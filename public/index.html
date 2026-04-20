@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniPrice – Price Tracker</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <div id="app">
+        <!-- Navigation -->
+        <nav class="nav">
+            <div class="nav-container">
+                <div class="nav-logo">
+                    <span class="logo-icon">◉</span>
+                    <span class="logo-text">OmniPrice</span>
+                </div>
+                <ul class="nav-tabs">
+                    <li><a href="#products" class="nav-link active" data-tab="products">Products</a></li>
+                    <li><a href="#charts" class="nav-link" data-tab="charts">Charts</a></li>
+                    <li><a href="#alerts" class="nav-link" data-tab="alerts">Alerts</a></li>
+                    <li><a href="#settings" class="nav-link" data-tab="settings">Settings</a></li>
+                </ul>
+                <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+                    <span class="theme-icon">◐</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Products Tab -->
+            <section id="products-tab" class="tab-content active">
+                <div class="tab-header">
+                    <h1>Products</h1>
+                    <div class="tab-actions">
+                        <div class="search-box">
+                            <input type="text" id="searchInput" placeholder="Search products..." />
+                        </div>
+                        <div class="view-toggle">
+                            <button class="view-btn active" data-view="card" aria-label="Card view">▦</button>
+                            <button class="view-btn" data-view="list" aria-label="List view">☰</button>
+                        </div>
+                        <select id="sortSelect" class="sort-select">
+                            <option value="delta">Sort by Price Δ</option>
+                            <option value="alpha">Sort A-Z</option>
+                            <option value="date">Sort by Date Added</option>
+                        </select>
+                        <button id="addProductBtn" class="btn btn-primary">+ Add Product</button>
+                    </div>
+                </div>
+                <div class="filters">
+                    <div class="filter-group">
+                        <label>Price Range:</label>
+                        <input type="number" id="priceMin" placeholder="Min" />
+                        <span>–</span>
+                        <input type="number" id="priceMax" placeholder="Max" />
+                    </div>
+                    <div class="filter-group">
+                        <label>Tags:</label>
+                        <div id="tagFilters" class="tag-filters"></div>
+                    </div>
+                </div>
+                <div id="productsGrid" class="products-grid"></div>
+            </section>
+
+            <!-- Charts Tab -->
+            <section id="charts-tab" class="tab-content">
+                <div class="tab-header">
+                    <h1>Price Analytics</h1>
+                    <div class="chart-controls">
+                        <div class="timeframe-btns">
+                            <button class="tf-btn" data-range="1">1D</button>
+                            <button class="tf-btn" data-range="5">5D</button>
+                            <button class="tf-btn active" data-range="30">1M</button>
+                            <button class="tf-btn" data-range="180">6M</button>
+                            <button class="tf-btn" data-range="365">1Y</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="globalChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Alerts Tab -->
+            <section id="alerts-tab" class="tab-content">
+                <div class="coming-soon">
+                    <div class="coming-soon-icon">🔔</div>
+                    <h2>Alerts</h2>
+                    <p>Coming Soon</p>
+                    <span class="coming-soon-desc">Set up price alerts to get notified when products drop below your
+                        target price.</span>
+                </div>
+            </section>
+
+            <!-- Settings Tab -->
+            <section id="settings-tab" class="tab-content">
+                <div class="tab-header">
+                    <h1>Settings</h1>
+                </div>
+                <div class="settings-grid">
+                    <div class="settings-card">
+                        <h3>Appearance</h3>
+                        <div class="setting-row">
+                            <label>Theme</label>
+                            <div class="theme-options">
+                                <button class="theme-opt active" data-theme="light">Light</button>
+                                <button class="theme-opt" data-theme="dark">Dark</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="settings-card">
+                        <h3>Scraping</h3>
+                        <div class="setting-row">
+                            <label>Frequency</label>
+                            <select id="scrapeFrequency">
+                                <option value="3600000">Every 1 hour</option>
+                                <option value="43200000">Every 12 hours</option>
+                                <option value="0">Only at startup</option>
+                            </select>
+                        </div>
+                        <div class="setting-row">
+                            <button id="scrapeAllBtn" class="btn btn-secondary">Scrape All Now</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Product Detail View (hidden by default) -->
+            <section id="product-detail" class="tab-content product-detail">
+                <button class="back-btn" id="backToProducts">← Back to Products</button>
+                <div id="productDetailContent"></div>
+            </section>
+        </main>
+
+        <!-- Add/Edit Product Modal -->
+        <div id="productModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="modalTitle">Add Product</h2>
+                    <button class="modal-close" id="closeModal">×</button>
+                </div>
+                <form id="productForm" class="product-form">
+                    <input type="hidden" id="productId" />
+
+                    <div class="form-section">
+                        <h4>Basic Information</h4>
+                        <div class="form-group">
+                            <label for="productTitle">Title *</label>
+                            <input type="text" id="productTitle" required />
+                        </div>
+                        <div class="form-group">
+                            <label for="productDescription">Description</label>
+                            <textarea id="productDescription" rows="3"></textarea>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="productRefPrice">Reference Price (€) *</label>
+                                <input type="number" id="productRefPrice" step="0.01" required />
+                            </div>
+                            <div class="form-group">
+                                <label for="productTags">Tags (comma-separated)</label>
+                                <input type="text" id="productTags" placeholder="e.g., electronics, apple" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h4>Product Image</h4>
+                        <div class="image-upload">
+                            <div class="image-preview" id="imagePreview">
+                                <span class="placeholder">No image</span>
+                            </div>
+                            <div class="image-controls">
+                                <input type="text" id="imageUrl" placeholder="Paste image URL..." />
+                                <span class="or-divider">or</span>
+                                <label class="file-upload-btn">
+                                    Choose File
+                                    <input type="file" id="imageFile" accept="image/*" />
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h4>Price Sources</h4>
+                        <div id="sourcesContainer" class="sources-container"></div>
+                        <button type="button" id="addSourceBtn" class="btn btn-secondary btn-sm">+ Add Source</button>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-ghost" id="cancelModal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Product</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/services/api.js"></script>
+    <script src="/js/components/productCard.js"></script>
+    <script src="/js/components/productDetail.js"></script>
+    <script src="/js/components/charts.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+
+</html>

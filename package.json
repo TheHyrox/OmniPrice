@@ -1,0 +1,22 @@
+{
+  "name": "omniprice",
+  "version": "2.0.0",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node server/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Hyrox",
+  "license": "ISC",
+  "description": "Modern price tracking web application (1GB RAM compatible)",
+  "dependencies": {
+    "axios": "^1.7.9",
+    "cheerio": "^1.0.0",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "lowdb": "^7.0.1",
+    "puppeteer": "^24.3.0",
+    "uuid": "^9.0.0"
+  }
+}
