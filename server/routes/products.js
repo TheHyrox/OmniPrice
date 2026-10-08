@@ -130,13 +130,18 @@ async function saveImage(imageData) {
 
     await fs.mkdir(imagesDir, { recursive: true });
     if (imageData.startsWith('http')) {
-        const axios = require('axios');
-        const response = await axios.get(imageData, { responseType: 'arraybuffer', timeout: 10000 });
-        const ext = getExtFromContentType(response.headers['content-type']) || 'jpg';
-        const filename = `${uuidv4()}.${ext}`;
-        const filepath = path.join(imagesDir, filename);
-        await fs.writeFile(filepath, response.data);
-        return `/images/${filename}`;
+        try {
+            const axios = require('axios');
+            const response = await axios.get(imageData, { responseType: 'arraybuffer', timeout: 10000 });
+            const ext = getExtFromContentType(response.headers['content-type']) || 'jpg';
+            const filename = `${uuidv4()}.${ext}`;
+            const filepath = path.join(imagesDir, filename);
+            await fs.writeFile(filepath, response.data);
+            return `/images/${filename}`;
+        } catch (error) {
+            console.error('Failed to download image:', error.message);
+            return imageData;
+        }
     }
 
     if (imageData.startsWith('data:image')) {
