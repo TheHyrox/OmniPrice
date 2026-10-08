@@ -63,7 +63,8 @@ class Scraper {
             });
             
             const $ = cheerio.load(response.data);
-            const element = $(cssSelector).first();
+            const element = $(cssSelector).first().clone();
+            element.find('sup, script, style').remove();
             
             if (element.length === 0) {
                 throw new Error(`Selector "${cssSelector}" not found`);
@@ -99,7 +100,11 @@ class Scraper {
 
             await page.waitForSelector(cssSelector, { timeout: 10000 });
             
-            const priceText = await page.$eval(cssSelector, el => el.textContent.trim());
+            const priceText = await page.$eval(cssSelector, el => {
+                const clone = el.cloneNode(true);
+                clone.querySelectorAll('sup, script, style').forEach(node => node.remove());
+                return clone.textContent.trim();
+            });
             const price = this.parsePrice(priceText);
             
             if (price === null) {
