@@ -96,7 +96,7 @@ const Charts = {
                         bodyFont: { size: 13 },
                         callbacks: {
                             label: (context) => {
-                                if (context.raw === null) return null;
+                                if (context.raw == null) return null;
                                 return `${context.dataset.label}: €${context.raw.toFixed(2)}`;
                             }
                         }

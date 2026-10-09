@@ -16,10 +16,10 @@ const ProductDetail = {
                     </div>
                     <p class="detail-desc">${product.description || 'No description'}</p>
                     <div class="detail-prices">
-                        <span class="detail-ref-price">Reference: €${product.referencePrice.toFixed(2)}</span>
-                        ${product.lowestPrice !== null ? `
+                        <span class="detail-ref-price">Reference: ${product.referencePrice != null ? `€${product.referencePrice.toFixed(2)}` : 'N/A'}</span>
+                        ${product.lowestPrice != null ? `
                             <span class="detail-lowest-price">€${product.lowestPrice.toFixed(2)}</span>
-                            ${product.priceDelta !== null ? `
+                            ${product.priceDelta != null ? `
                                 <span class="price-delta ${product.priceDelta < 0 ? 'negative' : 'positive'}">
                                     ${product.priceDelta < 0 ? '' : '+'}${product.priceDelta.toFixed(1)}%
                                 </span>
@@ -28,7 +28,7 @@ const ProductDetail = {
                     </div>
                 </div>
                 <div class="detail-buy-buttons">
-                    ${product.sources.filter(s => s.lastPrice).map(source => `
+                    ${(product.sources || []).filter(s => s.lastPrice != null).map(source => `
                         <a href="${source.url}" target="_blank" class="btn btn-primary buy-btn">
                             ${source.siteName} - €${source.lastPrice.toFixed(2)}
                         </a>
@@ -67,7 +67,7 @@ const ProductDetail = {
                 </div>
                 
                 <div class="source-list">
-                    ${product.sources.length === 0 ? `
+                    ${!product.sources || product.sources.length === 0 ? `
                         <div class="empty-state" style="padding: 32px;">
                             <p>No sources added yet. Add a source to start tracking prices.</p>
                         </div>
@@ -79,7 +79,7 @@ const ProductDetail = {
                             </div>
                             <code class="source-selector">${source.cssSelector}</code>
                             <span class="source-price">
-                                ${source.lastPrice !== null ? `€${source.lastPrice.toFixed(2)}` : '—'}
+                                ${source.lastPrice != null ? `€${source.lastPrice.toFixed(2)}` : '—'}
                             </span>
                             <div style="display: flex; gap: 8px;">
                                 <button class="btn btn-secondary scrape-btn" onclick="App.scrapeSource('${product._id}', ${index}, this)">
@@ -195,7 +195,7 @@ const ProductDetail = {
                         bodyFont: { size: 13 },
                         callbacks: {
                             label: (context) => {
-                                if (context.raw === null) return null;
+                                if (context.raw == null) return null;
                                 return `${context.dataset.label}: €${context.raw.toFixed(2)}`;
                             }
                         }

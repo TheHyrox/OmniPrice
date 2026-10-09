@@ -21,10 +21,10 @@ const ProductCard = {
                             </div>
                         </div>
                         <div class="product-card-prices">
-                            <span class="price-ref">Ref: €${product.referencePrice.toFixed(2)}</span>
-                            ${lowestPrice !== null ? `
+                            <span class="price-ref">Ref: ${product.referencePrice != null ? `€${product.referencePrice.toFixed(2)}` : 'N/A'}</span>
+                            ${lowestPrice != null ? `
                                 <span class="price-lowest">€${lowestPrice.toFixed(2)}</span>
-                                ${delta !== null ? `<span class="price-delta ${deltaClass}">${deltaSign}${delta.toFixed(1)}%</span>` : ''}
+                                ${delta != null ? `<span class="price-delta ${deltaClass}">${deltaSign}${delta.toFixed(1)}%</span>` : ''}
                             ` : '<span class="price-lowest">No price</span>'}
                         </div>
                         ${lowestSource ? `
@@ -48,12 +48,12 @@ const ProductCard = {
                     </div>
                     <div class="product-card-prices">
                         <div>
-                            <span class="price-ref">Ref: €${product.referencePrice.toFixed(2)}</span>
-                            ${lowestPrice !== null ? `
+                            <span class="price-ref">Ref: ${product.referencePrice != null ? `€${product.referencePrice.toFixed(2)}` : 'N/A'}</span>
+                            ${lowestPrice != null ? `
                                 <br><span class="price-lowest">€${lowestPrice.toFixed(2)}</span>
                             ` : '<br><span class="price-lowest">No price</span>'}
                         </div>
-                        ${delta !== null ? `<span class="price-delta ${deltaClass}">${deltaSign}${delta.toFixed(1)}%</span>` : ''}
+                        ${delta != null ? `<span class="price-delta ${deltaClass}">${deltaSign}${delta.toFixed(1)}%</span>` : ''}
                     </div>
                     ${lowestSource ? `
                         <a href="${lowestSource.url}" target="_blank" class="btn btn-primary product-card-action" onclick="event.stopPropagation()">
