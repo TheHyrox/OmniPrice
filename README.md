@@ -1,6 +1,6 @@
 # OmniPrice
 
-OmniPrice is a local web app to track product prices across multiple stores.
+OmniPrice is a local / remote web app to track product prices across multiple stores.
 You add products, configure one or more source URLs with CSS selectors, and scrape prices manually or on a schedule.
 
 ## Features
@@ -9,7 +9,8 @@ You add products, configure one or more source URLs with CSS selectors, and scra
 - Multiple sources per product
 - Source-level scraping with CSS selectors
 - Automatic lowest-price and price-delta calculation
-- Price history storage in JSON (`data/db.json`)
+- Flexible storage: MongoDB or JSON file database (`data/db.json`)
+- Standalone JSON to MongoDB migration script
 - Global and per-product charts (Chart.js)
 - Manual scrape and scheduled scrape frequency settings
 
@@ -17,13 +18,14 @@ You add products, configure one or more source URLs with CSS selectors, and scra
 
 - Backend: Node.js + Express
 - Frontend: Vanilla JavaScript, HTML, CSS
-- Database: LowDB (JSON file)
+- Database: MongoDB (via Mongoose) or LowDB (JSON file fallback)
 - Scraping: Cheerio + Puppeteer fallback
 
 ## Requirements
 
 - Node.js 18+
 - npm
+- (Optional) MongoDB server if using MongoDB database
 
 ## Installation
 
@@ -46,6 +48,98 @@ npm start
 http://localhost:3005
 ```
 
+## Database Configuration
+
+OmniPrice supports both **MongoDB** and **JSON** storage modes.
+
+### Using MongoDB (Recommended)
+
+Set the `MONGO_URI` environment variable (or `DB_TYPE=mongodb`):
+
+```bash
+export MONGO_URI="mongodb://localhost:27017/omniprice"
+npm start
+```
+
+The app will connect to database **`omniprice`** with three collections:
+- `products`: Product documents with price history and sources
+- `settings`: Global settings (theme, scrape frequency)
+- `stores`: Preset boutique selectors
+
+### JSON Mode (Default Fallback)
+
+If no `MONGO_URI` environment variable is defined, OmniPrice falls back to `data/db.json`.
+
+---
+
+## Migrating from JSON to MongoDB
+
+To convert an existing `data/db.json` into MongoDB database `omniprice`, use the included migration script:
+
+```bash
+# Basic usage (migrates data/db.json to mongodb://localhost:27017/omniprice)
+npm run migrate:mongo
+
+# Custom MongoDB URI and clean destination collections first
+node scripts/migrate-json-to-mongo.js --uri "mongodb://172.20.0.5:27017/omniprice" --clean
+
+# Help options
+node scripts/migrate-json-to-mongo.js --help
+```
+
+---
+
+## Docker & Docker Compose Setup
+
+Example `docker_compose_web.yml` snippet with MongoDB:
+
+```yaml
+version: '3.8'
+
+services:
+  omniprice-db:
+    container_name: omniprice-db
+    image: mongo:latest
+    restart: unless-stopped
+    volumes:
+      - omniprice_mongo_data:/data/db
+    networks:
+      - it-web
+
+  omniprice:
+    container_name: omniprice
+    build:
+      context: /configs/OmniPrice
+    ports:
+      - "3005:3005"
+    environment:
+      - MONGO_URI=mongodb://omniprice-db:27017/omniprice
+      - DB_TYPE=mongodb
+    volumes:
+      - /configs/OmniPrice/data:/app/data
+      - /configs/OmniPrice/public/images:/app/public/images
+    depends_on:
+      - omniprice-db
+    restart: unless-stopped
+    networks:
+      - it-web
+
+networks:
+  it-web:
+    external: true
+
+volumes:
+  omniprice_mongo_data:
+```
+
+To run data migration inside Docker or directly on the remote server:
+
+```bash
+docker exec -it omniprice node scripts/migrate-json-to-mongo.js --uri "mongodb://omniprice-db:27017/omniprice"
+```
+
+---
+
 ## How To Use
 
 1. Open the app and go to the Products tab.
@@ -67,34 +161,6 @@ http://localhost:3005
 	- Lowest price and delta in product cards/details
 	- Price history in charts
 
-## About CSS Selectors
-
-Scraping in OmniPrice depends on correct CSS selectors for each source.
-If the selector does not match the price element on the page, scraping fails.
-
-CSS selector reference:
-https://www.w3schools.com/cssref/css_selectors.php
-
-Tips:
-
-- Inspect the target page in browser dev tools.
-- Start with a specific selector (for example, `.product-price` or `#priceblock_ourprice`).
-- Avoid selectors that are generated dynamically and change on each load.
-
-## Scheduling
-
-- The server starts a scheduler at launch.
-- Default frequency is every 12 hours (`43200000` ms).
-- In Settings you can choose:
-  - Every 1 hour
-  - Every 12 hours
-  - Only at startup
-
-## Data Storage
-
-- Data is stored in `data/db.json`.
-- Product images downloaded from URLs are saved under `public/images`.
-
 ## API Overview
 
 Main endpoints:
@@ -108,9 +174,7 @@ Main endpoints:
 - `POST /api/scraper/all`
 - `GET /api/settings`
 - `PUT /api/settings`
-
-## Notes
-
-- Some websites block simple HTTP scraping. OmniPrice can fall back to Puppeteer for those cases.
-- The Alerts tab is currently a placeholder.
-- You can clone, copy, edit, do anything you want with this project and code.
+- `GET /api/stores`
+- `POST /api/stores`
+- `PUT /api/stores/:id`
+- `DELETE /api/stores/:id`

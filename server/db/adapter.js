@@ -1,14 +1,26 @@
 const JsonDatabase = require('./json-database');
+const MongoDatabase = require('./mongo-database');
 
 class DatabaseAdapter {
     constructor() {
         this.primary = null;
+        this.mode = 'json';
     }
 
     async init() {
-        this.primary = new JsonDatabase();
+        const dbType = (process.env.DB_TYPE || '').toLowerCase();
+        const hasMongoUri = Boolean(process.env.MONGO_URI || process.env.MONGODB_URI);
+
+        if (dbType === 'mongodb' || (dbType !== 'json' && hasMongoUri)) {
+            this.mode = 'mongodb';
+            this.primary = new MongoDatabase();
+        } else {
+            this.mode = 'json';
+            this.primary = new JsonDatabase();
+        }
+
         await this.primary.init();
-        console.log('Using JSON database');
+        console.log(`Database initialized in [${this.mode}] mode`);
     }
 
     async _execute(method, ...args) {
@@ -38,7 +50,7 @@ class DatabaseAdapter {
     }
 
     getMode() {
-        return 'json';
+        return this.mode;
     }
 }
 
