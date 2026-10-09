@@ -1097,3 +1097,93 @@ label {
         gap: 8px;
     }
 }
+
+/* ============================================
+   Stores Tab & Preset Styles
+   ============================================ */
+.stores-intro {
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+    font-size: 0.9375rem;
+}
+
+.stores-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+}
+
+.store-card {
+    background: var(--bg-primary);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: var(--card-shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.store-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.store-card-header h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+
+.store-card-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.store-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.store-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.875rem;
+}
+
+.store-field-label {
+    color: var(--text-tertiary);
+    min-width: 100px;
+}
+
+.store-url {
+    color: var(--accent);
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.store-url:hover {
+    text-decoration: underline;
+}
+
+.source-item {
+    display: grid;
+    grid-template-columns: 140px 1fr 1fr 120px auto;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.source-preset-select {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    font-size: 0.8125rem;
+}
+

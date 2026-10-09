@@ -1,5 +1,6 @@
 const App = {
     products: [],
+    stores: [],
     currentView: 'card',
     currentSort: 'delta',
     filters: {
@@ -13,6 +14,7 @@ const App = {
     async init() {
         this.bindEvents();
         this.loadTheme();
+        await this.loadStores();
         await this.loadProducts();
         this.setupChartTimeframes();
     },
@@ -62,6 +64,12 @@ const App = {
         document.getElementById('imageFile').addEventListener('change', (e) => this.handleImageFile(e));
 
         document.getElementById('addSourceBtn').addEventListener('click', () => this.addSourceRow());
+
+        document.getElementById('addStoreBtn')?.addEventListener('click', () => this.openStoreModal());
+        document.getElementById('closeStoreModal')?.addEventListener('click', () => this.closeStoreModal());
+        document.getElementById('cancelStoreModal')?.addEventListener('click', () => this.closeStoreModal());
+        document.getElementById('storeForm')?.addEventListener('submit', (e) => this.handleStoreFormSubmit(e));
+        document.getElementById('syncAllStoresBtn')?.addEventListener('click', () => this.syncAllStores());
 
         document.getElementById('backToProducts').addEventListener('click', () => this.navigateToTab('products'));
 
@@ -249,14 +257,41 @@ const App = {
     },
 
     sourceRowHTML(source = {}) {
+        const storeOptions = (this.stores || []).map(store => {
+            const selected = source.siteName === store.name ? 'selected' : '';
+            return `<option value="${store._id}" data-name="${store.name}" data-selector="${store.cssSelector}" ${selected}>${store.name}</option>`;
+        }).join('');
+
         return `
             <div class="source-item">
+                <div class="source-preset-group">
+                    <select class="source-preset-select" onchange="App.onSourcePresetSelectChange(this)">
+                        <option value="">-- Custom Store --</option>
+                        ${storeOptions}
+                    </select>
+                </div>
                 <input type="url" placeholder="URL" value="${source.url || ''}" class="source-url-input" />
                 <input type="text" placeholder="CSS Selector" value="${source.cssSelector || ''}" class="source-selector-input" />
                 <input type="text" placeholder="Site Name" value="${source.siteName || ''}" class="source-name-input" />
                 <button type="button" class="remove-source" onclick="this.closest('.source-item').remove()">×</button>
             </div>
         `;
+    },
+
+    onSourcePresetSelectChange(selectElem) {
+        const selectedOpt = selectElem.options[selectElem.selectedIndex];
+        const itemRow = selectElem.closest('.source-item') || selectElem.closest('#addSourceForm');
+        if (!itemRow) return;
+
+        const selectorInput = itemRow.querySelector('.source-selector-input') || itemRow.querySelector('#newSourceSelector');
+        const nameInput = itemRow.querySelector('.source-name-input') || itemRow.querySelector('#newSourceName');
+
+        if (selectedOpt.value) {
+            const name = selectedOpt.dataset.name;
+            const selector = selectedOpt.dataset.selector;
+            if (nameInput) nameInput.value = name;
+            if (selectorInput) selectorInput.value = selector;
+        }
     },
 
     addSourceRow() {
@@ -416,6 +451,137 @@ const App = {
         } finally {
             btn.disabled = false;
             btn.textContent = 'Scrape All Now';
+        }
+    },
+
+    // Stores Management
+    async loadStores() {
+        try {
+            this.stores = await API.stores.getAll();
+            this.renderStores();
+        } catch (error) {
+            console.error('Error loading stores:', error);
+        }
+    },
+
+    renderStores() {
+        const grid = document.getElementById('storesGrid');
+        if (!grid) return;
+
+        if (!this.stores || this.stores.length === 0) {
+            grid.innerHTML = `
+                <div class="empty-state" style="grid-column: 1 / -1;">
+                    <div class="empty-state-icon">🏪</div>
+                    <h3>No preset stores saved</h3>
+                    <p>Add a preset store to easily reuse boutique names and CSS selectors across products.</p>
+                </div>
+            `;
+            return;
+        }
+
+        grid.innerHTML = this.stores.map(store => `
+            <div class="store-card">
+                <div class="store-card-header">
+                    <h3>${store.name}</h3>
+                    <div class="store-card-actions">
+                        <button class="btn btn-ghost" onclick="App.openStoreModal('${store._id}')" title="Edit Store">✏️</button>
+                        <button class="btn btn-ghost" onclick="App.deleteStore('${store._id}')" title="Delete Store" style="color: var(--danger);">🗑️</button>
+                    </div>
+                </div>
+                <div class="store-card-body">
+                    <div class="store-field">
+                        <span class="store-field-label">CSS Selector:</span>
+                        <code class="source-selector">${store.cssSelector}</code>
+                    </div>
+                    ${store.defaultUrl ? `
+                        <div class="store-field">
+                            <span class="store-field-label">Base URL:</span>
+                            <a href="${store.defaultUrl}" target="_blank" class="store-url">${store.defaultUrl}</a>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `).join('');
+    },
+
+    openStoreModal(storeId = null) {
+        const modal = document.getElementById('storeModal');
+        const title = document.getElementById('storeModalTitle');
+        const form = document.getElementById('storeForm');
+        form.reset();
+
+        if (storeId) {
+            const store = this.stores.find(s => s._id === storeId);
+            if (store) {
+                title.textContent = 'Edit Store';
+                document.getElementById('storeId').value = store._id;
+                document.getElementById('storeName').value = store.name;
+                document.getElementById('storeCssSelector').value = store.cssSelector;
+                document.getElementById('storeDefaultUrl').value = store.defaultUrl || '';
+            }
+        } else {
+            title.textContent = 'Add Preset Store';
+            document.getElementById('storeId').value = '';
+        }
+
+        modal.classList.add('active');
+    },
+
+    closeStoreModal() {
+        document.getElementById('storeModal')?.classList.remove('active');
+        document.getElementById('storeForm')?.reset();
+    },
+
+    async handleStoreFormSubmit(e) {
+        e.preventDefault();
+        const id = document.getElementById('storeId').value;
+        const name = document.getElementById('storeName').value;
+        const cssSelector = document.getElementById('storeCssSelector').value;
+        const defaultUrl = document.getElementById('storeDefaultUrl').value;
+        const syncProducts = document.getElementById('storeSyncProducts').checked;
+
+        try {
+            if (id) {
+                await API.stores.update(id, { name, cssSelector, defaultUrl, syncProducts });
+            } else {
+                await API.stores.create({ name, cssSelector, defaultUrl });
+            }
+            this.closeStoreModal();
+            await this.loadStores();
+            await this.loadProducts();
+        } catch (error) {
+            alert('Error saving store: ' + error.message);
+        }
+    },
+
+    async deleteStore(id) {
+        if (!confirm('Are you sure you want to delete this store preset?')) return;
+        try {
+            await API.stores.delete(id);
+            await this.loadStores();
+        } catch (error) {
+            alert('Error deleting store: ' + error.message);
+        }
+    },
+
+    async syncAllStores() {
+        const btn = document.getElementById('syncAllStoresBtn');
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Syncing...';
+        }
+
+        try {
+            const res = await API.stores.syncAll();
+            alert(`Sync complete! Updated ${res.updatedSourcesCount} source(s) across ${res.updatedProductsCount} product(s).`);
+            await this.loadProducts();
+        } catch (error) {
+            alert('Error syncing stores: ' + error.message);
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = '🔄 Sync All Products';
+            }
         }
     },
 

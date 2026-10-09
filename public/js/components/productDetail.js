@@ -43,6 +43,13 @@ const ProductDetail = {
                 </div>
                 
                 <div id="addSourceForm" style="display: none; margin-bottom: 20px; padding: 16px; background: var(--bg-secondary); border-radius: 12px;">
+                    <div style="margin-bottom: 12px;">
+                        <label style="font-size: 0.875rem; font-weight: 500;">Preset Store (optional)</label>
+                        <select id="newSourceStoreSelect" class="source-store-select" style="width: 100%; padding: 8px 12px; margin-top: 4px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary);" onchange="App.onSourcePresetSelectChange(this)">
+                            <option value="">-- Custom Store --</option>
+                            ${(App.stores || []).map(store => `<option value="${store._id}" data-name="${store.name}" data-selector="${store.cssSelector}">${store.name}</option>`).join('')}
+                        </select>
+                    </div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr 120px 100px; gap: 12px; align-items: end;">
                         <div class="form-group" style="margin: 0;">
                             <label>URL</label>

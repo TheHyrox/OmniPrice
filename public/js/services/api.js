@@ -90,5 +90,37 @@ const API = {
                 body: data
             });
         }
+    },
+
+    stores: {
+        async getAll() {
+            return API.request('/stores');
+        },
+
+        async create(data) {
+            return API.request('/stores', {
+                method: 'POST',
+                body: data
+            });
+        },
+
+        async update(id, data) {
+            return API.request(`/stores/${id}`, {
+                method: 'PUT',
+                body: data
+            });
+        },
+
+        async delete(id) {
+            return API.request(`/stores/${id}`, {
+                method: 'DELETE'
+            });
+        },
+
+        async syncAll() {
+            return API.request('/stores/sync-all', {
+                method: 'POST'
+            });
+        }
     }
 };

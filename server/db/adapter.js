@@ -25,6 +25,17 @@ class DatabaseAdapter {
     }
     async getSettings() { return this._execute('getSettings'); }
     async updateSettings(data) { return this._execute('updateSettings', data); }
+    async getStores() { return this._execute('getStores'); }
+    async getStoreById(id) { return this._execute('getStoreById', id); }
+    async createStore(data) { return this._execute('createStore', data); }
+    async updateStore(id, data) { return this._execute('updateStore', id, data); }
+    async deleteStore(id) { return this._execute('deleteStore', id); }
+    async syncProductsWithStore(oldStoreName, newStoreName, newCssSelector) {
+        return this._execute('syncProductsWithStore', oldStoreName, newStoreName, newCssSelector);
+    }
+    async syncAllProductsWithStores() {
+        return this._execute('syncAllProductsWithStores');
+    }
 
     getMode() {
         return 'json';
