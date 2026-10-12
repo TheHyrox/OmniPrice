@@ -38,36 +38,67 @@
         <main class="main">
             <!-- Products Tab -->
             <section id="products-tab" class="tab-content active">
-                <div class="tab-header">
-                    <h1>Products</h1>
+                <div class="tab-header products-main-header">
+                    <div>
+                        <h1>Tracked Products</h1>
+                        <p class="tab-subtitle">Monitor price fluctuations, discover historical lows, and compare online merchants</p>
+                    </div>
                     <div class="tab-actions">
-                        <div class="search-box">
-                            <input type="text" id="searchInput" placeholder="Search products..." />
-                        </div>
-                        <div class="view-toggle">
-                            <button class="view-btn active" data-view="card" aria-label="Card view">▦</button>
-                            <button class="view-btn" data-view="list" aria-label="List view">☰</button>
-                        </div>
-                        <select id="sortSelect" class="sort-select">
-                            <option value="delta">Sort by Price Δ</option>
-                            <option value="alpha">Sort A-Z</option>
-                            <option value="date">Sort by Date Added</option>
-                        </select>
                         <button id="addProductBtn" class="btn btn-primary">+ Add Product</button>
                     </div>
                 </div>
-                <div class="filters">
-                    <div class="filter-group">
-                        <label>Price Range:</label>
-                        <input type="number" id="priceMin" placeholder="Min" />
-                        <span>–</span>
-                        <input type="number" id="priceMax" placeholder="Max" />
+
+                <!-- Products KPI Overview -->
+                <div id="productsKpiContainer" class="products-kpis"></div>
+
+                <!-- Search & Filters Toolbar -->
+                <div class="products-toolbar">
+                    <div class="products-search-row">
+                        <div class="search-box products-search-box">
+                            <input type="text" id="searchInput" placeholder="Search products by title or tag..." />
+                            <button id="clearSearchBtn" class="clear-input-btn" style="display: none;" title="Clear search">×</button>
+                        </div>
+
+                        <div class="products-quick-filters">
+                            <button class="quick-filter-btn active" data-filter="all">All Products</button>
+                            <button class="quick-filter-btn" data-filter="deals">🔥 Price Drops</button>
+                            <button class="quick-filter-btn" data-filter="atl">⭐ All-Time Lows</button>
+                        </div>
+
+                        <div class="products-controls-group">
+                            <div class="view-toggle">
+                                <button class="view-btn active" data-view="card" aria-label="Grid view" title="Grid View">▦</button>
+                                <button class="view-btn" data-view="list" aria-label="List view" title="List View">☰</button>
+                            </div>
+                            <select id="sortSelect" class="sort-select">
+                                <option value="delta">Sort: Best Discount</option>
+                                <option value="price-asc">Sort: Price (Low → High)</option>
+                                <option value="price-desc">Sort: Price (High → Low)</option>
+                                <option value="alpha">Sort: A-Z</option>
+                                <option value="date">Sort: Date Added</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="filter-group">
-                        <label>Tags:</label>
-                        <div id="tagFilters" class="tag-filters"></div>
+
+                    <div class="filters products-filters-collapsible">
+                        <div class="filter-group price-filter-group">
+                            <label>Price Range:</label>
+                            <div class="price-input-range">
+                                <span class="currency-symbol">€</span>
+                                <input type="number" id="priceMin" placeholder="Min" min="0" />
+                                <span class="range-separator">–</span>
+                                <span class="currency-symbol">€</span>
+                                <input type="number" id="priceMax" placeholder="Max" min="0" />
+                            </div>
+                            <button id="clearPriceFilterBtn" class="btn btn-sm btn-ghost" style="display: none;">Clear</button>
+                        </div>
+                        <div class="filter-group tag-filter-group">
+                            <label>Tags:</label>
+                            <div id="tagFilters" class="tag-filters"></div>
+                        </div>
                     </div>
                 </div>
+
                 <div id="productsGrid" class="products-grid"></div>
             </section>
 
@@ -224,62 +255,93 @@
 
         <!-- Add/Edit Product Modal -->
         <div id="productModal" class="modal">
-            <div class="modal-content">
+            <div class="modal-content product-modal-content">
                 <div class="modal-header">
-                    <h2 id="modalTitle">Add Product</h2>
-                    <button class="modal-close" id="closeModal">×</button>
+                    <div class="modal-title-wrap">
+                        <div class="modal-icon-badge">📦</div>
+                        <div>
+                            <h2 id="modalTitle">Add Product</h2>
+                            <p class="modal-subtitle">Track automated prices across storefronts and spot historic discounts</p>
+                        </div>
+                    </div>
+                    <button class="modal-close" id="closeModal" aria-label="Close modal">×</button>
                 </div>
                 <form id="productForm" class="product-form">
                     <input type="hidden" id="productId" />
 
-                    <div class="form-section">
-                        <h4>Basic Information</h4>
-                        <div class="form-group">
-                            <label for="productTitle">Title *</label>
-                            <input type="text" id="productTitle" required />
+                    <!-- Section 1: Basic Information -->
+                    <div class="modal-card-section">
+                        <div class="modal-section-title">
+                            <span class="step-num">1</span>
+                            <h4>Basic Product Information</h4>
                         </div>
                         <div class="form-group">
-                            <label for="productDescription">Description</label>
-                            <textarea id="productDescription" rows="3"></textarea>
+                            <label for="productTitle">Product Title *</label>
+                            <input type="text" id="productTitle" placeholder="e.g., Casque Scorpion EXO-530 Air" required />
                         </div>
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="productRefPrice">Reference Price (€) *</label>
-                                <input type="number" id="productRefPrice" step="0.01" required />
+                                <label for="productRefPrice">Reference / Retail Price (€) *</label>
+                                <div class="input-with-symbol">
+                                    <span class="input-sym">€</span>
+                                    <input type="number" id="productRefPrice" step="0.01" min="0" placeholder="219.90" required />
+                                </div>
+                                <span class="form-help">Baseline price used to calculate savings and percentage drops</span>
                             </div>
                             <div class="form-group">
-                                <label for="productTags">Tags (comma-separated)</label>
-                                <input type="text" id="productTags" placeholder="e.g., electronics, apple" />
+                                <label for="productTags">Tags / Categories (comma-separated)</label>
+                                <input type="text" id="productTags" placeholder="e.g., moto, casque, accessoire" />
+                                <span class="form-help">Used to group and filter your products</span>
                             </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="productDescription">Description (optional)</label>
+                            <textarea id="productDescription" rows="2" placeholder="Notes, sizes, color variations..."></textarea>
                         </div>
                     </div>
 
-                    <div class="form-section">
-                        <h4>Product Image</h4>
-                        <div class="image-upload">
+                    <!-- Section 2: Product Image -->
+                    <div class="modal-card-section">
+                        <div class="modal-section-title">
+                            <span class="step-num">2</span>
+                            <h4>Product Visual</h4>
+                        </div>
+                        <div class="modal-image-row">
                             <div class="image-preview" id="imagePreview">
-                                <span class="placeholder">No image</span>
+                                <span class="placeholder">🖼️ No image</span>
                             </div>
-                            <div class="image-controls">
-                                <input type="text" id="imageUrl" placeholder="Paste image URL..." />
-                                <span class="or-divider">or</span>
-                                <label class="file-upload-btn">
-                                    Choose File
+                            <div class="image-controls-modern">
+                                <div class="form-group" style="margin-bottom: 8px;">
+                                    <label for="imageUrl">Image Web URL</label>
+                                    <input type="text" id="imageUrl" placeholder="https://images.example.com/item.jpg" />
+                                </div>
+                                <div class="image-or-divider">
+                                    <span>or</span>
+                                </div>
+                                <label class="file-upload-btn-modern">
+                                    📁 Choose Local Image File
                                     <input type="file" id="imageFile" accept="image/*" />
                                 </label>
                             </div>
                         </div>
                     </div>
 
-                    <div class="form-section">
-                        <h4>Price Sources</h4>
+                    <!-- Section 3: Online Store Sources -->
+                    <div class="modal-card-section">
+                        <div class="modal-section-title" style="justify-content: space-between;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span class="step-num">3</span>
+                                <h4>Price Feeds & Online Stores</h4>
+                            </div>
+                            <button type="button" id="addSourceBtn" class="btn btn-secondary btn-sm">+ Add Store Feed</button>
+                        </div>
+                        <p class="section-subtitle" style="margin-bottom: 14px;">Define which online shops to scrape prices from</p>
                         <div id="sourcesContainer" class="sources-container"></div>
-                        <button type="button" id="addSourceBtn" class="btn btn-secondary btn-sm">+ Add Source</button>
                     </div>
 
-                    <div class="form-actions">
+                    <div class="modal-actions-sticky">
                         <button type="button" class="btn btn-ghost" id="cancelModal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Save Product</button>
+                        <button type="submit" class="btn btn-primary" id="saveProductBtn">Save Product</button>
                     </div>
                 </form>
             </div>

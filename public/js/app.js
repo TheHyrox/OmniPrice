@@ -7,7 +7,8 @@ const App = {
         search: '',
         priceMin: null,
         priceMax: null,
-        tags: []
+        tags: [],
+        dealType: 'all' // 'all' | 'deals' | 'atl'
     },
     allTags: [],
 
@@ -41,17 +42,61 @@ const App = {
             this.renderProducts();
         });
 
-        document.getElementById('searchInput').addEventListener('input', (e) => {
-            this.filters.search = e.target.value.toLowerCase();
-            this.renderProducts();
+        // Search Input with Clear Button
+        const searchInput = document.getElementById('searchInput');
+        const clearSearchBtn = document.getElementById('clearSearchBtn');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                this.filters.search = e.target.value.toLowerCase().trim();
+                if (clearSearchBtn) clearSearchBtn.style.display = e.target.value ? 'block' : 'none';
+                this.renderProducts();
+            });
+            if (clearSearchBtn) {
+                clearSearchBtn.addEventListener('click', () => {
+                    searchInput.value = '';
+                    this.filters.search = '';
+                    clearSearchBtn.style.display = 'none';
+                    this.renderProducts();
+                });
+            }
+        }
+
+        // Quick Filters (All, Deals, ATL)
+        document.querySelectorAll('.quick-filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.quick-filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.filters.dealType = btn.dataset.filter;
+                this.renderProducts();
+            });
         });
 
-        document.getElementById('priceMin').addEventListener('input', (e) => {
+        // Price Min & Max with Clear Button
+        const priceMin = document.getElementById('priceMin');
+        const priceMax = document.getElementById('priceMax');
+        const clearPriceBtn = document.getElementById('clearPriceFilterBtn');
+        const updatePriceClear = () => {
+            if (clearPriceBtn) {
+                clearPriceBtn.style.display = (priceMin?.value || priceMax?.value) ? 'inline-block' : 'none';
+            }
+        };
+
+        priceMin?.addEventListener('input', (e) => {
             this.filters.priceMin = e.target.value ? parseFloat(e.target.value) : null;
+            updatePriceClear();
             this.renderProducts();
         });
-        document.getElementById('priceMax').addEventListener('input', (e) => {
+        priceMax?.addEventListener('input', (e) => {
             this.filters.priceMax = e.target.value ? parseFloat(e.target.value) : null;
+            updatePriceClear();
+            this.renderProducts();
+        });
+        clearPriceBtn?.addEventListener('click', () => {
+            if (priceMin) priceMin.value = '';
+            if (priceMax) priceMax.value = '';
+            this.filters.priceMin = null;
+            this.filters.priceMax = null;
+            updatePriceClear();
             this.renderProducts();
         });
 
@@ -128,32 +173,121 @@ const App = {
         }
     },
 
+    renderProductsKpis() {
+        const container = document.getElementById('productsKpiContainer');
+        if (!container) return;
+
+        if (!this.products || this.products.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+
+        const totalCount = this.products.length;
+        const dealsCount = this.products.filter(p => p.priceDelta != null && p.priceDelta < 0).length;
+        const atlCount = this.products.filter(p => ProductCard.isAtAllTimeLow(p)).length;
+
+        let topDeal = null;
+        let bestDelta = 0;
+        this.products.forEach(p => {
+            if (p.priceDelta != null && p.priceDelta < bestDelta) {
+                bestDelta = p.priceDelta;
+                topDeal = p;
+            }
+        });
+
+        container.innerHTML = `
+            <div class="product-kpi-card">
+                <div class="kpi-header">
+                    <span>Monitored Products</span>
+                    <span class="kpi-icon">📦</span>
+                </div>
+                <div class="kpi-value-row">
+                    <span class="kpi-value">${totalCount}</span>
+                </div>
+                <span class="kpi-sub">${this.stores ? this.stores.length : 0} preset stores</span>
+            </div>
+
+            <div class="product-kpi-card">
+                <div class="kpi-header">
+                    <span>Active Price Drops</span>
+                    <span class="kpi-icon">🏷️</span>
+                </div>
+                <div class="kpi-value-row">
+                    <span class="kpi-value">${dealsCount}</span>
+                    <span class="kpi-badge ${dealsCount > 0 ? 'positive' : 'neutral'}">${dealsCount > 0 ? 'Savings' : 'None'}</span>
+                </div>
+                <span class="kpi-sub">Items below reference price</span>
+            </div>
+
+            <div class="product-kpi-card">
+                <div class="kpi-header">
+                    <span>At All-Time Low</span>
+                    <span class="kpi-icon">🔥</span>
+                </div>
+                <div class="kpi-value-row">
+                    <span class="kpi-value">${atlCount}</span>
+                    <span class="kpi-badge ${atlCount > 0 ? 'positive' : 'neutral'}">${atlCount > 0 ? 'Lowest Ever' : 'None'}</span>
+                </div>
+                <span class="kpi-sub">Historic price minimums</span>
+            </div>
+
+            <div class="product-kpi-card">
+                <div class="kpi-header">
+                    <span>Top Bargain</span>
+                    <span class="kpi-icon">⭐</span>
+                </div>
+                <div class="kpi-value-row">
+                    <span class="kpi-value">${topDeal ? `${bestDelta.toFixed(1)}%` : '—'}</span>
+                    ${topDeal ? `<span class="kpi-badge positive">Deal</span>` : ''}
+                </div>
+                <span class="kpi-sub" title="${escapeHtml(topDeal?.title || '')}">
+                    ${escapeHtml(topDeal?.title || 'No discounts yet')}
+                </span>
+            </div>
+        `;
+    },
+
     renderProducts() {
+        this.renderProductsKpis();
         const grid = document.getElementById('productsGrid');
+        if (!grid) return;
         
         let filtered = this.products.filter(p => {
             if (this.filters.search) {
                 const searchMatch = p.title.toLowerCase().includes(this.filters.search) ||
-                    p.tags.some(t => t.toLowerCase().includes(this.filters.search));
+                    (p.tags || []).some(t => t.toLowerCase().includes(this.filters.search));
                 if (!searchMatch) return false;
             }
             
-            const price = p.lowestPrice;
+            const price = ProductCard.sanitizePrice(p.lowestPrice, p.referencePrice);
             if (this.filters.priceMin !== null && (price === null || price < this.filters.priceMin)) return false;
             if (this.filters.priceMax !== null && (price === null || price > this.filters.priceMax)) return false;
             if (this.filters.tags.length > 0) {
-                if (!this.filters.tags.some(t => p.tags.includes(t))) return false;
+                if (!this.filters.tags.some(t => (p.tags || []).includes(t))) return false;
+            }
+
+            if (this.filters.dealType === 'deals') {
+                if (p.priceDelta == null || p.priceDelta >= 0) return false;
+            } else if (this.filters.dealType === 'atl') {
+                if (!ProductCard.isAtAllTimeLow(p)) return false;
             }
             
             return true;
         });
 
         filtered.sort((a, b) => {
+            const pA = ProductCard.sanitizePrice(a.lowestPrice, a.referencePrice) ?? Infinity;
+            const pB = ProductCard.sanitizePrice(b.lowestPrice, b.referencePrice) ?? Infinity;
+
             switch (this.currentSort) {
                 case 'delta':
                     const deltaA = a.priceDelta ?? Infinity;
                     const deltaB = b.priceDelta ?? Infinity;
                     return deltaA - deltaB;
+                case 'price-asc':
+                    return pA - pB;
+                case 'price-desc':
+                    return pB - pA;
                 case 'alpha':
                     return a.title.localeCompare(b.title);
                 case 'date':
@@ -172,28 +306,35 @@ const App = {
         grid.innerHTML = filtered.map(p => ProductCard.render(p, this.currentView)).join('');
     },
 
+    filterByTag(tag) {
+        if (!tag) return;
+        const index = this.filters.tags.indexOf(tag);
+        if (index >= 0) {
+            this.filters.tags.splice(index, 1);
+        } else {
+            this.filters.tags.push(tag);
+        }
+        this.updateTags();
+        this.renderProducts();
+    },
+
     updateTags() {
-        const allTags = [...new Set(this.products.flatMap(p => p.tags))];
+        const allTags = [...new Set(this.products.flatMap(p => p.tags || []))];
         this.allTags = allTags;
         
         const container = document.getElementById('tagFilters');
+        if (!container) return;
+
         container.innerHTML = allTags.map(tag => `
             <button class="tag-filter ${this.filters.tags.includes(tag) ? 'active' : ''}" data-tag="${escapeHtml(tag)}">
-                ${escapeHtml(tag)}
+                #${escapeHtml(tag)}
             </button>
         `).join('');
         
         container.querySelectorAll('.tag-filter').forEach(btn => {
             btn.addEventListener('click', () => {
                 const tag = btn.dataset.tag;
-                const index = this.filters.tags.indexOf(tag);
-                if (index >= 0) {
-                    this.filters.tags.splice(index, 1);
-                } else {
-                    this.filters.tags.push(tag);
-                }
-                btn.classList.toggle('active');
-                this.renderProducts();
+                this.filterByTag(tag);
             });
         });
     },
@@ -235,6 +376,7 @@ const App = {
         } else {
             title.textContent = 'Add Product';
             this.resetForm();
+            this.addSourceRow();
         }
         
         modal.classList.add('active');
@@ -248,7 +390,7 @@ const App = {
     resetForm() {
         document.getElementById('productForm').reset();
         document.getElementById('productId').value = '';
-        document.getElementById('imagePreview').innerHTML = '<span class="placeholder">No image</span>';
+        document.getElementById('imagePreview').innerHTML = '<span class="placeholder">🖼️ No image</span>';
         document.getElementById('sourcesContainer').innerHTML = '';
     },
 
@@ -257,7 +399,7 @@ const App = {
         document.getElementById('productTitle').value = product.title;
         document.getElementById('productDescription').value = product.description || '';
         document.getElementById('productRefPrice').value = product.referencePrice;
-        document.getElementById('productTags').value = product.tags.join(', ');
+        document.getElementById('productTags').value = (product.tags || []).join(', ');
         
         if (product.image) {
             document.getElementById('imagePreview').innerHTML = `<img src="${product.image}" alt="Preview">`;
@@ -265,27 +407,59 @@ const App = {
         }
         
         const container = document.getElementById('sourcesContainer');
-        container.innerHTML = product.sources.map((s, i) => this.sourceRowHTML(s)).join('');
+        if (product.sources && product.sources.length > 0) {
+            container.innerHTML = product.sources.map((s, i) => this.sourceRowHTML(s)).join('');
+        } else {
+            this.addSourceRow();
+        }
     },
 
     sourceRowHTML(source = {}) {
         const storeOptions = (this.stores || []).map(store => {
             const selected = source.siteName === store.name ? 'selected' : '';
-            return `<option value="${escapeHtml(store._id)}" data-name="${escapeHtml(store.name)}" data-selector="${escapeHtml(store.cssSelector)}" ${selected}>${escapeHtml(store.name)}</option>`;
+            return `<option value="${escapeHtml(store._id)}" 
+                            data-name="${escapeHtml(store.name)}" 
+                            data-selector="${escapeHtml(store.cssSelector)}" 
+                            data-url="${escapeHtml(store.defaultUrl || '')}" 
+                            ${selected}>${escapeHtml(store.name)}</option>`;
         }).join('');
 
+        const isPuppeteer = source.usePuppeteer ? 'checked' : '';
+
         return `
-            <div class="source-item">
-                <div class="source-preset-group">
-                    <select class="source-preset-select" onchange="App.onSourcePresetSelectChange(this)">
-                        <option value="">-- Custom Store --</option>
-                        ${storeOptions}
-                    </select>
+            <div class="modal-source-item source-item">
+                <div class="modal-source-row-top">
+                    <div class="source-field-preset">
+                        <label>Store Template</label>
+                        <select class="source-preset-select" onchange="App.onSourcePresetSelectChange(this)">
+                            <option value="">-- Custom Store --</option>
+                            ${storeOptions}
+                        </select>
+                    </div>
+                    <div class="source-field-name">
+                        <label>Store Name *</label>
+                        <input type="text" placeholder="e.g., Amazon, Louis Moto" value="${escapeHtml(source.siteName || '')}" class="source-name-input" required />
+                    </div>
+                    <button type="button" class="remove-source-btn" onclick="this.closest('.modal-source-item').remove()" title="Remove store feed">×</button>
                 </div>
-                <input type="url" placeholder="URL" value="${escapeHtml(source.url || '')}" class="source-url-input" />
-                <input type="text" placeholder="CSS Selector" value="${escapeHtml(source.cssSelector || '')}" class="source-selector-input" />
-                <input type="text" placeholder="Site Name" value="${escapeHtml(source.siteName || '')}" class="source-name-input" />
-                <button type="button" class="remove-source" onclick="this.closest('.source-item').remove()">×</button>
+
+                <div class="modal-source-row-bottom">
+                    <div class="source-field-url">
+                        <label>Product Page URL *</label>
+                        <input type="url" placeholder="https://www.example.com/item" value="${escapeHtml(source.url || '')}" class="source-url-input" required />
+                    </div>
+                    <div class="source-field-selector">
+                        <label>CSS Price Selector *</label>
+                        <input type="text" placeholder=".price, span.heading1" value="${escapeHtml(source.cssSelector || '')}" class="source-selector-input" required />
+                    </div>
+                </div>
+
+                <div class="modal-source-row-toggle">
+                    <label class="puppeteer-check-label">
+                        <input type="checkbox" class="source-puppeteer-input" ${isPuppeteer} />
+                        <span>Use Puppeteer Headless Browser (required for dynamic JS/React shops)</span>
+                    </label>
+                </div>
             </div>
         `;
     },
@@ -346,12 +520,13 @@ const App = {
         };
 
         document.querySelectorAll('.source-item').forEach(item => {
-            const url = item.querySelector('.source-url-input').value;
-            const cssSelector = item.querySelector('.source-selector-input').value;
-            const siteName = item.querySelector('.source-name-input').value;
+            const url = item.querySelector('.source-url-input')?.value?.trim();
+            const cssSelector = item.querySelector('.source-selector-input')?.value?.trim();
+            const siteName = item.querySelector('.source-name-input')?.value?.trim();
+            const usePuppeteer = item.querySelector('.source-puppeteer-input')?.checked || false;
             
             if (url && cssSelector && siteName) {
-                data.sources.push({ url, cssSelector, siteName, usePuppeteer: false });
+                data.sources.push({ url, cssSelector, siteName, usePuppeteer });
             }
         });
 
