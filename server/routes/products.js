@@ -4,12 +4,25 @@ const db = require('../db/adapter');
 const path = require('path');
 const fs = require('fs').promises;
 const { v4: uuidv4 } = require('uuid');
+const axios = require('axios');
+
 
 // GET all products
 router.get('/', async (req, res) => {
     try {
         const products = await db.getProducts();
         res.json(products);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// GET all unique tags  ← must be before /:id to avoid shadowing
+router.get('/meta/tags', async (req, res) => {
+    try {
+        const products = await db.getProducts();
+        const allTags = [...new Set(products.flatMap(p => p.tags || []))];
+        res.json(allTags);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -114,16 +127,7 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
-// GET all unique tags
-router.get('/meta/tags', async (req, res) => {
-    try {
-        const products = await db.getProducts();
-        const allTags = [...new Set(products.flatMap(p => p.tags || []))];
-        res.json(allTags);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
+
 
 async function saveImage(imageData) {
     const imagesDir = path.join(__dirname, '../../public/images');
@@ -131,7 +135,6 @@ async function saveImage(imageData) {
     await fs.mkdir(imagesDir, { recursive: true });
     if (imageData.startsWith('http')) {
         try {
-            const axios = require('axios');
             const response = await axios.get(imageData, { responseType: 'arraybuffer', timeout: 10000 });
             const ext = getExtFromContentType(response.headers['content-type']) || 'jpg';
             const filename = `${uuidv4()}.${ext}`;

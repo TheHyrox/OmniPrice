@@ -166,8 +166,8 @@ const App = {
         
         const container = document.getElementById('tagFilters');
         container.innerHTML = allTags.map(tag => `
-            <button class="tag-filter ${this.filters.tags.includes(tag) ? 'active' : ''}" data-tag="${tag}">
-                ${tag}
+            <button class="tag-filter ${this.filters.tags.includes(tag) ? 'active' : ''}" data-tag="${escapeHtml(tag)}">
+                ${escapeHtml(tag)}
             </button>
         `).join('');
         
@@ -259,7 +259,7 @@ const App = {
     sourceRowHTML(source = {}) {
         const storeOptions = (this.stores || []).map(store => {
             const selected = source.siteName === store.name ? 'selected' : '';
-            return `<option value="${store._id}" data-name="${store.name}" data-selector="${store.cssSelector}" ${selected}>${store.name}</option>`;
+            return `<option value="${escapeHtml(store._id)}" data-name="${escapeHtml(store.name)}" data-selector="${escapeHtml(store.cssSelector)}" ${selected}>${escapeHtml(store.name)}</option>`;
         }).join('');
 
         return `
@@ -270,9 +270,9 @@ const App = {
                         ${storeOptions}
                     </select>
                 </div>
-                <input type="url" placeholder="URL" value="${source.url || ''}" class="source-url-input" />
-                <input type="text" placeholder="CSS Selector" value="${source.cssSelector || ''}" class="source-selector-input" />
-                <input type="text" placeholder="Site Name" value="${source.siteName || ''}" class="source-name-input" />
+                <input type="url" placeholder="URL" value="${escapeHtml(source.url || '')}" class="source-url-input" />
+                <input type="text" placeholder="CSS Selector" value="${escapeHtml(source.cssSelector || '')}" class="source-selector-input" />
+                <input type="text" placeholder="Site Name" value="${escapeHtml(source.siteName || '')}" class="source-name-input" />
                 <button type="button" class="remove-source" onclick="this.closest('.source-item').remove()">×</button>
             </div>
         `;
@@ -482,21 +482,21 @@ const App = {
         grid.innerHTML = this.stores.map(store => `
             <div class="store-card">
                 <div class="store-card-header">
-                    <h3>${store.name}</h3>
+                    <h3>${escapeHtml(store.name)}</h3>
                     <div class="store-card-actions">
-                        <button class="btn btn-ghost" onclick="App.openStoreModal('${store._id}')" title="Edit Store">✏️</button>
-                        <button class="btn btn-ghost" onclick="App.deleteStore('${store._id}')" title="Delete Store" style="color: var(--danger);">🗑️</button>
+                        <button class="btn btn-ghost" onclick="App.openStoreModal('${escapeHtml(store._id)}')" title="Edit Store">✏️</button>
+                        <button class="btn btn-ghost" onclick="App.deleteStore('${escapeHtml(store._id)}')" title="Delete Store" style="color: var(--danger);">🗑️</button>
                     </div>
                 </div>
                 <div class="store-card-body">
                     <div class="store-field">
                         <span class="store-field-label">CSS Selector:</span>
-                        <code class="source-selector">${store.cssSelector}</code>
+                        <code class="source-selector">${escapeHtml(store.cssSelector)}</code>
                     </div>
                     ${store.defaultUrl ? `
                         <div class="store-field">
                             <span class="store-field-label">Base URL:</span>
-                            <a href="${store.defaultUrl}" target="_blank" class="store-url">${store.defaultUrl}</a>
+                            <a href="${escapeHtml(store.defaultUrl)}" target="_blank" class="store-url">${escapeHtml(store.defaultUrl)}</a>
                         </div>
                     ` : ''}
                 </div>

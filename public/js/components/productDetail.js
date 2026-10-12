@@ -4,17 +4,20 @@ const ProductDetail = {
 
     render(product) {
         this.currentProduct = product;
-        const imageUrl = product.image || '/images/placeholder.svg';
+        const imageUrl = escapeHtml(product.image || '/images/placeholder.svg');
+        const id = escapeHtml(product._id);
+        const title = escapeHtml(product.title);
+        const desc = escapeHtml(product.description || 'No description');
         
         return `
             <div class="detail-hero">
-                <img class="detail-image" src="${imageUrl}" alt="${product.title}" onerror="this.src='/images/placeholder.svg'">
+                <img class="detail-image" src="${imageUrl}" alt="${title}" onerror="this.src='/images/placeholder.svg'">
                 <div class="detail-info">
-                    <h1>${product.title}</h1>
+                    <h1>${title}</h1>
                     <div class="detail-tags">
-                        ${product.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                        ${product.tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('')}
                     </div>
-                    <p class="detail-desc">${product.description || 'No description'}</p>
+                    <p class="detail-desc">${desc}</p>
                     <div class="detail-prices">
                         <span class="detail-ref-price">Reference: ${product.referencePrice != null ? `€${product.referencePrice.toFixed(2)}` : 'N/A'}</span>
                         ${product.lowestPrice != null ? `
@@ -29,8 +32,8 @@ const ProductDetail = {
                 </div>
                 <div class="detail-buy-buttons">
                     ${(product.sources || []).filter(s => s.lastPrice != null).map(source => `
-                        <a href="${source.url}" target="_blank" class="btn btn-primary buy-btn">
-                            ${source.siteName} - €${source.lastPrice.toFixed(2)}
+                        <a href="${escapeHtml(source.url)}" target="_blank" class="btn btn-primary buy-btn">
+                            ${escapeHtml(source.siteName)} - €${source.lastPrice.toFixed(2)}
                         </a>
                     `).join('')}
                 </div>
@@ -39,7 +42,7 @@ const ProductDetail = {
             <div class="scraper-section">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h2>Price Sources</h2>
-                    <button class="btn btn-secondary" onclick="App.showAddSourceForm('${product._id}')">+ Add Source</button>
+                    <button class="btn btn-secondary" onclick="App.showAddSourceForm('${id}')">+ Add Source</button>
                 </div>
                 
                 <div id="addSourceForm" style="display: none; margin-bottom: 20px; padding: 16px; background: var(--bg-secondary); border-radius: 12px;">
@@ -47,7 +50,7 @@ const ProductDetail = {
                         <label style="font-size: 0.875rem; font-weight: 500;">Preset Store (optional)</label>
                         <select id="newSourceStoreSelect" class="source-store-select" style="width: 100%; padding: 8px 12px; margin-top: 4px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary);" onchange="App.onSourcePresetSelectChange(this)">
                             <option value="">-- Custom Store --</option>
-                            ${(App.stores || []).map(store => `<option value="${store._id}" data-name="${store.name}" data-selector="${store.cssSelector}">${store.name}</option>`).join('')}
+                            ${(App.stores || []).map(store => `<option value="${escapeHtml(store._id)}" data-name="${escapeHtml(store.name)}" data-selector="${escapeHtml(store.cssSelector)}">${escapeHtml(store.name)}</option>`).join('')}
                         </select>
                     </div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr 120px 100px; gap: 12px; align-items: end;">
@@ -63,7 +66,7 @@ const ProductDetail = {
                             <label>Site Name</label>
                             <input type="text" id="newSourceName" placeholder="Amazon" />
                         </div>
-                        <button class="btn btn-primary" onclick="App.addSource('${product._id}')">Add</button>
+                        <button class="btn btn-primary" onclick="App.addSource('${id}')">Add</button>
                     </div>
                     <div style="margin-top: 8px;">
                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
@@ -81,18 +84,18 @@ const ProductDetail = {
                     ` : product.sources.map((source, index) => `
                         <div class="source-row">
                             <div>
-                                <strong>${source.siteName}</strong>
-                                <div class="source-url" title="${source.url}">${source.url}</div>
+                                <strong>${escapeHtml(source.siteName)}</strong>
+                                <div class="source-url" title="${escapeHtml(source.url)}">${escapeHtml(source.url)}</div>
                             </div>
-                            <code class="source-selector">${source.cssSelector}</code>
+                            <code class="source-selector">${escapeHtml(source.cssSelector)}</code>
                             <span class="source-price">
                                 ${source.lastPrice != null ? `€${source.lastPrice.toFixed(2)}` : '—'}
                             </span>
                             <div style="display: flex; gap: 8px;">
-                                <button class="btn btn-secondary scrape-btn" onclick="App.scrapeSource('${product._id}', ${index}, this)">
+                                <button class="btn btn-secondary scrape-btn" onclick="App.scrapeSource('${id}', ${index}, this)">
                                     Scrape Now
                                 </button>
-                                <button class="btn btn-ghost" onclick="App.removeSource('${product._id}', ${index})" title="Remove" style="color: var(--danger);">
+                                <button class="btn btn-ghost" onclick="App.removeSource('${id}', ${index})" title="Remove" style="color: var(--danger);">
                                     ×
                                 </button>
                             </div>
@@ -118,8 +121,8 @@ const ProductDetail = {
             </div>
 
             <div style="margin-top: 24px; display: flex; gap: 12px;">
-                <button class="btn btn-secondary" onclick="App.editProduct('${product._id}')">Edit Product</button>
-                <button class="btn btn-danger" onclick="App.deleteProduct('${product._id}')">Delete Product</button>
+                <button class="btn btn-secondary" onclick="App.editProduct('${id}')">Edit Product</button>
+                <button class="btn btn-danger" onclick="App.deleteProduct('${id}')">Delete Product</button>
             </div>
         `;
     },

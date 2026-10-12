@@ -8,6 +8,7 @@ const scraperRoutes = require('./routes/scraper');
 const settingsRoutes = require('./routes/settings');
 const storeRoutes = require('./routes/stores');
 const scheduler = require('./jobs/scheduler');
+const scraper = require('./services/scraper');
 
 const app = express();
 const PORT = process.env.PORT || 3005;
@@ -40,6 +41,26 @@ const startServer = async () => {
         process.exit(1);
     }
 };
+
+/**
+ * Graceful shutdown — called on SIGINT (Ctrl+C) and SIGTERM (Docker stop).
+ * Stops the scheduler and closes the Puppeteer browser so no zombie
+ * Chrome processes are left behind.
+ */
+async function gracefulShutdown(signal) {
+    console.log(`\n[${signal}] Shutting down gracefully...`);
+    scheduler.stop();
+    try {
+        await scraper.closeBrowser();
+        console.log('✓ Puppeteer browser closed');
+    } catch (err) {
+        console.error('Error closing Puppeteer browser:', err.message);
+    }
+    process.exit(0);
+}
+
+process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
 startServer();
 

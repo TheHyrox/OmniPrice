@@ -5,19 +5,21 @@ const ProductCard = {
         const deltaClass = delta < 0 ? 'negative' : 'positive';
         const deltaSign = delta < 0 ? '' : '+';
         
-        const imageUrl = product.image || '/images/placeholder.svg';
+        const imageUrl = escapeHtml(product.image || '/images/placeholder.svg');
         const lowestSource = product.lowestPriceSource;
+        const title = escapeHtml(product.title);
+        const desc = escapeHtml(product.description || '');
         
         if (viewMode === 'list') {
             return `
-                <article class="product-card" data-id="${product._id}">
-                    <img class="product-card-image" src="${imageUrl}" alt="${product.title}" onerror="this.src='/images/placeholder.svg'">
+                <article class="product-card" data-id="${escapeHtml(product._id)}">
+                    <img class="product-card-image" src="${imageUrl}" alt="${title}" onerror="this.src='/images/placeholder.svg'">
                     <div class="product-card-body">
                         <div class="product-card-info">
-                            <h3 class="product-card-title">${product.title}</h3>
-                            <p class="product-card-desc">${product.description || ''}</p>
+                            <h3 class="product-card-title">${title}</h3>
+                            <p class="product-card-desc">${desc}</p>
                             <div class="product-card-tags">
-                                ${product.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                                ${product.tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('')}
                             </div>
                         </div>
                         <div class="product-card-prices">
@@ -28,8 +30,8 @@ const ProductCard = {
                             ` : '<span class="price-lowest">No price</span>'}
                         </div>
                         ${lowestSource ? `
-                            <a href="${lowestSource.url}" target="_blank" class="btn btn-primary product-card-action" onclick="event.stopPropagation()">
-                                Buy at ${lowestSource.siteName}
+                            <a href="${escapeHtml(lowestSource.url)}" target="_blank" class="btn btn-primary product-card-action" onclick="event.stopPropagation()">
+                                Buy at ${escapeHtml(lowestSource.siteName)}
                             </a>
                         ` : ''}
                     </div>
@@ -38,13 +40,13 @@ const ProductCard = {
         }
 
         return `
-            <article class="product-card" data-id="${product._id}">
-                <img class="product-card-image" src="${imageUrl}" alt="${product.title}" onerror="this.src='/images/placeholder.svg'">
+            <article class="product-card" data-id="${escapeHtml(product._id)}">
+                <img class="product-card-image" src="${imageUrl}" alt="${title}" onerror="this.src='/images/placeholder.svg'">
                 <div class="product-card-body">
-                    <h3 class="product-card-title">${product.title}</h3>
-                    <p class="product-card-desc">${product.description || ''}</p>
+                    <h3 class="product-card-title">${title}</h3>
+                    <p class="product-card-desc">${desc}</p>
                     <div class="product-card-tags">
-                        ${product.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                        ${product.tags.map(tag => `<span class="tag">${escapeHtml(tag)}</span>`).join('')}
                     </div>
                     <div class="product-card-prices">
                         <div>
@@ -56,8 +58,8 @@ const ProductCard = {
                         ${delta != null ? `<span class="price-delta ${deltaClass}">${deltaSign}${delta.toFixed(1)}%</span>` : ''}
                     </div>
                     ${lowestSource ? `
-                        <a href="${lowestSource.url}" target="_blank" class="btn btn-primary product-card-action" onclick="event.stopPropagation()">
-                            Buy at ${lowestSource.siteName}
+                        <a href="${escapeHtml(lowestSource.url)}" target="_blank" class="btn btn-primary product-card-action" onclick="event.stopPropagation()">
+                            Buy at ${escapeHtml(lowestSource.siteName)}
                         </a>
                     ` : ''}
                 </div>
