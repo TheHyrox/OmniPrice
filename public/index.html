@@ -88,20 +88,86 @@
 
             <!-- Charts Tab -->
             <section id="charts-tab" class="tab-content">
-                <div class="tab-header">
-                    <h1>Price Analytics</h1>
-                    <div class="chart-controls">
-                        <div class="timeframe-btns">
+                <div class="tab-header chart-main-header">
+                    <div>
+                        <h1>Price Analytics</h1>
+                        <p class="tab-subtitle">Compare multi-product trends, normalize price swings, and track market lows</p>
+                    </div>
+                    <div class="chart-header-actions">
+                        <div class="chart-view-toggle">
+                            <button class="chart-view-btn active" id="chartViewComparisonBtn" data-view="comparison">📈 Compare</button>
+                            <button class="chart-view-btn" id="chartViewGridBtn" data-view="grid">▦ Sparklines</button>
+                        </div>
+                        <div class="timeframe-btns" id="chartTimeframeBtns">
                             <button class="tf-btn" data-range="1">1D</button>
                             <button class="tf-btn" data-range="5">5D</button>
                             <button class="tf-btn active" data-range="30">1M</button>
                             <button class="tf-btn" data-range="180">6M</button>
                             <button class="tf-btn" data-range="365">1Y</button>
+                            <button class="tf-btn" data-range="0">All</button>
                         </div>
                     </div>
                 </div>
-                <div class="chart-container">
-                    <canvas id="globalChart"></canvas>
+
+                <!-- KPI Summary Cards -->
+                <div id="chartKpiContainer" class="chart-kpis"></div>
+
+                <!-- Comparison View -->
+                <div id="chartComparisonSection" class="chart-view-section">
+                    <div class="chart-filter-panel">
+                        <div class="chart-filter-row">
+                            <div class="chart-search-box">
+                                <input type="text" id="chartProductSearch" placeholder="Filter products by title or tag..." />
+                            </div>
+                            <div class="chart-scale-toggle">
+                                <span class="chart-filter-label">Scale:</span>
+                                <div class="segmented-control">
+                                    <button class="segmented-btn active" data-scale="absolute" id="scaleAbsoluteBtn">€ Absolute</button>
+                                    <button class="segmented-btn" data-scale="relative" id="scaleRelativeBtn">% Change</button>
+                                </div>
+                            </div>
+                            <div class="chart-quick-presets">
+                                <button class="btn btn-sm btn-secondary" id="chartPresetTop5Btn">⭐ Top 5 Deals</button>
+                                <button class="btn btn-sm btn-ghost" id="chartSelectAllBtn">Select All</button>
+                                <button class="btn btn-sm btn-ghost" id="chartClearAllBtn">Clear All</button>
+                            </div>
+                        </div>
+
+                        <div id="chartTagFilters" class="tag-filters chart-tag-filters"></div>
+
+                        <div class="chart-chips-header">
+                            <span class="chart-chips-title" id="chartSelectedCount">Selected Products: 0</span>
+                        </div>
+                        <div id="chartProductChips" class="chart-chips-container"></div>
+                    </div>
+
+                    <div class="chart-container">
+                        <div id="chartEmptyWarning" class="chart-empty-state" style="display: none;">
+                            <div class="empty-state-icon">📉</div>
+                            <h3>No products selected</h3>
+                            <p>Choose one or more products above to compare their price trajectories.</p>
+                        </div>
+                        <div class="chart-canvas-wrapper" id="globalChartWrapper">
+                            <canvas id="globalChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sparkline Grid View -->
+                <div id="chartGridSection" class="chart-view-section" style="display: none;">
+                    <div class="chart-grid-toolbar">
+                        <div class="search-box">
+                            <input type="text" id="chartGridSearch" placeholder="Search sparkline products..." />
+                        </div>
+                        <div class="chart-grid-actions">
+                            <select id="chartGridSort" class="sort-select">
+                                <option value="delta">Sort by Best Discount</option>
+                                <option value="alpha">Sort A-Z</option>
+                                <option value="price">Sort by Price</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="chartSparklineGrid" class="chart-sparkline-grid"></div>
                 </div>
             </section>
 

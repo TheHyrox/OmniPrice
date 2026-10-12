@@ -111,6 +111,9 @@ const App = {
             this.products = await API.products.getAll();
             this.updateTags();
             this.renderProducts();
+            if (document.getElementById('charts-tab')?.classList.contains('active')) {
+                Charts.init(this.products);
+            }
         } catch (error) {
             grid.innerHTML = `<div class="empty-state"><p>Error loading products: ${error.message}</p></div>`;
         }
