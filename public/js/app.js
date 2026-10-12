@@ -87,7 +87,12 @@ const App = {
         });
     },
 
+    previousTab: 'products',
+
     navigateToTab(tabName) {
+        if (tabName !== 'product-detail') {
+            this.previousTab = tabName;
+        }
 
         document.querySelectorAll('.nav-link').forEach(link => {
             link.classList.toggle('active', link.dataset.tab === tabName);
@@ -101,6 +106,10 @@ const App = {
         if (tabName === 'charts' && this.products.length > 0) {
             setTimeout(() => Charts.init(this.products), 100);
         }
+    },
+
+    backToPreviousTab() {
+        this.navigateToTab(this.previousTab || 'products');
     },
 
     async loadProducts() {
@@ -283,17 +292,20 @@ const App = {
 
     onSourcePresetSelectChange(selectElem) {
         const selectedOpt = selectElem.options[selectElem.selectedIndex];
-        const itemRow = selectElem.closest('.source-item') || selectElem.closest('#addSourceForm');
+        const itemRow = selectElem.closest('.source-item') || selectElem.closest('#addSourceForm') || selectElem.closest('.add-source-card');
         if (!itemRow) return;
 
         const selectorInput = itemRow.querySelector('.source-selector-input') || itemRow.querySelector('#newSourceSelector');
         const nameInput = itemRow.querySelector('.source-name-input') || itemRow.querySelector('#newSourceName');
+        const urlInput = itemRow.querySelector('.source-url-input') || itemRow.querySelector('#newSourceUrl');
 
         if (selectedOpt.value) {
             const name = selectedOpt.dataset.name;
             const selector = selectedOpt.dataset.selector;
+            const defaultUrl = selectedOpt.dataset.url;
             if (nameInput) nameInput.value = name;
             if (selectorInput) selectorInput.value = selector;
+            if (urlInput && !urlInput.value && defaultUrl) urlInput.value = defaultUrl;
         }
     },
 
@@ -376,20 +388,32 @@ const App = {
     },
 
     async addSource(productId) {
-        const url = document.getElementById('newSourceUrl').value;
-        const cssSelector = document.getElementById('newSourceSelector').value;
-        const siteName = document.getElementById('newSourceName').value;
-        const usePuppeteer = document.getElementById('newSourcePuppeteer').checked;
+        const urlInput = document.getElementById('newSourceUrl');
+        const selectorInput = document.getElementById('newSourceSelector');
+        const nameInput = document.getElementById('newSourceName');
+        const puppeteerInput = document.getElementById('newSourcePuppeteer');
+
+        const url = urlInput?.value?.trim();
+        const cssSelector = selectorInput?.value?.trim();
+        const siteName = nameInput?.value?.trim();
+        const usePuppeteer = puppeteerInput?.checked || false;
 
         if (!url || !cssSelector || !siteName) {
-            alert('Please fill in all fields');
+            alert('Please fill in URL, CSS Selector, and Store Name');
             return;
         }
 
         try {
             const product = await API.products.getById(productId);
+            product.sources = product.sources || [];
             product.sources.push({ url, cssSelector, siteName, usePuppeteer });
             await API.products.update(productId, product);
+            
+            if (urlInput) urlInput.value = '';
+            if (selectorInput) selectorInput.value = '';
+            if (nameInput) nameInput.value = '';
+            if (puppeteerInput) puppeteerInput.checked = false;
+
             await this.showProductDetail(productId);
         } catch (error) {
             alert('Error adding source: ' + error.message);
@@ -410,16 +434,38 @@ const App = {
     },
 
     async scrapeSource(productId, sourceIndex, btn) {
-        btn.disabled = true;
-        btn.textContent = 'Scraping...';
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Scraping...';
+        }
 
         try {
             await API.scraper.scrapeSource(productId, sourceIndex);
             await this.showProductDetail(productId);
         } catch (error) {
             alert('Scrape failed: ' + error.message);
-            btn.disabled = false;
-            btn.textContent = 'Scrape Now';
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Scrape';
+            }
+        }
+    },
+
+    async scrapeProductAll(productId, btn) {
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = '🔄 Scraping All...';
+        }
+
+        try {
+            const res = await API.scraper.scrapeProduct(productId);
+            await this.showProductDetail(productId);
+        } catch (error) {
+            alert('Scrape all failed: ' + error.message);
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = '🔄 Scrape All Stores';
+            }
         }
     },
 
