@@ -125,11 +125,13 @@ class Scraper {
         try {
             return await this.scrapeWithCheerio(url, cssSelector);
         } catch (error) {
-            if (error.message.includes('Access blocked')) {
-                console.log(`Cheerio blocked for ${url}, trying Puppeteer...`);
-                return this.scrapeWithPuppeteer(url, cssSelector);
+            console.log(`Cheerio failed for ${url} (${error.message}), auto-falling back to Puppeteer...`);
+            try {
+                return await this.scrapeWithPuppeteer(url, cssSelector);
+            } catch (puppeteerError) {
+                // Throw the Puppeteer error or the original error if more descriptive
+                throw puppeteerError;
             }
-            throw error;
         }
     }
 

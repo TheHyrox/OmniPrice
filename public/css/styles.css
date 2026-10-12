@@ -1766,84 +1766,147 @@ label {
 .sources-container {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 18px;
 }
 
 .modal-source-item {
     background: var(--bg-primary);
-    border-radius: 14px;
-    padding: 16px 18px;
+    border-radius: 16px;
+    padding: 20px 22px;
     border: 1px solid var(--border-color);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    transition: border-color 0.2s;
+    gap: 16px;
+    transition: all 0.2s ease;
 }
 
 .modal-source-item:hover {
-    border-color: var(--text-tertiary);
+    border-color: var(--accent);
+    box-shadow: 0 4px 16px rgba(0, 113, 227, 0.08);
 }
 
-.modal-source-row-top {
-    display: grid;
-    grid-template-columns: 1fr 1fr auto;
-    gap: 12px;
-    align-items: end;
+.modal-source-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
 }
 
-.modal-source-row-top label,
-.modal-source-row-bottom label {
+.modal-source-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.modal-source-index {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.source-store-badge {
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
     font-size: 0.75rem;
     font-weight: 600;
-    color: var(--text-secondary);
-    margin-bottom: 4px;
-    display: block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
 }
 
-.source-field-preset select,
-.source-field-name input,
-.source-field-url input,
-.source-field-selector input {
+.modal-source-body {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.modal-source-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.modal-source-row:has(.source-field-url),
+.modal-source-row:has(.source-field-selector) {
+    grid-template-columns: 1fr;
+}
+
+.source-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.source-field label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 0;
+}
+
+.source-field label .required {
+    color: var(--danger);
+    font-weight: 700;
+}
+
+.source-label-hint {
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--text-tertiary);
+}
+
+.source-field input,
+.source-field select {
     width: 100%;
-    padding: 8px 12px;
+    padding: 10px 14px;
+    font-size: 0.875rem;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+}
+
+.source-field input:focus,
+.source-field select:focus {
+    background: var(--bg-primary);
+    border-color: var(--accent);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15);
+}
+
+.source-field input::placeholder {
+    color: var(--text-tertiary);
     font-size: 0.8125rem;
 }
 
-.modal-source-row-bottom {
-    display: grid;
-    grid-template-columns: 1.3fr 1fr;
-    gap: 12px;
-}
-
 .remove-source-btn {
-    background: none;
-    border: none;
+    background: rgba(255, 59, 48, 0.08);
+    border: 1px solid rgba(255, 59, 48, 0.2);
     color: var(--danger);
-    font-size: 1.3rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
     cursor: pointer;
-    padding: 6px 10px;
-    border-radius: 6px;
-    line-height: 1;
-    transition: background 0.2s;
-    margin-bottom: 2px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
 }
 
 .remove-source-btn:hover {
-    background: rgba(255, 59, 48, 0.1);
-}
-
-.modal-source-row-toggle {
-    padding-top: 8px;
-    border-top: 1px solid var(--border-color);
-}
-
-.puppeteer-check-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-    cursor: pointer;
+    background: rgba(255, 59, 48, 0.18);
+    border-color: var(--danger);
+    color: var(--danger);
 }
 
 .modal-actions-sticky {
@@ -2586,8 +2649,8 @@ label {
         grid-template-columns: 1fr;
     }
     
-    .source-item {
-        grid-template-columns: 1fr;
+    .modal-source-row {
+        grid-template-columns: 1fr !important;
     }
     
     .detail-hero {
@@ -2683,23 +2746,5 @@ label {
 
 .store-url:hover {
     text-decoration: underline;
-}
-
-.source-item {
-    display: grid;
-    grid-template-columns: 140px 1fr 1fr 120px auto;
-    gap: 8px;
-    align-items: center;
-    margin-bottom: 8px;
-}
-
-.source-preset-select {
-    width: 100%;
-    padding: 8px 10px;
-    border-radius: 6px;
-    border: 1px solid var(--border-color);
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
-    font-size: 0.8125rem;
 }
 

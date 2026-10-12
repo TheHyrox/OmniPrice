@@ -424,41 +424,51 @@ const App = {
                             ${selected}>${escapeHtml(store.name)}</option>`;
         }).join('');
 
-        const isPuppeteer = source.usePuppeteer ? 'checked' : '';
+        const isKnownStore = (this.stores || []).some(s => s.name === source.siteName);
 
         return `
             <div class="modal-source-item source-item">
-                <div class="modal-source-row-top">
-                    <div class="source-field-preset">
-                        <label>Store Template</label>
-                        <select class="source-preset-select" onchange="App.onSourcePresetSelectChange(this)">
-                            <option value="">-- Custom Store --</option>
-                            ${storeOptions}
-                        </select>
+                <div class="modal-source-header">
+                    <div class="modal-source-title">
+                        <span class="modal-source-index">🏪 Store Feed</span>
+                        <span class="source-store-badge">${escapeHtml(source.siteName || 'New Store')}</span>
                     </div>
-                    <div class="source-field-name">
-                        <label>Store Name *</label>
-                        <input type="text" placeholder="e.g., Amazon, Louis Moto" value="${escapeHtml(source.siteName || '')}" class="source-name-input" required />
-                    </div>
-                    <button type="button" class="remove-source-btn" onclick="this.closest('.modal-source-item').remove()" title="Remove store feed">×</button>
+                    <button type="button" class="remove-source-btn" onclick="this.closest('.modal-source-item').remove()" title="Remove store feed">
+                        <span>Remove</span> ×
+                    </button>
                 </div>
 
-                <div class="modal-source-row-bottom">
-                    <div class="source-field-url">
-                        <label>Product Page URL *</label>
-                        <input type="url" placeholder="https://www.example.com/item" value="${escapeHtml(source.url || '')}" class="source-url-input" required />
+                <div class="modal-source-body">
+                    <div class="modal-source-row">
+                        <div class="source-field source-field-preset">
+                            <label>Store Template</label>
+                            <select class="source-preset-select" onchange="App.onSourcePresetSelectChange(this)">
+                                <option value="">Custom Store</option>
+                                ${storeOptions}
+                            </select>
+                        </div>
+                        <div class="source-field source-field-name">
+                            <label>Store Name <span class="required">*</span></label>
+                            <input type="text" placeholder="e.g. Amazon, Fnac, Darty" value="${escapeHtml(source.siteName || '')}" class="source-name-input" required />
+                        </div>
                     </div>
-                    <div class="source-field-selector">
-                        <label>CSS Price Selector *</label>
-                        <input type="text" placeholder=".price, span.heading1" value="${escapeHtml(source.cssSelector || '')}" class="source-selector-input" required />
-                    </div>
-                </div>
 
-                <div class="modal-source-row-toggle">
-                    <label class="puppeteer-check-label">
-                        <input type="checkbox" class="source-puppeteer-input" ${isPuppeteer} />
-                        <span>Use Puppeteer Headless Browser (required for dynamic JS/React shops)</span>
-                    </label>
+                    <div class="modal-source-row">
+                        <div class="source-field source-field-url">
+                            <label>Product Page URL <span class="required">*</span></label>
+                            <input type="url" placeholder="https://www.example.com/product/12345" value="${escapeHtml(source.url || '')}" class="source-url-input" required />
+                        </div>
+                    </div>
+
+                    <div class="modal-source-row">
+                        <div class="source-field source-field-selector">
+                            <label>
+                                <span>CSS Price Selector <span class="required">*</span></span>
+                                <span class="source-label-hint">HTML tag or class containing the price</span>
+                            </label>
+                            <input type="text" placeholder="e.g. .a-price .a-offscreen, span.price" value="${escapeHtml(source.cssSelector || '')}" class="source-selector-input" required />
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -472,6 +482,7 @@ const App = {
         const selectorInput = itemRow.querySelector('.source-selector-input') || itemRow.querySelector('#newSourceSelector');
         const nameInput = itemRow.querySelector('.source-name-input') || itemRow.querySelector('#newSourceName');
         const urlInput = itemRow.querySelector('.source-url-input') || itemRow.querySelector('#newSourceUrl');
+        const badge = itemRow.querySelector('.source-store-badge');
 
         if (selectedOpt.value) {
             const name = selectedOpt.dataset.name;
@@ -480,6 +491,9 @@ const App = {
             if (nameInput) nameInput.value = name;
             if (selectorInput) selectorInput.value = selector;
             if (urlInput && !urlInput.value && defaultUrl) urlInput.value = defaultUrl;
+            if (badge) badge.textContent = name;
+        } else {
+            if (badge) badge.textContent = nameInput?.value?.trim() || 'Custom Store';
         }
     },
 
@@ -523,10 +537,9 @@ const App = {
             const url = item.querySelector('.source-url-input')?.value?.trim();
             const cssSelector = item.querySelector('.source-selector-input')?.value?.trim();
             const siteName = item.querySelector('.source-name-input')?.value?.trim();
-            const usePuppeteer = item.querySelector('.source-puppeteer-input')?.checked || false;
             
             if (url && cssSelector && siteName) {
-                data.sources.push({ url, cssSelector, siteName, usePuppeteer });
+                data.sources.push({ url, cssSelector, siteName });
             }
         });
 
@@ -566,12 +579,10 @@ const App = {
         const urlInput = document.getElementById('newSourceUrl');
         const selectorInput = document.getElementById('newSourceSelector');
         const nameInput = document.getElementById('newSourceName');
-        const puppeteerInput = document.getElementById('newSourcePuppeteer');
 
         const url = urlInput?.value?.trim();
         const cssSelector = selectorInput?.value?.trim();
         const siteName = nameInput?.value?.trim();
-        const usePuppeteer = puppeteerInput?.checked || false;
 
         if (!url || !cssSelector || !siteName) {
             alert('Please fill in URL, CSS Selector, and Store Name');
@@ -581,13 +592,12 @@ const App = {
         try {
             const product = await API.products.getById(productId);
             product.sources = product.sources || [];
-            product.sources.push({ url, cssSelector, siteName, usePuppeteer });
+            product.sources.push({ url, cssSelector, siteName });
             await API.products.update(productId, product);
             
             if (urlInput) urlInput.value = '';
             if (selectorInput) selectorInput.value = '';
             if (nameInput) nameInput.value = '';
-            if (puppeteerInput) puppeteerInput.checked = false;
 
             await this.showProductDetail(productId);
         } catch (error) {

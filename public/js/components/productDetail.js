@@ -351,11 +351,7 @@ const ProductDetail = {
                         </div>
                     </div>
 
-                    <div class="add-source-footer">
-                        <label class="puppeteer-toggle">
-                            <input type="checkbox" id="newSourcePuppeteer" />
-                            <span>Use Puppeteer Headless Browser (required for dynamic JavaScript / React stores)</span>
-                        </label>
+                    <div class="add-source-footer" style="justify-content: flex-end;">
                         <div class="add-source-actions">
                             <button type="button" class="btn btn-ghost" onclick="App.showAddSourceForm('${id}')">Cancel</button>
                             <button type="button" class="btn btn-primary" onclick="App.addSource('${id}')">Save Source</button>
