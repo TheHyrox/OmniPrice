@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db/adapter');
 const scraper = require('../services/scraper');
+const alertChecker = require('../services/alert-checker');
 
 // POST scrape single source for a product
 router.post('/product/:productId/source/:sourceIndex', async (req, res) => {
@@ -20,6 +21,10 @@ router.post('/product/:productId/source/:sourceIndex', async (req, res) => {
         
         const price = await scraper.scrapePrice(source.url, source.cssSelector, source.usePuppeteer);
         const updated = await db.addPriceHistory(productId, parseInt(sourceIndex), price);
+
+        if (updated) {
+            alertChecker.checkProduct(updated).catch(e => console.error('Alert check error:', e.message));
+        }
         
         res.json({ 
             price,
@@ -48,6 +53,10 @@ router.post('/product/:productId', async (req, res) => {
         }
         
         const updated = await db.getProductById(req.params.productId);
+
+        if (updated) {
+            alertChecker.checkProduct(updated).catch(e => console.error('Alert check error:', e.message));
+        }
         
         res.json({ 
             product: updated,
@@ -74,6 +83,10 @@ router.post('/all', async (req, res) => {
             }
             
             const updated = await db.getProductById(product._id);
+
+            if (updated) {
+                alertChecker.checkProduct(updated).catch(e => console.error('Alert check error:', e.message));
+            }
             
             allResults.push({
                 productId: product._id,

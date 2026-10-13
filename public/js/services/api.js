@@ -122,5 +122,48 @@ const API = {
                 method: 'POST'
             });
         }
+    },
+
+    alerts: {
+        async getAll() {
+            return API.request('/alerts');
+        },
+
+        async getById(id) {
+            return API.request(`/alerts/${id}`);
+        },
+
+        async create(data) {
+            return API.request('/alerts', {
+                method: 'POST',
+                body: data
+            });
+        },
+
+        async update(id, data) {
+            return API.request(`/alerts/${id}`, {
+                method: 'PUT',
+                body: data
+            });
+        },
+
+        async delete(id) {
+            return API.request(`/alerts/${id}`, {
+                method: 'DELETE'
+            });
+        },
+
+        async testWebhook(webhookUrl) {
+            return API.request('/alerts/test-webhook', {
+                method: 'POST',
+                body: { webhookUrl }
+            });
+        },
+
+        async triggerTest(id) {
+            return API.request(`/alerts/${id}/test-trigger`, {
+                method: 'POST'
+            });
+        }
     }
 };

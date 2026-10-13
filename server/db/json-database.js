@@ -14,9 +14,11 @@ const defaultData = {
         { _id: uuidv4(), name: 'Maxxess', cssSelector: 'span.h4.prixProduit.m-0' },
         { _id: uuidv4(), name: 'Motoblouz', cssSelector: 'span.price' }
     ],
+    alerts: [],
     settings: {
         theme: 'light',
-        scrapeFrequency: 43200000
+        scrapeFrequency: 43200000,
+        discordWebhookUrl: ''
     }
 };
 
@@ -31,6 +33,7 @@ class JsonDatabase {
         await this.db.read();
         
         if (!this.db.data.products) this.db.data.products = [];
+        if (!this.db.data.alerts) this.db.data.alerts = [];
         if (!this.db.data.stores) {
             // Extract existing unique stores from products if stores is empty
             const existingStoresMap = new Map();
@@ -284,6 +287,65 @@ class JsonDatabase {
         this.db.data.settings = { ...this.db.data.settings, ...data };
         await this.save();
         return this.db.data.settings;
+    }
+
+    // Alerts
+    async getAlerts() {
+        return this.db.data.alerts || [];
+    }
+
+    async getAlertById(id) {
+        return (this.db.data.alerts || []).find(a => a._id === id);
+    }
+
+    async getAlertsByProductId(productId) {
+        return (this.db.data.alerts || []).filter(a => a.productId === productId);
+    }
+
+    async createAlert(data) {
+        const alert = {
+            _id: uuidv4(),
+            productId: data.productId,
+            targetPrice: Number(data.targetPrice),
+            webhookUrl: data.webhookUrl ? data.webhookUrl.trim() : '',
+            active: data.active !== undefined ? Boolean(data.active) : true,
+            lastTriggeredAt: null,
+            lastTriggeredPrice: null,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        if (!this.db.data.alerts) this.db.data.alerts = [];
+        this.db.data.alerts.push(alert);
+        await this.save();
+        return alert;
+    }
+
+    async updateAlert(id, data) {
+        const index = (this.db.data.alerts || []).findIndex(a => a._id === id);
+        if (index === -1) return null;
+
+        const updateData = { ...data };
+        if (updateData.targetPrice !== undefined) updateData.targetPrice = Number(updateData.targetPrice);
+
+        const alert = {
+            ...this.db.data.alerts[index],
+            ...updateData,
+            _id: id,
+            updatedAt: new Date().toISOString()
+        };
+
+        this.db.data.alerts[index] = alert;
+        await this.save();
+        return alert;
+    }
+
+    async deleteAlert(id) {
+        const index = (this.db.data.alerts || []).findIndex(a => a._id === id);
+        if (index === -1) return false;
+
+        this.db.data.alerts.splice(index, 1);
+        await this.save();
+        return true;
     }
 }
 

@@ -7,6 +7,7 @@ const productRoutes = require('./routes/products');
 const scraperRoutes = require('./routes/scraper');
 const settingsRoutes = require('./routes/settings');
 const storeRoutes = require('./routes/stores');
+const alertRoutes = require('./routes/alerts');
 const scheduler = require('./jobs/scheduler');
 const scraper = require('./services/scraper');
 
@@ -23,6 +24,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/scraper', scraperRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/stores', storeRoutes);
+app.use('/api/alerts', alertRoutes);
 
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/index.html'));

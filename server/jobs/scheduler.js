@@ -1,5 +1,6 @@
 const db = require('../db/adapter');
 const scraper = require('../services/scraper');
+const alertChecker = require('../services/alert-checker');
 
 class Scheduler {
     constructor() {
@@ -55,6 +56,16 @@ class Scheduler {
                     } else {
                         console.log(`    ✗ ${product.sources[i].siteName}: ${results[i].error}`);
                     }
+                }
+
+                // Evaluate alerts for the updated product
+                try {
+                    const updatedProduct = await db.getProductById(product._id);
+                    if (updatedProduct) {
+                        await alertChecker.checkProduct(updatedProduct);
+                    }
+                } catch (err) {
+                    console.error(`  Alert check error for ${product.title}:`, err.message);
                 }
             }
 

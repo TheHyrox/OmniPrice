@@ -48,6 +48,12 @@ class DatabaseAdapter {
     async syncAllProductsWithStores() {
         return this._execute('syncAllProductsWithStores');
     }
+    async getAlerts() { return this._execute('getAlerts'); }
+    async getAlertById(id) { return this._execute('getAlertById', id); }
+    async getAlertsByProductId(productId) { return this._execute('getAlertsByProductId', productId); }
+    async createAlert(data) { return this._execute('createAlert', data); }
+    async updateAlert(id, data) { return this._execute('updateAlert', id, data); }
+    async deleteAlert(id) { return this._execute('deleteAlert', id); }
 
     getMode() {
         return this.mode;

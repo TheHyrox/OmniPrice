@@ -1,6 +1,7 @@
 const App = {
     products: [],
     stores: [],
+    alerts: [],
     currentView: 'card',
     currentSort: 'delta',
     filters: {
@@ -17,6 +18,8 @@ const App = {
         this.loadTheme();
         await this.loadStores();
         await this.loadProducts();
+        await this.loadAlerts();
+        await this.loadSettings();
         this.setupChartTimeframes();
     },
 
@@ -116,6 +119,16 @@ const App = {
         document.getElementById('storeForm')?.addEventListener('submit', (e) => this.handleStoreFormSubmit(e));
         document.getElementById('syncAllStoresBtn')?.addEventListener('click', () => this.syncAllStores());
 
+        // Alerts Modal & SMTP
+        document.getElementById('addAlertBtn')?.addEventListener('click', () => this.openAlertModal());
+        document.getElementById('closeAlertModal')?.addEventListener('click', () => this.closeAlertModal());
+        document.getElementById('cancelAlertModal')?.addEventListener('click', () => this.closeAlertModal());
+        document.getElementById('alertForm')?.addEventListener('submit', (e) => this.handleAlertFormSubmit(e));
+        document.getElementById('alertProductSelect')?.addEventListener('change', (e) => this.onAlertProductSelectChange(e));
+
+        document.getElementById('saveDiscordBtn')?.addEventListener('click', () => this.saveDiscordSettings());
+        document.getElementById('testDiscordBtn')?.addEventListener('click', () => this.testDiscordWebhook());
+
         document.getElementById('backToProducts').addEventListener('click', () => this.navigateToTab('products'));
 
         document.getElementById('productsGrid').addEventListener('click', (e) => {
@@ -146,10 +159,16 @@ const App = {
         document.querySelectorAll('.tab-content').forEach(tab => {
             tab.classList.remove('active');
         });
-        document.getElementById(`${tabName}-tab`).classList.add('active');
+        document.getElementById(`${tabName}-tab`)?.classList.add('active');
 
         if (tabName === 'charts' && this.products.length > 0) {
             setTimeout(() => Charts.init(this.products), 100);
+        }
+        if (tabName === 'alerts') {
+            this.loadAlerts();
+        }
+        if (tabName === 'settings') {
+            this.loadSettings();
         }
     },
 
@@ -815,6 +834,332 @@ const App = {
             if (btn) {
                 btn.disabled = false;
                 btn.textContent = '🔄 Sync All Products';
+            }
+        }
+    },
+
+    // ==========================================
+    // Alerts Management
+    // ==========================================
+    async loadAlerts() {
+        const container = document.getElementById('alertsContainer');
+        if (!container) return;
+
+        try {
+            this.alerts = await API.alerts.getAll();
+            this.renderAlerts();
+        } catch (error) {
+            container.innerHTML = `<div class="empty-state"><p>Error loading alerts: ${error.message}</p></div>`;
+        }
+    },
+
+    renderAlerts() {
+        const container = document.getElementById('alertsContainer');
+        if (!container) return;
+
+        if (!this.alerts || this.alerts.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state" style="grid-column: 1 / -1; padding: 48px 20px; text-align: center;">
+                    <div style="font-size: 3rem; margin-bottom: 12px;">🔔</div>
+                    <h3>No price alerts configured</h3>
+                    <p style="color: var(--text-secondary); max-width: 440px; margin: 8px auto 20px;">
+                        Set a target price on any of your tracked products. You will receive an email as soon as the lowest price reaches or drops below your target.
+                    </p>
+                    <button class="btn btn-primary" onclick="App.openAlertModal()">+ Create Price Alert</button>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = this.alerts.map(alert => {
+            const product = alert.product;
+            const currentPrice = product?.lowestPrice != null ? product.lowestPrice : null;
+            const isMet = currentPrice != null && currentPrice <= alert.targetPrice;
+            
+            let statusBadge = '';
+            if (!alert.active) {
+                statusBadge = '<span class="alert-status-badge disabled">⏸ Disabled</span>';
+            } else if (isMet || alert.lastTriggeredAt) {
+                statusBadge = '<span class="alert-status-badge triggered">🔥 Target Reached</span>';
+            } else {
+                statusBadge = '<span class="alert-status-badge active">● Monitoring</span>';
+            }
+
+            const formattedTarget = `€${Number(alert.targetPrice).toFixed(2)}`;
+            const formattedCurrent = currentPrice != null ? `€${Number(currentPrice).toFixed(2)}` : 'Not scraped yet';
+            const channelText = alert.webhookUrl ? 'Custom Webhook' : 'Default Discord Webhook';
+
+            const lastTriggeredText = alert.lastTriggeredAt 
+                ? `Last alerted: ${new Date(alert.lastTriggeredAt).toLocaleDateString()} ${new Date(alert.lastTriggeredAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`
+                : 'Not triggered yet';
+
+            const title = product?.title || 'Unknown Product';
+            const escapedTitle = Utils ? Utils.escapeHtml(title) : title;
+
+            return `
+                <div class="alert-card" data-id="${alert._id}">
+                    <div class="alert-card-header">
+                        ${product?.image 
+                            ? `<img src="${product.image}" alt="${escapedTitle}" class="alert-card-img" />`
+                            : `<div class="alert-card-img-placeholder">📦</div>`
+                        }
+                        <div class="alert-card-title-wrap">
+                            <h3 class="alert-card-title" title="${escapedTitle}">${escapedTitle}</h3>
+                            ${statusBadge}
+                        </div>
+                    </div>
+
+                    <div class="alert-card-body">
+                        <div class="alert-stat">
+                            <span class="alert-stat-label">Target Price</span>
+                            <span class="alert-stat-value target">${formattedTarget}</span>
+                        </div>
+                        <div class="alert-stat">
+                            <span class="alert-stat-label">Current Lowest</span>
+                            <span class="alert-stat-value current">${formattedCurrent}</span>
+                        </div>
+                    </div>
+
+                    <div class="alert-meta">
+                        <div><strong>Notification:</strong> ${channelText}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-tertiary);">${lastTriggeredText}</div>
+                    </div>
+
+                    <div class="alert-card-footer">
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-secondary btn-sm" onclick="App.toggleAlert('${alert._id}', ${alert.active})" title="${alert.active ? 'Pause' : 'Resume'} alert">
+                                ${alert.active ? 'Pause' : 'Resume'}
+                            </button>
+                            <button class="btn btn-ghost btn-sm" onclick="App.triggerTestAlert('${alert._id}')" title="Send a test notification to Discord">
+                                🎮 Test
+                            </button>
+                        </div>
+                        <button class="btn btn-ghost btn-sm" style="color: #ef4444;" onclick="App.deleteAlert('${alert._id}')" title="Delete alert">
+                            🗑 Delete
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    },
+
+    openAlertModal(alert = null) {
+        const modal = document.getElementById('alertModal');
+        const title = document.getElementById('alertModalTitle');
+        const select = document.getElementById('alertProductSelect');
+        const hint = document.getElementById('alertProductCurrentPriceHint');
+
+        if (!modal || !select) return;
+
+        // Populate products dropdown
+        select.innerHTML = '<option value="">Select a tracked product...</option>' + 
+            this.products.map(p => {
+                const priceInfo = p.lowestPrice != null ? ` (Current lowest: €${p.lowestPrice})` : '';
+                const pTitle = Utils ? Utils.escapeHtml(p.title) : p.title;
+                return `<option value="${p._id}" data-lowest="${p.lowestPrice != null ? p.lowestPrice : ''}" data-ref="${p.referencePrice || ''}">${pTitle}${priceInfo}</option>`;
+            }).join('');
+
+        if (alert) {
+            title.textContent = 'Edit Price Alert';
+            document.getElementById('alertId').value = alert._id;
+            select.value = alert.productId;
+            document.getElementById('alertTargetPrice').value = alert.targetPrice;
+            document.getElementById('alertWebhookUrl').value = alert.webhookUrl || '';
+        } else {
+            title.textContent = 'Create Price Alert';
+            document.getElementById('alertId').value = '';
+            document.getElementById('alertForm')?.reset();
+            if (hint) hint.textContent = '';
+        }
+
+        modal.classList.add('active');
+    },
+
+    closeAlertModal() {
+        document.getElementById('alertModal')?.classList.remove('active');
+        document.getElementById('alertForm')?.reset();
+        const hint = document.getElementById('alertProductCurrentPriceHint');
+        if (hint) hint.textContent = '';
+    },
+
+    onAlertProductSelectChange(e) {
+        const select = e.target;
+        const selectedOpt = select.selectedOptions[0];
+        const hint = document.getElementById('alertProductCurrentPriceHint');
+        const targetInput = document.getElementById('alertTargetPrice');
+
+        if (!selectedOpt || !selectedOpt.value) {
+            if (hint) hint.textContent = '';
+            return;
+        }
+
+        const lowest = selectedOpt.dataset.lowest;
+        const ref = selectedOpt.dataset.ref;
+
+        if (lowest) {
+            if (hint) hint.textContent = `Current lowest: €${lowest} | Reference price: €${ref}`;
+            if (!targetInput.value) {
+                const suggested = Math.floor(parseFloat(lowest) * 0.95);
+                targetInput.value = suggested > 0 ? suggested : lowest;
+            }
+        } else if (ref) {
+            if (hint) hint.textContent = `Reference price: €${ref}`;
+            if (!targetInput.value) {
+                targetInput.value = ref;
+            }
+        }
+    },
+
+    async handleAlertFormSubmit(e) {
+        e.preventDefault();
+        const id = document.getElementById('alertId').value;
+        const productId = document.getElementById('alertProductSelect').value;
+        const targetPrice = parseFloat(document.getElementById('alertTargetPrice').value);
+        const webhookUrl = document.getElementById('alertWebhookUrl').value.trim();
+
+        if (!productId) {
+            alert('Please select a product');
+            return;
+        }
+        if (isNaN(targetPrice) || targetPrice <= 0) {
+            alert('Please enter a valid target price');
+            return;
+        }
+
+        try {
+            if (id) {
+                await API.alerts.update(id, { productId, targetPrice, webhookUrl });
+            } else {
+                await API.alerts.create({ productId, targetPrice, webhookUrl });
+            }
+            this.closeAlertModal();
+            await this.loadAlerts();
+        } catch (error) {
+            alert('Error saving alert: ' + error.message);
+        }
+    },
+
+    async toggleAlert(id, currentActive) {
+        try {
+            await API.alerts.update(id, { active: !currentActive });
+            await this.loadAlerts();
+        } catch (error) {
+            alert('Error updating alert: ' + error.message);
+        }
+    },
+
+    async deleteAlert(id) {
+        if (!confirm('Are you sure you want to delete this alert?')) return;
+        try {
+            await API.alerts.delete(id);
+            await this.loadAlerts();
+        } catch (error) {
+            alert('Error deleting alert: ' + error.message);
+        }
+    },
+
+    async triggerTestAlert(id) {
+        try {
+            const res = await API.alerts.triggerTest(id);
+            alert(res.message || 'Test Discord notification sent successfully!');
+        } catch (error) {
+            alert('Failed to send test Discord notification: ' + error.message);
+        }
+    },
+
+    // ==========================================
+    // Settings & Discord Webhook Management
+    // ==========================================
+    async loadSettings() {
+        try {
+            const settings = await API.settings.get();
+            if (!settings) return;
+
+            const freqSelect = document.getElementById('scrapeFrequency');
+            if (freqSelect && settings.scrapeFrequency !== undefined) {
+                freqSelect.value = settings.scrapeFrequency;
+            }
+
+            const webhookEl = document.getElementById('discordWebhookUrl');
+            if (webhookEl) {
+                webhookEl.value = settings.discordWebhookUrl || '';
+            }
+        } catch (error) {
+            console.error('Error loading settings:', error.message);
+        }
+    },
+
+    async saveDiscordSettings() {
+        const btn = document.getElementById('saveDiscordBtn');
+        const status = document.getElementById('discordStatusMsg');
+        const webhookUrl = document.getElementById('discordWebhookUrl')?.value.trim() || '';
+
+        if (btn) btn.disabled = true;
+        if (status) {
+            status.style.display = 'block';
+            status.style.color = 'var(--text-secondary)';
+            status.textContent = 'Saving Discord settings...';
+        }
+
+        try {
+            await API.settings.update({
+                discordWebhookUrl: webhookUrl
+            });
+
+            if (status) {
+                status.style.color = '#10b981';
+                status.textContent = '✓ Discord webhook saved successfully!';
+                setTimeout(() => { status.style.display = 'none'; }, 4000);
+            }
+        } catch (error) {
+            if (status) {
+                status.style.color = '#ef4444';
+                status.textContent = '✗ Error saving Discord settings: ' + error.message;
+            }
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    },
+
+    async testDiscordWebhook() {
+        const btn = document.getElementById('testDiscordBtn');
+        const status = document.getElementById('discordStatusMsg');
+        const webhookUrl = document.getElementById('discordWebhookUrl')?.value.trim() || '';
+
+        if (!webhookUrl) {
+            if (status) {
+                status.style.display = 'block';
+                status.style.color = '#ef4444';
+                status.textContent = 'Please enter a Discord Webhook URL before testing.';
+            }
+            return;
+        }
+
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Sending...';
+        }
+        if (status) {
+            status.style.display = 'block';
+            status.style.color = 'var(--text-secondary)';
+            status.textContent = 'Sending test notification to Discord...';
+        }
+
+        try {
+            const res = await API.alerts.testWebhook(webhookUrl);
+            if (status) {
+                status.style.color = '#10b981';
+                status.textContent = '✓ ' + (res.message || 'Discord notification sent successfully!');
+            }
+        } catch (error) {
+            if (status) {
+                status.style.color = '#ef4444';
+                status.textContent = '✗ Discord test failed: ' + error.message;
+            }
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Send Test Notification';
             }
         }
     },

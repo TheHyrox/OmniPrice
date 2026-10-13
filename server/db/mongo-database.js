@@ -41,12 +41,26 @@ const storeSchema = new mongoose.Schema({
 const settingsSchema = new mongoose.Schema({
     _id: { type: String, default: 'default_settings' },
     theme: { type: String, default: 'light' },
-    scrapeFrequency: { type: Number, default: 43200000 }
-}, { versionKey: false, collection: 'settings' });
+    scrapeFrequency: { type: Number, default: 43200000 },
+    discordWebhookUrl: { type: String, default: '' }
+}, { versionKey: false, collection: 'settings', strict: false });
+
+const alertSchema = new mongoose.Schema({
+    _id: { type: String, default: uuidv4 },
+    productId: { type: String, required: true },
+    targetPrice: { type: Number, required: true },
+    webhookUrl: { type: String, default: '' },
+    active: { type: Boolean, default: true },
+    lastTriggeredAt: { type: String, default: null },
+    lastTriggeredPrice: { type: Number, default: null },
+    createdAt: { type: String, default: () => new Date().toISOString() },
+    updatedAt: { type: String, default: () => new Date().toISOString() }
+}, { versionKey: false, collection: 'alerts' });
 
 const Product = mongoose.model('Product', productSchema);
 const Store = mongoose.model('Store', storeSchema);
 const Setting = mongoose.model('Setting', settingsSchema);
+const Alert = mongoose.model('Alert', alertSchema);
 
 const defaultStores = [
     { _id: uuidv4(), name: 'Louis Moto', cssSelector: 'span.heading1' },
@@ -59,7 +73,8 @@ const defaultStores = [
 const defaultSettings = {
     _id: 'default_settings',
     theme: 'light',
-    scrapeFrequency: 43200000
+    scrapeFrequency: 43200000,
+    discordWebhookUrl: ''
 };
 
 class MongoDatabase {
@@ -67,6 +82,7 @@ class MongoDatabase {
         this.Product = Product;
         this.Store = Store;
         this.Setting = Setting;
+        this.Alert = Alert;
     }
 
     async init() {
@@ -309,6 +325,49 @@ class MongoDatabase {
         }
         await settings.save();
         return settings.toObject();
+    }
+
+    // Alerts
+    async getAlerts() {
+        return Alert.find({}).lean();
+    }
+
+    async getAlertById(id) {
+        return Alert.findOne({ _id: id }).lean();
+    }
+
+    async getAlertsByProductId(productId) {
+        return Alert.find({ productId }).lean();
+    }
+
+    async createAlert(data) {
+        const alert = new Alert({
+            _id: uuidv4(),
+            productId: data.productId,
+            targetPrice: Number(data.targetPrice),
+            webhookUrl: data.webhookUrl ? data.webhookUrl.trim() : '',
+            active: data.active !== undefined ? Boolean(data.active) : true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        });
+        await alert.save();
+        return alert.toObject();
+    }
+
+    async updateAlert(id, data) {
+        const updateData = { ...data, updatedAt: new Date().toISOString() };
+        if (updateData.targetPrice !== undefined) updateData.targetPrice = Number(updateData.targetPrice);
+        const alert = await Alert.findOneAndUpdate(
+            { _id: id },
+            { $set: updateData },
+            { new: true }
+        ).lean();
+        return alert;
+    }
+
+    async deleteAlert(id) {
+        const result = await Alert.deleteOne({ _id: id });
+        return result.deletedCount > 0;
     }
 }
 

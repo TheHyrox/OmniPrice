@@ -204,13 +204,17 @@
 
             <!-- Alerts Tab -->
             <section id="alerts-tab" class="tab-content">
-                <div class="coming-soon">
-                    <div class="coming-soon-icon">🔔</div>
-                    <h2>Alerts</h2>
-                    <p>Coming Soon</p>
-                    <span class="coming-soon-desc">Set up price alerts to get notified when products drop below your
-                        target price.</span>
+                <div class="tab-header">
+                    <div>
+                        <h1>Price Drop Alerts</h1>
+                        <p class="tab-subtitle">Receive instant notifications in Discord when tracked products reach your target price</p>
+                    </div>
+                    <div class="tab-actions">
+                        <button id="addAlertBtn" class="btn btn-primary">+ Create Alert</button>
+                    </div>
                 </div>
+
+                <div id="alertsContainer" class="alerts-container"></div>
             </section>
 
             <!-- Settings Tab -->
@@ -242,6 +246,25 @@
                         <div class="setting-row">
                             <button id="scrapeAllBtn" class="btn btn-secondary">Scrape All Now</button>
                         </div>
+                    </div>
+                    <div class="settings-card" style="grid-column: 1 / -1; max-width: 680px;">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+                            <span style="font-size: 1.5rem;">🎮</span>
+                            <h3 style="margin-bottom: 0; padding-bottom: 0; border-bottom: none;">Discord Notifications (Webhook)</h3>
+                        </div>
+                        <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 16px; line-height: 1.5;">
+                            Send rich price drop alerts directly to a Discord channel. To create a webhook in Discord:
+                            <strong>Channel Settings → Integrations → Webhooks → New Webhook → Copy Webhook URL</strong>.
+                        </p>
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label for="discordWebhookUrl">Default Discord Webhook URL</label>
+                            <input type="url" id="discordWebhookUrl" placeholder="https://discord.com/api/webhooks/..." style="font-family: monospace; font-size: 0.875rem;" />
+                        </div>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                            <button id="saveDiscordBtn" class="btn btn-primary">Save Webhook</button>
+                            <button id="testDiscordBtn" class="btn btn-secondary">Send Test Notification</button>
+                        </div>
+                        <div id="discordStatusMsg" style="margin-top: 12px; font-size: 0.875rem; display: none;"></div>
                     </div>
                 </div>
             </section>
@@ -376,6 +399,41 @@
                     <div class="form-actions" style="margin-top: 24px;">
                         <button type="button" class="btn btn-ghost" id="cancelStoreModal">Cancel</button>
                         <button type="submit" class="btn btn-primary">Save Store</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Add/Edit Alert Modal -->
+        <div id="alertModal" class="modal">
+            <div class="modal-content" style="max-width: 480px;">
+                <div class="modal-header">
+                    <h2 id="alertModalTitle">Create Price Alert</h2>
+                    <button class="modal-close" id="closeAlertModal">×</button>
+                </div>
+                <form id="alertForm" class="product-form">
+                    <input type="hidden" id="alertId" />
+                    <div class="form-group">
+                        <label for="alertProductSelect">Product *</label>
+                        <select id="alertProductSelect" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 0.95rem;">
+                            <option value="">Select a tracked product...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="alertTargetPrice">Target Price (€) *</label>
+                        <input type="number" id="alertTargetPrice" step="0.01" min="0" placeholder="e.g., 149.99" required />
+                        <span id="alertProductCurrentPriceHint" style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px; display: block;"></span>
+                    </div>
+                    <div class="form-group">
+                        <label for="alertWebhookUrl">Custom Discord Webhook (Optional)</label>
+                        <input type="url" id="alertWebhookUrl" placeholder="Leave blank to use default Settings webhook" style="font-family: monospace; font-size: 0.85rem;" />
+                        <span style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px; display: block;">
+                            If left empty, alerts are sent to the default Discord webhook set in Settings.
+                        </span>
+                    </div>
+                    <div class="form-actions" style="margin-top: 24px;">
+                        <button type="button" class="btn btn-ghost" id="cancelAlertModal">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="saveAlertBtn">Save Alert</button>
                     </div>
                 </form>
             </div>
