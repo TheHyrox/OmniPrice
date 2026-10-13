@@ -894,7 +894,7 @@ const App = {
                 : 'Not triggered yet';
 
             const title = product?.title || 'Unknown Product';
-            const escapedTitle = Utils ? Utils.escapeHtml(title) : title;
+            const escapedTitle = escapeHtml(title);
 
             return `
                 <div class="alert-card" data-id="${alert._id}">
@@ -955,7 +955,7 @@ const App = {
         select.innerHTML = '<option value="">Select a tracked product...</option>' + 
             this.products.map(p => {
                 const priceInfo = p.lowestPrice != null ? ` (Current lowest: €${p.lowestPrice})` : '';
-                const pTitle = Utils ? Utils.escapeHtml(p.title) : p.title;
+                const pTitle = escapeHtml(p.title);
                 return `<option value="${p._id}" data-lowest="${p.lowestPrice != null ? p.lowestPrice : ''}" data-ref="${p.referencePrice || ''}">${pTitle}${priceInfo}</option>`;
             }).join('');
 

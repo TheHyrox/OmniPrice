@@ -44,3 +44,10 @@ function formatCurrency(val) {
     if (val == null || isNaN(val)) return '—';
     return `€${parseFloat(val).toFixed(2)}`;
 }
+
+// Global Utils namespace for compatibility
+window.Utils = {
+    escapeHtml,
+    formatTimeAgo,
+    formatCurrency
+};
