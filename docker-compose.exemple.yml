@@ -1,0 +1,39 @@
+services:
+  omniprice-db:
+    container_name: omniprice-db
+    image: mongo:latest
+    restart: unless-stopped
+    ports:
+      # Expose MongoDB port if needed from host or external management
+      - "27017:27017"
+    volumes:
+      - omniprice_mongo_data:/data/db
+    networks:
+      - it-web
+
+  omniprice:
+    container_name: omniprice
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3005:3005"
+    environment:
+      - PORT=3005
+      - MONGO_URI=mongodb://omniprice-db:27017/omniprice
+      - DB_TYPE=mongodb
+    volumes:
+      - ./data:/app/data
+      - ./public/images:/app/public/images
+    depends_on:
+      - omniprice-db
+    restart: unless-stopped
+    networks:
+      - it-web
+
+networks:
+  it-web:
+    driver: bridge
+
+volumes:
+  omniprice_mongo_data:

@@ -9,8 +9,7 @@ You add products, configure one or more source URLs with CSS selectors, and scra
 - Multiple sources per product
 - Source-level scraping with CSS selectors
 - Automatic lowest-price and price-delta calculation
-- Flexible storage: MongoDB or JSON file database (`data/db.json`)
-- Standalone JSON to MongoDB migration script
+- Database storage: MongoDB (via Mongoose)
 - Global and per-product charts (Chart.js)
 - Manual scrape and scheduled scrape frequency settings
 
@@ -18,14 +17,14 @@ You add products, configure one or more source URLs with CSS selectors, and scra
 
 - Backend: Node.js + Express
 - Frontend: Vanilla JavaScript, HTML, CSS
-- Database: MongoDB (via Mongoose) or LowDB (JSON file fallback)
+- Database: MongoDB (via Mongoose)
 - Scraping: Cheerio + Puppeteer fallback
 
 ## Requirements
 
 - Node.js 18+
 - npm
-- (Optional) MongoDB server if using MongoDB database
+- MongoDB 6+ (standalone or via Docker)
 
 ## Installation
 
@@ -36,7 +35,7 @@ You add products, configure one or more source URLs with CSS selectors, and scra
 npm install
 ```
 
-3. Start the server:
+3. Start the server (ensure MongoDB is reachable via `MONGO_URI` or `localhost:27017`):
 
 ```bash
 npm start
@@ -50,57 +49,35 @@ http://localhost:3005
 
 ## Database Configuration
 
-OmniPrice supports both **MongoDB** and **JSON** storage modes.
+OmniPrice requires **MongoDB**.
 
-### Using MongoDB (Recommended)
-
-Set the `MONGO_URI` environment variable (or `DB_TYPE=mongodb`):
+Set the `MONGO_URI` environment variable (defaults to `mongodb://localhost:27017/omniprice`):
 
 ```bash
 export MONGO_URI="mongodb://localhost:27017/omniprice"
 npm start
 ```
 
-The app will connect to database **`omniprice`** with three collections:
+The app will connect to database **`omniprice`** with four collections:
 - `products`: Product documents with price history and sources
-- `settings`: Global settings (theme, scrape frequency)
+- `settings`: Global settings (theme, scrape frequency, Discord webhook)
 - `stores`: Preset boutique selectors
-
-### JSON Mode (Default Fallback)
-
-If no `MONGO_URI` environment variable is defined, OmniPrice falls back to `data/db.json`.
-
----
-
-## Migrating from JSON to MongoDB
-
-To convert an existing `data/db.json` into MongoDB database `omniprice`, use the included migration script:
-
-```bash
-# Basic usage (migrates data/db.json to mongodb://localhost:27017/omniprice)
-npm run migrate:mongo
-
-# Custom MongoDB URI and clean destination collections first
-node scripts/migrate-json-to-mongo.js --uri "mongodb://172.20.0.5:27017/omniprice" --clean
-
-# Help options
-node scripts/migrate-json-to-mongo.js --help
-```
+- `alerts`: Price drop alerts and notification status
 
 ---
 
 ## Docker & Docker Compose Setup
 
-Example `docker_compose_web.yml` snippet with MongoDB:
+An example compose file is provided at [`docker-compose.exemple.yml`](docker-compose.exemple.yml):
 
 ```yaml
-version: '3.8'
-
 services:
   omniprice-db:
     container_name: omniprice-db
     image: mongo:latest
     restart: unless-stopped
+    ports:
+      - "27017:27017"
     volumes:
       - omniprice_mongo_data:/data/db
     networks:
@@ -109,15 +86,17 @@ services:
   omniprice:
     container_name: omniprice
     build:
-      context: /configs/OmniPrice
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "3005:3005"
     environment:
+      - PORT=3005
       - MONGO_URI=mongodb://omniprice-db:27017/omniprice
       - DB_TYPE=mongodb
     volumes:
-      - /configs/OmniPrice/data:/app/data
-      - /configs/OmniPrice/public/images:/app/public/images
+      - ./data:/app/data
+      - ./public/images:/app/public/images
     depends_on:
       - omniprice-db
     restart: unless-stopped
@@ -126,16 +105,10 @@ services:
 
 networks:
   it-web:
-    external: true
+    driver: bridge
 
 volumes:
   omniprice_mongo_data:
-```
-
-To run data migration inside Docker or directly on the remote server:
-
-```bash
-docker exec -it omniprice node scripts/migrate-json-to-mongo.js --uri "mongodb://omniprice-db:27017/omniprice"
 ```
 
 ---
