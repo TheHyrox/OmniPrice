@@ -3,9 +3,10 @@ const router = express.Router();
 const db = require('../db/adapter');
 const scraper = require('../services/scraper');
 const alertChecker = require('../services/alert-checker');
+const { scrapeAllLimiter, scrapeProductLimiter } = require('../middleware/rate-limiters');
 
 // POST scrape single source for a product
-router.post('/product/:productId/source/:sourceIndex', async (req, res) => {
+router.post('/product/:productId/source/:sourceIndex', scrapeProductLimiter, async (req, res) => {
     try {
         const { productId, sourceIndex } = req.params;
         const product = await db.getProductById(productId);
@@ -36,7 +37,7 @@ router.post('/product/:productId/source/:sourceIndex', async (req, res) => {
 });
 
 // POST scrape all sources for a product
-router.post('/product/:productId', async (req, res) => {
+router.post('/product/:productId', scrapeProductLimiter, async (req, res) => {
     try {
         const product = await db.getProductById(req.params.productId);
         
@@ -68,7 +69,7 @@ router.post('/product/:productId', async (req, res) => {
 });
 
 // POST scrape all products
-router.post('/all', async (req, res) => {
+router.post('/all', scrapeAllLimiter, async (req, res) => {
     try {
         const products = await db.getProducts();
         const allResults = [];

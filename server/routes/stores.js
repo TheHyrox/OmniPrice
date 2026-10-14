@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db/adapter');
+const { validate } = require('../middleware/validate');
+const { createStoreSchema, updateStoreSchema } = require('../schemas');
 
 // GET all preset stores
 router.get('/', async (req, res) => {
@@ -13,12 +15,9 @@ router.get('/', async (req, res) => {
 });
 
 // POST create preset store
-router.post('/', async (req, res) => {
+router.post('/', validate(createStoreSchema), async (req, res) => {
     try {
         const { name, cssSelector, defaultUrl } = req.body;
-        if (!name || !cssSelector) {
-            return res.status(400).json({ error: 'Name and cssSelector are required' });
-        }
         const store = await db.createStore({ name, cssSelector, defaultUrl });
         res.status(201).json(store);
     } catch (error) {
@@ -27,7 +26,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT update preset store (syncs products if requested or auto-syncs selector updates)
-router.put('/:id', async (req, res) => {
+router.put('/:id', validate(updateStoreSchema), async (req, res) => {
     try {
         const { name, cssSelector, defaultUrl, syncProducts } = req.body;
         const oldStore = await db.getStoreById(req.params.id);

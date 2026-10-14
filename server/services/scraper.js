@@ -2,13 +2,15 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const puppeteer = require('puppeteer');
 
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 class Scraper {
     constructor() {
         this.browser = null;
     }
 
     async getBrowser() {
-        if (!this.browser) {
+        if (!this.browser || (typeof this.browser.isConnected === 'function' && !this.browser.isConnected())) {
             this.browser = await puppeteer.launch({
                 headless: true,
                 args: ['--no-sandbox', '--disable-setuid-sandbox']
@@ -19,9 +21,84 @@ class Scraper {
 
     async closeBrowser() {
         if (this.browser) {
-            await this.browser.close();
+            try {
+                await this.browser.close();
+            } catch (err) {
+                console.warn('Error closing Puppeteer browser:', err.message);
+            }
             this.browser = null;
         }
+    }
+
+    isTransientError(error) {
+        if (!error) return false;
+
+        // Permanent failures that must NOT be retried
+        if (error.message && (
+            error.message.includes('Selector "') ||
+            error.message.includes('Could not parse price from') ||
+            error.message.includes('not found')
+        )) {
+            return false;
+        }
+
+        // HTTP status codes: retry 408, 429, 500, 502, 503, 504; fail fast on 400, 401, 404
+        const status = error.response?.status;
+        if (status) {
+            if ([408, 429, 500, 502, 503, 504].includes(status)) {
+                return true;
+            }
+            if ([400, 401, 404].includes(status)) {
+                return false;
+            }
+        }
+
+        // Common transient network errors
+        const transientCodes = ['ETIMEDOUT', 'ECONNRESET', 'ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN', 'EPIPE'];
+        if (error.code && transientCodes.includes(error.code)) {
+            return true;
+        }
+
+        // Puppeteer / Axios timeout or connection drop strings
+        const lowerMsg = (error.message || '').toLowerCase();
+        if (
+            lowerMsg.includes('timeout') ||
+            lowerMsg.includes('navigation timeout') ||
+            lowerMsg.includes('session closed') ||
+            lowerMsg.includes('target closed') ||
+            lowerMsg.includes('socket hang up') ||
+            lowerMsg.includes('network error')
+        ) {
+            return true;
+        }
+
+        return false;
+    }
+
+    async withRetry(operation, { maxRetries = 2, baseDelay = 1000, description = 'Operation' } = {}) {
+        let lastError = null;
+
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+                return await operation();
+            } catch (err) {
+                lastError = err;
+
+                const isTransient = this.isTransientError(err);
+                if (!isTransient || attempt === maxRetries) {
+                    throw err;
+                }
+
+                // Exponential backoff with small random jitter
+                const jitter = Math.floor(Math.random() * 300);
+                const delay = (baseDelay * Math.pow(2, attempt)) + jitter;
+
+                console.warn(`[Scraper] ${description} attempt ${attempt + 1}/${maxRetries + 1} failed (${err.message}). Retrying in ${delay}ms...`);
+                await sleep(delay);
+            }
+        }
+
+        throw lastError;
     }
 
     parsePrice(priceText) {
@@ -59,7 +136,8 @@ class Scraper {
                     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
                     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
                     'Accept-Language': 'en-US,en;q=0.5',
-                }
+                },
+                timeout: 15000
             });
             
             const $ = cheerio.load(response.data);
@@ -113,26 +191,45 @@ class Scraper {
             
             return price;
         } finally {
-            await page.close();
+            try {
+                await page.close();
+            } catch (closeErr) {
+                // Page may have already closed if navigation failed
+            }
         }
     }
 
-    async scrapePrice(url, cssSelector, usePuppeteer = false) {
-        if (usePuppeteer) {
-            return this.scrapeWithPuppeteer(url, cssSelector);
-        }
-        
-        try {
-            return await this.scrapeWithCheerio(url, cssSelector);
-        } catch (error) {
-            console.log(`Cheerio failed for ${url} (${error.message}), auto-falling back to Puppeteer...`);
-            try {
-                return await this.scrapeWithPuppeteer(url, cssSelector);
-            } catch (puppeteerError) {
-                // Throw the Puppeteer error or the original error if more descriptive
-                throw puppeteerError;
+    async scrapePrice(url, cssSelector, usePuppeteer = false, options = {}) {
+        const { maxRetries = 2, baseDelay = 1000 } = options;
+
+        return this.withRetry(async () => {
+            if (usePuppeteer) {
+                return this.scrapeWithPuppeteer(url, cssSelector);
             }
-        }
+            
+            try {
+                return await this.scrapeWithCheerio(url, cssSelector);
+            } catch (error) {
+                // If it was an access block, immediately try Puppeteer
+                if (error.message?.includes('Access blocked') || error.response?.status === 403) {
+                    console.log(`Cheerio access blocked for ${url}, auto-falling back to Puppeteer...`);
+                    return await this.scrapeWithPuppeteer(url, cssSelector);
+                }
+
+                // If transient network error, throw to let withRetry retry
+                if (this.isTransientError(error)) {
+                    throw error;
+                }
+
+                // For selector/parsing issues, try Puppeteer once in case dynamic client-side JS was required
+                console.log(`Cheerio failed for ${url} (${error.message}), auto-falling back to Puppeteer...`);
+                return await this.scrapeWithPuppeteer(url, cssSelector);
+            }
+        }, {
+            maxRetries,
+            baseDelay,
+            description: `Scraping ${url}`
+        });
     }
 
     async scrapeAllSources(product) {

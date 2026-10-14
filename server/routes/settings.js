@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db/adapter');
 const scheduler = require('../jobs/scheduler');
+const { validate } = require('../middleware/validate');
+const { updateSettingsSchema } = require('../schemas');
 
 // GET settings
 router.get('/', async (req, res) => {
@@ -14,7 +16,7 @@ router.get('/', async (req, res) => {
 });
 
 // PUT update settings
-router.put('/', async (req, res) => {
+router.put('/', validate(updateSettingsSchema), async (req, res) => {
     try {
         const settings = await db.updateSettings(req.body);
 

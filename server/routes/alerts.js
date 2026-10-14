@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db/adapter');
 const discord = require('../services/discord');
+const { validate } = require('../middleware/validate');
+const { createAlertSchema, updateAlertSchema, testWebhookSchema } = require('../schemas');
+const { webhookTestLimiter } = require('../middleware/rate-limiters');
 
 // GET all alerts (enriched with product info)
 router.get('/', async (req, res) => {
@@ -51,16 +54,9 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST create alert
-router.post('/', async (req, res) => {
+router.post('/', validate(createAlertSchema), async (req, res) => {
     try {
         const { productId, targetPrice, webhookUrl, active } = req.body;
-
-        if (!productId) {
-            return res.status(400).json({ error: 'Product ID is required' });
-        }
-        if (targetPrice == null || isNaN(targetPrice) || Number(targetPrice) <= 0) {
-            return res.status(400).json({ error: 'Valid target price is required' });
-        }
 
         // Verify product exists
         const product = await db.getProductById(productId);
@@ -82,7 +78,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT update alert
-router.put('/:id', async (req, res) => {
+router.put('/:id', validate(updateAlertSchema), async (req, res) => {
     try {
         const updated = await db.updateAlert(req.params.id, req.body);
         if (!updated) return res.status(404).json({ error: 'Alert not found' });
@@ -104,7 +100,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 // POST test Discord webhook
-router.post('/test-webhook', async (req, res) => {
+router.post('/test-webhook', webhookTestLimiter, validate(testWebhookSchema), async (req, res) => {
     try {
         const { webhookUrl } = req.body;
         const result = await discord.testWebhook(webhookUrl);
@@ -115,7 +111,7 @@ router.post('/test-webhook', async (req, res) => {
 });
 
 // POST trigger test notification for a specific alert
-router.post('/:id/test-trigger', async (req, res) => {
+router.post('/:id/test-trigger', webhookTestLimiter, async (req, res) => {
     try {
         const alert = await db.getAlertById(req.params.id);
         if (!alert) return res.status(404).json({ error: 'Alert not found' });

@@ -5,6 +5,8 @@ const path = require('path');
 const fs = require('fs').promises;
 const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
+const { validate } = require('../middleware/validate');
+const { createProductSchema, updateProductSchema } = require('../schemas');
 
 
 // GET all products
@@ -42,7 +44,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST create product
-router.post('/', async (req, res) => {
+router.post('/', validate(createProductSchema), async (req, res) => {
     try {
         const { title, description, referencePrice, tags, image, sources } = req.body;
         
@@ -67,7 +69,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT update product
-router.put('/:id', async (req, res) => {
+router.put('/:id', validate(updateProductSchema), async (req, res) => {
     try {
         const { title, description, referencePrice, tags, image, sources } = req.body;
         const product = await db.getProductById(req.params.id);
