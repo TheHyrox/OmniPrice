@@ -61,8 +61,8 @@
 
                         <div class="products-quick-filters">
                             <button class="quick-filter-btn active" data-filter="all">All Products</button>
-                            <button class="quick-filter-btn" data-filter="deals">🔥 Price Drops</button>
-                            <button class="quick-filter-btn" data-filter="atl">⭐ All-Time Lows</button>
+                            <button class="quick-filter-btn" data-filter="deals">Price Drops</button>
+                            <button class="quick-filter-btn" data-filter="atl">All-Time Lows</button>
                         </div>
 
                         <div class="products-controls-group">
@@ -107,7 +107,7 @@
                 <div class="tab-header">
                     <h1>Stores & Selectors</h1>
                     <div class="tab-actions">
-                        <button id="syncAllStoresBtn" class="btn btn-secondary">🔄 Sync All Products</button>
+                        <button id="syncAllStoresBtn" class="btn btn-secondary">Sync All Products</button>
                         <button id="addStoreBtn" class="btn btn-primary">+ Add Store</button>
                     </div>
                 </div>
@@ -126,7 +126,7 @@
                     </div>
                     <div class="chart-header-actions">
                         <div class="chart-view-toggle">
-                            <button class="chart-view-btn active" id="chartViewComparisonBtn" data-view="comparison">📈 Compare</button>
+                            <button class="chart-view-btn active" id="chartViewComparisonBtn" data-view="comparison">Compare</button>
                             <button class="chart-view-btn" id="chartViewGridBtn" data-view="grid">▦ Sparklines</button>
                         </div>
                         <div class="timeframe-btns" id="chartTimeframeBtns">
@@ -158,7 +158,7 @@
                                 </div>
                             </div>
                             <div class="chart-quick-presets">
-                                <button class="btn btn-sm btn-secondary" id="chartPresetTop5Btn">⭐ Top 5 Deals</button>
+                                <button class="btn btn-sm btn-secondary" id="chartPresetTop5Btn">Top 5 Deals</button>
                                 <button class="btn btn-sm btn-ghost" id="chartSelectAllBtn">Select All</button>
                                 <button class="btn btn-sm btn-ghost" id="chartClearAllBtn">Clear All</button>
                             </div>
@@ -174,7 +174,7 @@
 
                     <div class="chart-container">
                         <div id="chartEmptyWarning" class="chart-empty-state" style="display: none;">
-                            <div class="empty-state-icon">📉</div>
+                            <div class="empty-state-icon"></div>
                             <h3>No products selected</h3>
                             <p>Choose one or more products above to compare their price trajectories.</p>
                         </div>
@@ -249,7 +249,6 @@
                     </div>
                     <div class="settings-card" style="grid-column: 1 / -1; max-width: 680px;">
                         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
-                            <span style="font-size: 1.5rem;">🎮</span>
                             <h3 style="margin-bottom: 0; padding-bottom: 0; border-bottom: none;">Discord Notifications (Webhook)</h3>
                         </div>
                         <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 16px; line-height: 1.5;">
@@ -281,7 +280,6 @@
             <div class="modal-content product-modal-content">
                 <div class="modal-header">
                     <div class="modal-title-wrap">
-                        <div class="modal-icon-badge">📦</div>
                         <div>
                             <h2 id="modalTitle">Add Product</h2>
                             <p class="modal-subtitle">Track automated prices across storefronts and spot historic discounts</p>
@@ -331,7 +329,7 @@
                         </div>
                         <div class="modal-image-row">
                             <div class="image-preview" id="imagePreview">
-                                <span class="placeholder">🖼️ No image</span>
+                                <span class="placeholder">No image</span>
                             </div>
                             <div class="image-controls-modern">
                                 <div class="form-group" style="margin-bottom: 8px;">
@@ -342,7 +340,7 @@
                                     <span>or</span>
                                 </div>
                                 <label class="file-upload-btn-modern">
-                                    📁 Choose Local Image File
+                                    Choose Local Image File
                                     <input type="file" id="imageFile" accept="image/*" />
                                 </label>
                             </div>

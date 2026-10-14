@@ -39,7 +39,7 @@ class AlertChecker {
                             }
                         }
 
-                        console.log(`[Alert] 🔔 Target met for "${product.title}" (€${product.lowestPrice} <= €${alert.targetPrice}). Dispatching Discord notification...`);
+                        console.log(`[Alert] Target met for "${product.title}" (€${product.lowestPrice} <= €${alert.targetPrice}). Dispatching Discord notification...`);
 
                         try {
                             await discord.sendPriceAlert({
@@ -50,7 +50,7 @@ class AlertChecker {
                                 sourceUrl
                             });
 
-                            console.log(`[Alert] ✓ Discord notification sent for "${product.title}"`);
+                            console.log(`[Alert] Discord notification sent for "${product.title}"`);
 
                             // Update alert record
                             await db.updateAlert(alert._id, {
@@ -58,7 +58,7 @@ class AlertChecker {
                                 lastTriggeredPrice: product.lowestPrice
                             });
                         } catch (err) {
-                            console.error(`[Alert] ✗ Failed to send Discord notification:`, err.message);
+                            console.error(`[Alert] Failed to send Discord notification:`, err.message);
                         }
                     }
                 } else if (product.lowestPrice > alert.targetPrice && alert.lastTriggeredAt) {

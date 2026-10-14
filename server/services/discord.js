@@ -36,13 +36,13 @@ class DiscordNotifier {
             avatar_url: 'https://cdn-icons-png.flaticon.com/512/3135/3135706.png',
             embeds: [
                 {
-                    title: '🔔 OmniPrice Notification Connected!',
+                    title: 'OmniPrice Notification Connected',
                     description: 'Your Discord webhook is working properly. You will receive alerts in this channel whenever a tracked product reaches or drops below your target price.',
                     color: 0x5865F2, // Discord Blurple
                     fields: [
                         {
                             name: 'Status',
-                            value: '✅ Webhook Operational',
+                            value: 'Webhook Operational',
                             inline: true
                         },
                         {
@@ -89,12 +89,12 @@ class DiscordNotifier {
 
         const fields = [
             {
-                name: '💰 Lowest Price',
+                name: 'Lowest Price',
                 value: `**€${Number(currentPrice).toFixed(2)}**`,
                 inline: true
             },
             {
-                name: '🎯 Target Price',
+                name: 'Target Price',
                 value: `€${Number(targetPrice).toFixed(2)}`,
                 inline: true
             }
@@ -102,7 +102,7 @@ class DiscordNotifier {
 
         if (discountAmount > 0) {
             fields.push({
-                name: '📉 Below Target By',
+                name: 'Below Target By',
                 value: `-€${discountAmount.toFixed(2)} (-${discountPercent}%)`,
                 inline: true
             });
@@ -110,7 +110,7 @@ class DiscordNotifier {
 
         if (product.referencePrice) {
             fields.push({
-                name: '🏷️ Base Price',
+                name: 'Base Price',
                 value: `~~€${Number(product.referencePrice).toFixed(2)}~~`,
                 inline: true
             });
@@ -118,7 +118,7 @@ class DiscordNotifier {
 
         if (storeName) {
             fields.push({
-                name: '🏪 Merchant',
+                name: 'Merchant',
                 value: storeName,
                 inline: true
             });
@@ -126,14 +126,14 @@ class DiscordNotifier {
 
         if (sourceUrl) {
             fields.push({
-                name: '🔗 Store Link',
+                name: 'Store Link',
                 value: `[View Deal at ${storeName || 'Merchant'}](${sourceUrl})`,
                 inline: false
             });
         }
 
         const embed = {
-            title: `🔥 Price Drop: ${product.title}`,
+            title: `Price Drop: ${product.title}`,
             url: sourceUrl || undefined,
             color: 0x10B981, // Green
             description: `Great news! **${product.title}** has dropped to or below your target price.`,

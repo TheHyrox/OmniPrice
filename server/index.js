@@ -39,7 +39,7 @@ const startServer = async () => {
             scheduler.start();
         });
     } catch (error) {
-        console.error('✗ Error starting server:', error.message);
+        console.error('Error starting server:', error.message);
         process.exit(1);
     }
 };
@@ -54,7 +54,7 @@ async function gracefulShutdown(signal) {
     scheduler.stop();
     try {
         await scraper.closeBrowser();
-        console.log('✓ Puppeteer browser closed');
+        console.log('Puppeteer browser closed');
     } catch (err) {
         console.error('Error closing Puppeteer browser:', err.message);
     }

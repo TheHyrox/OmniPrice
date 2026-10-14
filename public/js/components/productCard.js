@@ -56,14 +56,14 @@ const ProductCard = {
                 <article class="product-card list-card" data-id="${id}">
                     <div class="list-card-media">
                         <img class="product-card-image" src="${imageUrl}" alt="${title}" onerror="this.src='/images/placeholder.svg'">
-                        ${isATL ? `<span class="card-badge atl">🔥 ATL</span>` : ''}
+                        ${isATL ? `<span class="card-badge atl">ATL</span>` : ''}
                     </div>
 
                     <div class="product-card-body list-card-body">
                         <div class="product-card-info">
                             <div class="card-header-tags">
                                 ${tags.map(t => `<span class="tag" onclick="event.stopPropagation(); App.filterByTag('${escapeHtml(t)}')">#${escapeHtml(t)}</span>`).join('')}
-                                <span class="tag-store-count">🏪 ${sourcesCount} store${sourcesCount !== 1 ? 's' : ''}</span>
+                                <span class="tag-store-count">${sourcesCount} store${sourcesCount !== 1 ? 's' : ''}</span>
                             </div>
                             <h3 class="product-card-title">${title}</h3>
                             ${desc ? `<p class="product-card-desc">${desc}</p>` : ''}
@@ -102,13 +102,13 @@ const ProductCard = {
                 <div class="product-card-image-wrap">
                     <img class="product-card-image" src="${imageUrl}" alt="${title}" onerror="this.src='/images/placeholder.svg'">
                     <div class="card-badges-overlay">
-                        ${isATL ? `<span class="card-badge atl">🔥 ATL</span>` : ''}
+                        ${isATL ? `<span class="card-badge atl">ATL</span>` : ''}
                         ${delta != null ? `
                             <span class="card-badge delta ${deltaClass}">
                                 ${deltaSign}${delta.toFixed(1)}%
                             </span>
                         ` : ''}
-                        <span class="card-badge sources">🏪 ${sourcesCount}</span>
+                        <span class="card-badge sources">${sourcesCount} stores</span>
                     </div>
                 </div>
 
@@ -149,7 +149,7 @@ const ProductCard = {
     renderEmpty() {
         return `
             <div class="empty-state products-empty-state">
-                <div class="empty-state-icon">📦</div>
+                <div class="empty-state-icon"></div>
                 <h3>No products found</h3>
                 <p>Try modifying your search or filters, or add a new product to start tracking prices.</p>
                 <button class="btn btn-primary btn-sm" onclick="App.openModal()" style="margin-top: 14px;">+ Add Product</button>

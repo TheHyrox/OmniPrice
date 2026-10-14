@@ -218,7 +218,6 @@ const App = {
             <div class="product-kpi-card">
                 <div class="kpi-header">
                     <span>Monitored Products</span>
-                    <span class="kpi-icon">📦</span>
                 </div>
                 <div class="kpi-value-row">
                     <span class="kpi-value">${totalCount}</span>
@@ -229,7 +228,6 @@ const App = {
             <div class="product-kpi-card">
                 <div class="kpi-header">
                     <span>Active Price Drops</span>
-                    <span class="kpi-icon">🏷️</span>
                 </div>
                 <div class="kpi-value-row">
                     <span class="kpi-value">${dealsCount}</span>
@@ -241,7 +239,6 @@ const App = {
             <div class="product-kpi-card">
                 <div class="kpi-header">
                     <span>At All-Time Low</span>
-                    <span class="kpi-icon">🔥</span>
                 </div>
                 <div class="kpi-value-row">
                     <span class="kpi-value">${atlCount}</span>
@@ -253,7 +250,6 @@ const App = {
             <div class="product-kpi-card">
                 <div class="kpi-header">
                     <span>Top Bargain</span>
-                    <span class="kpi-icon">⭐</span>
                 </div>
                 <div class="kpi-value-row">
                     <span class="kpi-value">${topDeal ? `${bestDelta.toFixed(1)}%` : '—'}</span>
@@ -409,7 +405,7 @@ const App = {
     resetForm() {
         document.getElementById('productForm').reset();
         document.getElementById('productId').value = '';
-        document.getElementById('imagePreview').innerHTML = '<span class="placeholder">🖼️ No image</span>';
+        document.getElementById('imagePreview').innerHTML = '<span class="placeholder">No image</span>';
         document.getElementById('sourcesContainer').innerHTML = '';
     },
 
@@ -449,7 +445,7 @@ const App = {
             <div class="modal-source-item source-item">
                 <div class="modal-source-header">
                     <div class="modal-source-title">
-                        <span class="modal-source-index">🏪 Store Feed</span>
+                        <span class="modal-source-index">Store Feed</span>
                         <span class="source-store-badge">${escapeHtml(source.siteName || 'New Store')}</span>
                     </div>
                     <button type="button" class="remove-source-btn" onclick="this.closest('.modal-source-item').remove()" title="Remove store feed">
@@ -658,7 +654,7 @@ const App = {
     async scrapeProductAll(productId, btn) {
         if (btn) {
             btn.disabled = true;
-            btn.textContent = '🔄 Scraping All...';
+            btn.textContent = 'Scraping All...';
         }
 
         try {
@@ -668,7 +664,7 @@ const App = {
             alert('Scrape all failed: ' + error.message);
             if (btn) {
                 btn.disabled = false;
-                btn.textContent = '🔄 Scrape All Stores';
+                btn.textContent = 'Scrape All Stores';
             }
         }
     },
@@ -724,7 +720,7 @@ const App = {
         if (!this.stores || this.stores.length === 0) {
             grid.innerHTML = `
                 <div class="empty-state" style="grid-column: 1 / -1;">
-                    <div class="empty-state-icon">🏪</div>
+                    <div class="empty-state-icon"></div>
                     <h3>No preset stores saved</h3>
                     <p>Add a preset store to easily reuse boutique names and CSS selectors across products.</p>
                 </div>
@@ -737,8 +733,8 @@ const App = {
                 <div class="store-card-header">
                     <h3>${escapeHtml(store.name)}</h3>
                     <div class="store-card-actions">
-                        <button class="btn btn-ghost" onclick="App.openStoreModal('${escapeHtml(store._id)}')" title="Edit Store">✏️</button>
-                        <button class="btn btn-ghost" onclick="App.deleteStore('${escapeHtml(store._id)}')" title="Delete Store" style="color: var(--danger);">🗑️</button>
+                        <button class="btn btn-ghost" onclick="App.openStoreModal('${escapeHtml(store._id)}')" title="Edit Store">Edit</button>
+                        <button class="btn btn-ghost" onclick="App.deleteStore('${escapeHtml(store._id)}')" title="Delete Store" style="color: var(--danger);">Delete</button>
                     </div>
                 </div>
                 <div class="store-card-body">
@@ -833,7 +829,7 @@ const App = {
         } finally {
             if (btn) {
                 btn.disabled = false;
-                btn.textContent = '🔄 Sync All Products';
+                btn.textContent = 'Sync All Products';
             }
         }
     },
@@ -860,7 +856,6 @@ const App = {
         if (!this.alerts || this.alerts.length === 0) {
             container.innerHTML = `
                 <div class="empty-state" style="grid-column: 1 / -1; padding: 48px 20px; text-align: center;">
-                    <div style="font-size: 3rem; margin-bottom: 12px;">🔔</div>
                     <h3>No price alerts configured</h3>
                     <p style="color: var(--text-secondary); max-width: 440px; margin: 8px auto 20px;">
                         Set a target price on any of your tracked products. You will receive an email as soon as the lowest price reaches or drops below your target.
@@ -878,9 +873,9 @@ const App = {
             
             let statusBadge = '';
             if (!alert.active) {
-                statusBadge = '<span class="alert-status-badge disabled">⏸ Disabled</span>';
+                statusBadge = '<span class="alert-status-badge disabled">Disabled</span>';
             } else if (isMet || alert.lastTriggeredAt) {
-                statusBadge = '<span class="alert-status-badge triggered">🔥 Target Reached</span>';
+                statusBadge = '<span class="alert-status-badge triggered">Target Reached</span>';
             } else {
                 statusBadge = '<span class="alert-status-badge active">● Monitoring</span>';
             }
@@ -901,7 +896,7 @@ const App = {
                     <div class="alert-card-header">
                         ${product?.image 
                             ? `<img src="${product.image}" alt="${escapedTitle}" class="alert-card-img" />`
-                            : `<div class="alert-card-img-placeholder">📦</div>`
+                            : `<div class="alert-card-img-placeholder"></div>`
                         }
                         <div class="alert-card-title-wrap">
                             <h3 class="alert-card-title" title="${escapedTitle}">${escapedTitle}</h3>
@@ -931,11 +926,11 @@ const App = {
                                 ${alert.active ? 'Pause' : 'Resume'}
                             </button>
                             <button class="btn btn-ghost btn-sm" onclick="App.triggerTestAlert('${alert._id}')" title="Send a test notification to Discord">
-                                🎮 Test
+                                Test
                             </button>
                         </div>
                         <button class="btn btn-ghost btn-sm" style="color: #ef4444;" onclick="App.deleteAlert('${alert._id}')" title="Delete alert">
-                            🗑 Delete
+                            Delete
                         </button>
                     </div>
                 </div>
@@ -1108,13 +1103,13 @@ const App = {
 
             if (status) {
                 status.style.color = '#10b981';
-                status.textContent = '✓ Discord webhook saved successfully!';
+                status.textContent = 'Discord webhook saved successfully!';
                 setTimeout(() => { status.style.display = 'none'; }, 4000);
             }
         } catch (error) {
             if (status) {
                 status.style.color = '#ef4444';
-                status.textContent = '✗ Error saving Discord settings: ' + error.message;
+                status.textContent = 'Error saving Discord settings: ' + error.message;
             }
         } finally {
             if (btn) btn.disabled = false;
@@ -1149,12 +1144,12 @@ const App = {
             const res = await API.alerts.testWebhook(webhookUrl);
             if (status) {
                 status.style.color = '#10b981';
-                status.textContent = '✓ ' + (res.message || 'Discord notification sent successfully!');
+                status.textContent = res.message || 'Discord notification sent successfully!';
             }
         } catch (error) {
             if (status) {
                 status.style.color = '#ef4444';
-                status.textContent = '✗ Discord test failed: ' + error.message;
+                status.textContent = 'Discord test failed: ' + error.message;
             }
         } finally {
             if (btn) {

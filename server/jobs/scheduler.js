@@ -52,9 +52,9 @@ class Scheduler {
                 for (let i = 0; i < results.length; i++) {
                     if (results[i].success) {
                         await db.addPriceHistory(product._id, i, results[i].price);
-                        console.log(`    ✓ ${product.sources[i].siteName}: €${results[i].price}`);
+                        console.log(`    [OK] ${product.sources[i].siteName}: €${results[i].price}`);
                     } else {
-                        console.log(`    ✗ ${product.sources[i].siteName}: ${results[i].error}`);
+                        console.log(`    [FAILED] ${product.sources[i].siteName}: ${results[i].error}`);
                     }
                 }
 

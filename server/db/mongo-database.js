@@ -88,7 +88,7 @@ class MongoDatabase {
     async init() {
         const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/omniprice';
         await mongoose.connect(mongoUri);
-        console.log(`✓ MongoDB Database initialized connected to ${mongoUri}`);
+        console.log(`Connected to MongoDB at ${mongoUri}`);
 
         // Seed default stores if empty
         const storeCount = await Store.countDocuments();

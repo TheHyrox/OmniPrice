@@ -215,7 +215,6 @@ const Charts = {
             <div class="chart-kpi-card">
                 <div class="kpi-header">
                     <span>Tracked Products</span>
-                    <span class="kpi-icon">📦</span>
                 </div>
                 <div class="kpi-value-row">
                     <span class="kpi-value">${totalCount}</span>
@@ -226,7 +225,6 @@ const Charts = {
             <div class="chart-kpi-card">
                 <div class="kpi-header">
                     <span>Top Discount</span>
-                    <span class="kpi-icon">🏷️</span>
                 </div>
                 <div class="kpi-value-row">
                     <span class="kpi-value">${bestDeal ? `${bestDealDelta.toFixed(1)}%` : '—'}</span>
@@ -240,7 +238,6 @@ const Charts = {
             <div class="chart-kpi-card">
                 <div class="kpi-header">
                     <span>At All-Time Low</span>
-                    <span class="kpi-icon">🔥</span>
                 </div>
                 <div class="kpi-value-row">
                     <span class="kpi-value">${atlCount}</span>
@@ -252,7 +249,6 @@ const Charts = {
             <div class="chart-kpi-card">
                 <div class="kpi-header">
                     <span>Avg. Price Trend</span>
-                    <span class="kpi-icon">📊</span>
                 </div>
                 <div class="kpi-value-row">
                     <span class="kpi-value">${avgDelta > 0 ? '+' : ''}${avgDelta.toFixed(1)}%</span>
@@ -626,7 +622,7 @@ const Charts = {
         if (filtered.length === 0) {
             container.innerHTML = `
                 <div class="empty-state" style="grid-column: 1 / -1; padding: 48px;">
-                    <div class="empty-state-icon">🔍</div>
+                    <div class="empty-state-icon"></div>
                     <h3>No matching products</h3>
                     <p>Try searching for a different keyword or tag.</p>
                 </div>
@@ -662,7 +658,7 @@ const Charts = {
                             ${refPrice ? `<span class="sparkline-ref-price">${refPrice}</span>` : ''}
                         </div>
                         <div class="sparkline-badges">
-                            ${isATL ? `<span class="atl-badge">🔥 ATL</span>` : ''}
+                            ${isATL ? `<span class="atl-badge">ATL</span>` : ''}
                             ${delta != null ? `
                                 <span class="price-delta ${delta < 0 ? 'negative' : 'positive'}">
                                     ${delta < 0 ? '' : '+'}${delta.toFixed(1)}%

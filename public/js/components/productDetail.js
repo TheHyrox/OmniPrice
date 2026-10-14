@@ -130,13 +130,13 @@ const ProductDetail = {
                 </button>
                 <div class="detail-top-actions">
                     <button class="btn btn-secondary" id="scrapeAllProductBtn" onclick="App.scrapeProductAll('${id}', this)">
-                        🔄 Scrape All Stores
+                        Scrape All Stores
                     </button>
                     <button class="btn btn-secondary" onclick="App.editProduct('${id}')">
-                        ✏️ Edit
+                        Edit
                     </button>
                     <button class="btn btn-ghost detail-delete-btn" onclick="App.deleteProduct('${id}')" title="Delete Product">
-                        🗑️ Delete
+                        Delete
                     </button>
                 </div>
             </div>
@@ -145,7 +145,7 @@ const ProductDetail = {
             <div class="detail-hero">
                 <div class="detail-image-wrapper">
                     <img class="detail-image" src="${imageUrl}" alt="${title}" onerror="this.src='/images/placeholder.svg'">
-                    ${stats.isATL ? `<span class="detail-atl-badge">🔥 All-Time Low</span>` : ''}
+                    ${stats.isATL ? `<span class="detail-atl-badge">All-Time Low</span>` : ''}
                 </div>
 
                 <div class="detail-info">
@@ -185,7 +185,7 @@ const ProductDetail = {
 
                 <!-- Best Deal Action Card -->
                 <div class="detail-best-deal-box">
-                    <div class="best-deal-badge">🏆 Best Verified Offer</div>
+                    <div class="best-deal-badge">Best Verified Offer</div>
                     ${bestSource ? `
                         <div class="best-deal-price">${formatCurrency(bestSource.cleanPrice)}</div>
                         <div class="best-deal-store">${escapeHtml(bestSource.siteName)}</div>
@@ -208,7 +208,6 @@ const ProductDetail = {
                 <div class="detail-stat-card">
                     <div class="stat-card-header">
                         <span>All-Time Low (ATL)</span>
-                        <span class="stat-icon">📉</span>
                     </div>
                     <div class="stat-card-value">${formatCurrency(stats.minPrice)}</div>
                     <div class="stat-card-sub">
@@ -219,7 +218,6 @@ const ProductDetail = {
                 <div class="detail-stat-card">
                     <div class="stat-card-header">
                         <span>All-Time High (ATH)</span>
-                        <span class="stat-icon">📈</span>
                     </div>
                     <div class="stat-card-value">${formatCurrency(stats.maxPrice)}</div>
                     <div class="stat-card-sub">
@@ -230,7 +228,6 @@ const ProductDetail = {
                 <div class="detail-stat-card">
                     <div class="stat-card-header">
                         <span>Store Price Spread</span>
-                        <span class="stat-icon">⚖️</span>
                     </div>
                     <div class="stat-card-value">
                         ${stats.spread != null ? formatCurrency(stats.spread) : '—'}
@@ -243,7 +240,6 @@ const ProductDetail = {
                 <div class="detail-stat-card">
                     <div class="stat-card-header">
                         <span>Active Stores</span>
-                        <span class="stat-icon">🏪</span>
                     </div>
                     <div class="stat-card-value">${(product.sources || []).length}</div>
                     <div class="stat-card-sub">
@@ -308,7 +304,7 @@ const ProductDetail = {
                     </div>
                     <div class="sources-header-actions">
                         <button class="btn btn-secondary btn-sm" onclick="App.scrapeProductAll('${id}', this)">
-                            🔄 Scrape All
+                            Scrape All
                         </button>
                         <button class="btn btn-primary btn-sm" onclick="App.showAddSourceForm('${id}')">
                             + Add Store
@@ -363,7 +359,7 @@ const ProductDetail = {
                 <div class="source-list">
                     ${!product.sources || product.sources.length === 0 ? `
                         <div class="empty-state" style="padding: 40px;">
-                            <div class="empty-state-icon">🏪</div>
+                            <div class="empty-state-icon"></div>
                             <h3>No price feeds configured</h3>
                             <p>Add a store URL and CSS selector above to track automated prices for this product.</p>
                         </div>
