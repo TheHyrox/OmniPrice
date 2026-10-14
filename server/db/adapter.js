@@ -23,6 +23,9 @@ class DatabaseAdapter {
     async addPriceHistory(productId, sourceIndex, price) { 
         return this._execute('addPriceHistory', productId, sourceIndex, price); 
     }
+    async getPriceHistory(productId) { 
+        return this._execute('getPriceHistory', productId); 
+    }
     async getSettings() { return this._execute('getSettings'); }
     async updateSettings(data) { return this._execute('updateSettings', data); }
     async getStores() { return this._execute('getStores'); }

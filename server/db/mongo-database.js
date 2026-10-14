@@ -18,19 +18,24 @@ const productSchema = new mongoose.Schema({
     }],
     createdAt: { type: String, default: () => new Date().toISOString() },
     updatedAt: { type: String, default: () => new Date().toISOString() },
-    priceHistory: [{
-        date: { type: String, required: true },
-        prices: [{
-            sourceIndex: { type: Number, required: true },
-            price: { type: Number, required: true },
-            url: { type: String }
-        }]
-    }],
     lowestPrice: { type: Number, default: null },
     lowestPriceSource: { type: mongoose.Schema.Types.Mixed, default: null },
     priceDelta: { type: Number, default: null },
     active: { type: Boolean, default: true }
 }, { versionKey: false, collection: 'products' });
+
+const priceRecordSchema = new mongoose.Schema({
+    _id: { type: String, default: uuidv4 },
+    productId: { type: String, required: true, index: true },
+    date: { type: String, required: true },
+    prices: [{
+        sourceIndex: { type: Number, required: true },
+        price: { type: Number, required: true },
+        url: { type: String, default: '' }
+    }]
+}, { versionKey: false, collection: 'price_records' });
+
+priceRecordSchema.index({ productId: 1, date: 1 });
 
 const storeSchema = new mongoose.Schema({
     _id: { type: String, default: uuidv4 },
@@ -59,6 +64,7 @@ const alertSchema = new mongoose.Schema({
 }, { versionKey: false, collection: 'alerts' });
 
 const Product = mongoose.model('Product', productSchema);
+const PriceRecord = mongoose.model('PriceRecord', priceRecordSchema);
 const Store = mongoose.model('Store', storeSchema);
 const Setting = mongoose.model('Setting', settingsSchema);
 const Alert = mongoose.model('Alert', alertSchema);
@@ -81,6 +87,7 @@ const defaultSettings = {
 class MongoDatabase {
     constructor() {
         this.Product = Product;
+        this.PriceRecord = PriceRecord;
         this.Store = Store;
         this.Setting = Setting;
         this.Alert = Alert;
@@ -101,6 +108,33 @@ class MongoDatabase {
         const settingCount = await Setting.countDocuments();
         if (settingCount === 0) {
             await Setting.create(defaultSettings);
+        }
+
+        // Migrate legacy embedded priceHistory to price_records collection if present
+        const productsWithHistory = await Product.collection.find({ 'priceHistory.0': { $exists: true } }).toArray();
+        if (productsWithHistory.length > 0) {
+            console.log(`Migrating embedded priceHistory for ${productsWithHistory.length} products to price_records...`);
+            for (const prod of productsWithHistory) {
+                if (Array.isArray(prod.priceHistory) && prod.priceHistory.length > 0) {
+                    for (const entry of prod.priceHistory) {
+                        const dateStr = entry.date ? new Date(entry.date).toISOString().split('T')[0] : '';
+                        const exists = await PriceRecord.findOne({
+                            productId: prod._id,
+                            date: { $regex: `^${dateStr}` }
+                        });
+                        if (!exists) {
+                            await PriceRecord.create({
+                                _id: uuidv4(),
+                                productId: prod._id,
+                                date: entry.date,
+                                prices: entry.prices || []
+                            });
+                        }
+                    }
+                    await Product.collection.updateOne({ _id: prod._id }, { $unset: { priceHistory: 1 } });
+                }
+            }
+            console.log('Migration of priceHistory to price_records completed.');
         }
     }
 
@@ -126,20 +160,40 @@ class MongoDatabase {
 
     // Products
     async getProducts() {
-        const products = await Product.find({}).lean();
+        const [products, records] = await Promise.all([
+            Product.find({}).lean(),
+            PriceRecord.find({}).sort({ date: 1 }).lean()
+        ]);
+
+        const historyByProduct = new Map();
+        for (const rec of records) {
+            if (!historyByProduct.has(rec.productId)) {
+                historyByProduct.set(rec.productId, []);
+            }
+            historyByProduct.get(rec.productId).push(rec);
+        }
+
         return products.map(p => ({
             ...p,
-            active: p.active !== false
+            active: p.active !== false,
+            priceHistory: historyByProduct.get(p._id) || []
         }));
     }
 
     async getProductById(id) {
         const product = await Product.findOne({ _id: id }).lean();
         if (!product) return null;
+
+        const priceHistory = await PriceRecord.find({ productId: id }).sort({ date: 1 }).lean();
         return {
             ...product,
-            active: product.active !== false
+            active: product.active !== false,
+            priceHistory
         };
+    }
+
+    async getPriceHistory(productId) {
+        return PriceRecord.find({ productId }).sort({ date: 1 }).lean();
     }
 
     async createProduct(data) {
@@ -150,14 +204,15 @@ class MongoDatabase {
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             sources: data.sources || [],
-            priceHistory: [],
             lowestPrice: null,
             lowestPriceSource: null,
             priceDelta: null
         };
         const product = new Product(productData);
         await product.save();
-        return product.toObject();
+        const obj = product.toObject();
+        obj.priceHistory = [];
+        return obj;
     }
 
     async updateProduct(id, data) {
@@ -171,11 +226,17 @@ class MongoDatabase {
         product.updatedAt = new Date().toISOString();
         this._updateVirtuals(product);
         await product.save();
-        return product.toObject();
+
+        const obj = product.toObject();
+        obj.priceHistory = await PriceRecord.find({ productId: id }).sort({ date: 1 }).lean();
+        return obj;
     }
 
     async deleteProduct(id) {
-        const res = await Product.deleteOne({ _id: id });
+        const [res] = await Promise.all([
+            Product.deleteOne({ _id: id }),
+            PriceRecord.deleteMany({ productId: id })
+        ]);
         return res.deletedCount > 0;
     }
 
@@ -187,30 +248,34 @@ class MongoDatabase {
         today.setHours(0, 0, 0, 0);
         const todayStr = today.toISOString().split('T')[0];
 
-        let historyEntry = product.priceHistory.find(h => {
-            const hDate = new Date(h.date);
-            hDate.setHours(0, 0, 0, 0);
-            return hDate.toISOString().split('T')[0] === todayStr;
+        let record = await PriceRecord.findOne({
+            productId,
+            date: { $regex: `^${todayStr}` }
         });
 
-        if (!historyEntry) {
-            historyEntry = {
+        if (!record) {
+            record = new PriceRecord({
+                _id: uuidv4(),
+                productId,
                 date: new Date().toISOString(),
                 prices: []
-            };
-            product.priceHistory.push(historyEntry);
+            });
         }
 
-        const priceIndex = historyEntry.prices.findIndex(p => p.sourceIndex === sourceIndex);
+        const priceIndex = record.prices.findIndex(p => p.sourceIndex === sourceIndex);
         if (priceIndex >= 0) {
-            historyEntry.prices[priceIndex].price = price;
+            record.prices[priceIndex].price = price;
+            if (product.sources[sourceIndex]?.url) {
+                record.prices[priceIndex].url = product.sources[sourceIndex].url;
+            }
         } else {
-            historyEntry.prices.push({
+            record.prices.push({
                 sourceIndex,
                 price,
                 url: product.sources[sourceIndex] ? product.sources[sourceIndex].url : ''
             });
         }
+        await record.save();
 
         if (product.sources[sourceIndex]) {
             product.sources[sourceIndex].lastPrice = price;
@@ -219,7 +284,10 @@ class MongoDatabase {
 
         this._updateVirtuals(product);
         await product.save();
-        return product.toObject();
+
+        const productObj = product.toObject();
+        productObj.priceHistory = await PriceRecord.find({ productId }).sort({ date: 1 }).lean();
+        return productObj;
     }
 
     // Stores

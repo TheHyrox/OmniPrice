@@ -61,6 +61,10 @@ const API = {
             });
         },
 
+        async getHistory(id) {
+            return API.request(`/products/${id}/history`);
+        },
+
         async getTags() {
             return API.request('/products/meta/tags');
         }
