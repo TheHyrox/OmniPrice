@@ -46,7 +46,7 @@ router.get('/:id', async (req, res) => {
 // POST create product
 router.post('/', validate(createProductSchema), async (req, res) => {
     try {
-        const { title, description, referencePrice, tags, image, sources } = req.body;
+        const { title, description, referencePrice, tags, image, sources, active } = req.body;
         
         let imagePath = null;
         if (image) {
@@ -59,7 +59,8 @@ router.post('/', validate(createProductSchema), async (req, res) => {
             referencePrice,
             tags: tags || [],
             image: imagePath,
-            sources: sources || []
+            sources: sources || [],
+            active: active !== undefined ? Boolean(active) : true
         });
         
         res.status(201).json(product);
@@ -71,7 +72,7 @@ router.post('/', validate(createProductSchema), async (req, res) => {
 // PUT update product
 router.put('/:id', validate(updateProductSchema), async (req, res) => {
     try {
-        const { title, description, referencePrice, tags, image, sources } = req.body;
+        const { title, description, referencePrice, tags, image, sources, active } = req.body;
         const product = await db.getProductById(req.params.id);
         
         if (!product) {
@@ -93,18 +94,42 @@ router.put('/:id', validate(updateProductSchema), async (req, res) => {
             newImage = null;
         }
         
-        const updated = await db.updateProduct(req.params.id, {
+        const updatePayload = {
             title,
             description,
             referencePrice,
             tags: tags || [],
             image: newImage,
             sources: sources || []
-        });
+        };
+        if (active !== undefined) {
+            updatePayload.active = Boolean(active);
+        }
+
+        const updated = await db.updateProduct(req.params.id, updatePayload);
         
         res.json(updated);
     } catch (error) {
         res.status(400).json({ error: error.message });
+    }
+});
+
+// PATCH toggle active state of product
+router.patch('/:id/toggle', async (req, res) => {
+    try {
+        const product = await db.getProductById(req.params.id);
+        if (!product) {
+            return res.status(404).json({ error: 'Product not found' });
+        }
+
+        const newActive = req.body.active !== undefined
+            ? Boolean(req.body.active)
+            : !product.active;
+
+        const updated = await db.updateProduct(req.params.id, { active: newActive });
+        res.json(updated);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 });
 

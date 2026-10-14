@@ -28,7 +28,8 @@ const productSchema = new mongoose.Schema({
     }],
     lowestPrice: { type: Number, default: null },
     lowestPriceSource: { type: mongoose.Schema.Types.Mixed, default: null },
-    priceDelta: { type: Number, default: null }
+    priceDelta: { type: Number, default: null },
+    active: { type: Boolean, default: true }
 }, { versionKey: false, collection: 'products' });
 
 const storeSchema = new mongoose.Schema({
@@ -125,17 +126,27 @@ class MongoDatabase {
 
     // Products
     async getProducts() {
-        return Product.find({}).lean();
+        const products = await Product.find({}).lean();
+        return products.map(p => ({
+            ...p,
+            active: p.active !== false
+        }));
     }
 
     async getProductById(id) {
-        return Product.findOne({ _id: id }).lean();
+        const product = await Product.findOne({ _id: id }).lean();
+        if (!product) return null;
+        return {
+            ...product,
+            active: product.active !== false
+        };
     }
 
     async createProduct(data) {
         const productData = {
             _id: uuidv4(),
             ...data,
+            active: data.active !== undefined ? Boolean(data.active) : true,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             sources: data.sources || [],
@@ -154,6 +165,9 @@ class MongoDatabase {
         if (!product) return null;
 
         Object.assign(product, data);
+        if (data.active !== undefined) {
+            product.active = Boolean(data.active);
+        }
         product.updatedAt = new Date().toISOString();
         this._updateVirtuals(product);
         await product.save();

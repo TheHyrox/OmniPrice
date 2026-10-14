@@ -202,6 +202,8 @@ const App = {
         }
 
         const totalCount = this.products.length;
+        const activeCount = this.products.filter(p => p.active !== false).length;
+        const pausedCount = totalCount - activeCount;
         const dealsCount = this.products.filter(p => p.priceDelta != null && p.priceDelta < 0).length;
         const atlCount = this.products.filter(p => ProductCard.isAtAllTimeLow(p)).length;
 
@@ -221,8 +223,9 @@ const App = {
                 </div>
                 <div class="kpi-value-row">
                     <span class="kpi-value">${totalCount}</span>
+                    <span class="kpi-badge ${pausedCount === 0 ? 'positive' : 'neutral'}">${activeCount} Active</span>
                 </div>
-                <span class="kpi-sub">${this.stores ? this.stores.length : 0} preset stores</span>
+                <span class="kpi-sub">${pausedCount > 0 ? `${pausedCount} paused · ` : ''}${this.stores ? this.stores.length : 0} preset stores</span>
             </div>
 
             <div class="product-kpi-card">
@@ -285,6 +288,10 @@ const App = {
                 if (p.priceDelta == null || p.priceDelta >= 0) return false;
             } else if (this.filters.dealType === 'atl') {
                 if (!ProductCard.isAtAllTimeLow(p)) return false;
+            } else if (this.filters.dealType === 'active') {
+                if (p.active === false) return false;
+            } else if (this.filters.dealType === 'paused') {
+                if (p.active !== false) return false;
             }
             
             return true;
@@ -405,6 +412,8 @@ const App = {
     resetForm() {
         document.getElementById('productForm').reset();
         document.getElementById('productId').value = '';
+        const activeBox = document.getElementById('productActive');
+        if (activeBox) activeBox.checked = true;
         document.getElementById('imagePreview').innerHTML = '<span class="placeholder">No image</span>';
         document.getElementById('sourcesContainer').innerHTML = '';
     },
@@ -415,6 +424,8 @@ const App = {
         document.getElementById('productDescription').value = product.description || '';
         document.getElementById('productRefPrice').value = product.referencePrice;
         document.getElementById('productTags').value = (product.tags || []).join(', ');
+        const activeBox = document.getElementById('productActive');
+        if (activeBox) activeBox.checked = product.active !== false;
         
         if (product.image) {
             document.getElementById('imagePreview').innerHTML = `<img src="${product.image}" alt="Preview">`;
@@ -539,12 +550,14 @@ const App = {
         e.preventDefault();
         
         const id = document.getElementById('productId').value;
+        const activeBox = document.getElementById('productActive');
         const data = {
             title: document.getElementById('productTitle').value,
             description: document.getElementById('productDescription').value,
             referencePrice: parseFloat(document.getElementById('productRefPrice').value),
             tags: document.getElementById('productTags').value.split(',').map(t => t.trim()).filter(t => t),
             image: document.getElementById('imageUrl').value || null,
+            active: activeBox ? activeBox.checked : true,
             sources: []
         };
 
@@ -683,6 +696,20 @@ const App = {
             await this.loadProducts();
         } catch (error) {
             alert('Error deleting product: ' + error.message);
+        }
+    },
+
+    async toggleProductActive(id, currentActive) {
+        try {
+            await API.products.toggleActive(id, !currentActive);
+            await this.loadProducts();
+
+            const detailSection = document.getElementById('product-detail');
+            if (detailSection && detailSection.classList.contains('active')) {
+                await this.showProductDetail(id);
+            }
+        } catch (error) {
+            alert('Error updating tracking status: ' + error.message);
         }
     },
 

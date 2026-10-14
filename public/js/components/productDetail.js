@@ -129,6 +129,9 @@ const ProductDetail = {
                     ← Back to ${App.previousTab === 'charts' ? 'Analytics' : 'Products'}
                 </button>
                 <div class="detail-top-actions">
+                    <button class="btn btn-secondary" onclick="App.toggleProductActive('${id}', ${product.active !== false})" title="${product.active === false ? 'Resume automatic scraping' : 'Pause automatic scraping'}">
+                        ${product.active === false ? '▶ Resume Tracking' : '⏸ Pause Tracking'}
+                    </button>
                     <button class="btn btn-secondary" id="scrapeAllProductBtn" onclick="App.scrapeProductAll('${id}', this)">
                         Scrape All Stores
                     </button>
@@ -145,6 +148,7 @@ const ProductDetail = {
             <div class="detail-hero">
                 <div class="detail-image-wrapper">
                     <img class="detail-image" src="${imageUrl}" alt="${title}" onerror="this.src='/images/placeholder.svg'">
+                    ${product.active === false ? `<span class="detail-paused-badge">Paused</span>` : ''}
                     ${stats.isATL ? `<span class="detail-atl-badge">All-Time Low</span>` : ''}
                 </div>
 

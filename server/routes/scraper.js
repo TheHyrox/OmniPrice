@@ -74,7 +74,13 @@ router.post('/all', scrapeAllLimiter, async (req, res) => {
         const products = await db.getProducts();
         const allResults = [];
         
+        let skippedCount = 0;
         for (const product of products) {
+            if (product.active === false) {
+                skippedCount++;
+                continue;
+            }
+
             const results = await scraper.scrapeAllSources(product);
             
             for (let i = 0; i < results.length; i++) {
@@ -97,7 +103,7 @@ router.post('/all', scrapeAllLimiter, async (req, res) => {
         }
         
         res.json({ 
-            message: `Scraped ${products.length} products`,
+            message: `Scraped ${allResults.length} active products${skippedCount > 0 ? ` (${skippedCount} paused)` : ''}`,
             results: allResults 
         });
     } catch (error) {

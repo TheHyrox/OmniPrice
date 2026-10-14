@@ -25,6 +25,7 @@ class Scheduler {
             const products = await db.getProducts();
             let latest = 0;
             for (const product of products) {
+                if (product.active === false) continue;
                 for (const source of (product.sources || [])) {
                     if (source.lastScraped) {
                         const t = new Date(source.lastScraped).getTime();
@@ -43,8 +44,16 @@ class Scheduler {
         
         try {
             const products = await db.getProducts();
+            let processedCount = 0;
+            let skippedCount = 0;
             
             for (const product of products) {
+                if (product.active === false) {
+                    skippedCount++;
+                    continue;
+                }
+
+                processedCount++;
                 console.log(`  Scraping: ${product.title}`);
                 
                 const results = await scraper.scrapeAllSources(product);
@@ -69,7 +78,7 @@ class Scheduler {
                 }
             }
 
-            console.log(`[${new Date().toISOString()}] Scrape complete. ${products.length} products processed.`);
+            console.log(`[${new Date().toISOString()}] Scrape complete. ${processedCount} active products processed (${skippedCount} paused).`);
         } catch (error) {
             console.error(`[${new Date().toISOString()}] Scrape error:`, error.message);
         }
@@ -79,7 +88,10 @@ class Scheduler {
         const frequency = await this.getFrequency();
 
         if (frequency > 0) {
-            console.log(`Scheduler started. Scraping every ${frequency / 3600000} hours.`);
+            const freqDesc = frequency >= 3600000
+                ? `${frequency / 3600000} hour${frequency / 3600000 !== 1 ? 's' : ''}`
+                : `${Math.round(frequency / 60000)} minute${Math.round(frequency / 60000) !== 1 ? 's' : ''}`;
+            console.log(`Scheduler started. Scraping every ${freqDesc}.`);
 
             // Only fire the startup scrape if enough time has passed since the last one.
             // This prevents hammering external sites on every container restart/redeploy.

@@ -54,6 +54,13 @@ const API = {
             });
         },
 
+        async toggleActive(id, active) {
+            return API.request(`/products/${id}/toggle`, {
+                method: 'PATCH',
+                body: active !== undefined ? { active } : {}
+            });
+        },
+
         async getTags() {
             return API.request('/products/meta/tags');
         }

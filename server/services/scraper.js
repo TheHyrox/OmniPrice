@@ -7,26 +7,69 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 class Scraper {
     constructor() {
         this.browser = null;
+        this.launchPromise = null;
     }
 
     async getBrowser() {
-        if (!this.browser || (typeof this.browser.isConnected === 'function' && !this.browser.isConnected())) {
-            this.browser = await puppeteer.launch({
-                headless: true,
-                args: ['--no-sandbox', '--disable-setuid-sandbox']
-            });
+        // Return existing healthy browser instance if still connected
+        if (this.browser && typeof this.browser.isConnected === 'function' && this.browser.isConnected()) {
+            return this.browser;
         }
-        return this.browser;
+
+        // Avoid race conditions if multiple concurrent calls trigger a launch
+        if (this.launchPromise) {
+            return this.launchPromise;
+        }
+
+        this.launchPromise = (async () => {
+            // Clean up any stale/broken instance
+            if (this.browser) {
+                try {
+                    await this.browser.close();
+                } catch (_) {}
+                this.browser = null;
+            }
+
+            try {
+                const browser = await puppeteer.launch({
+                    headless: true,
+                    args: ['--no-sandbox', '--disable-setuid-sandbox']
+                });
+
+                // Auto-recover state on unexpected process termination or disconnect
+                browser.once('disconnected', () => {
+                    console.warn('[Scraper] Puppeteer browser disconnected or crashed.');
+                    if (this.browser === browser) {
+                        this.browser = null;
+                    }
+                });
+
+                this.browser = browser;
+                return browser;
+            } finally {
+                this.launchPromise = null;
+            }
+        })();
+
+        return this.launchPromise;
+    }
+
+    async restartBrowser() {
+        console.warn('[Scraper] Restarting Puppeteer browser...');
+        await this.closeBrowser();
+        return this.getBrowser();
     }
 
     async closeBrowser() {
-        if (this.browser) {
+        const browser = this.browser;
+        this.browser = null;
+        this.launchPromise = null;
+        if (browser) {
             try {
-                await this.browser.close();
+                await browser.close();
             } catch (err) {
                 console.warn('Error closing Puppeteer browser:', err.message);
             }
-            this.browser = null;
         }
     }
 
@@ -66,6 +109,10 @@ class Scraper {
             lowerMsg.includes('navigation timeout') ||
             lowerMsg.includes('session closed') ||
             lowerMsg.includes('target closed') ||
+            lowerMsg.includes('protocol error') ||
+            lowerMsg.includes('browser has disconnected') ||
+            lowerMsg.includes('crashed') ||
+            lowerMsg.includes('navigating frame was detached') ||
             lowerMsg.includes('socket hang up') ||
             lowerMsg.includes('network error')
         ) {
@@ -165,10 +212,18 @@ class Scraper {
     }
 
     async scrapeWithPuppeteer(url, cssSelector) {
-        const browser = await this.getBrowser();
-        const page = await browser.newPage();
-        
+        let browser;
         try {
+            browser = await this.getBrowser();
+        } catch (launchErr) {
+            console.error('[Scraper] Failed to acquire Puppeteer browser, retrying with fresh instance...', launchErr.message);
+            await this.closeBrowser();
+            browser = await this.getBrowser();
+        }
+
+        let page = null;
+        try {
+            page = await browser.newPage();
             await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36');
             
             await page.goto(url, { 
@@ -190,11 +245,31 @@ class Scraper {
             }
             
             return price;
+        } catch (error) {
+            const msg = (error.message || '').toLowerCase();
+            const isCrash =
+                !browser ||
+                (typeof browser.isConnected === 'function' && !browser.isConnected()) ||
+                msg.includes('target closed') ||
+                msg.includes('session closed') ||
+                msg.includes('protocol error') ||
+                msg.includes('browser has disconnected') ||
+                msg.includes('crashed') ||
+                msg.includes('navigating frame was detached');
+
+            if (isCrash) {
+                console.warn(`[Scraper] Puppeteer crash or disconnection detected (${error.message}). Discarding crashed browser instance for recovery.`);
+                await this.closeBrowser();
+            }
+
+            throw error;
         } finally {
-            try {
-                await page.close();
-            } catch (closeErr) {
-                // Page may have already closed if navigation failed
+            if (page) {
+                try {
+                    await page.close();
+                } catch (closeErr) {
+                    // Page may have already closed if navigation failed or browser crashed
+                }
             }
         }
     }
@@ -233,30 +308,36 @@ class Scraper {
     }
 
     async scrapeAllSources(product) {
-        const results = [];
-        
-        for (const source of product.sources) {
-            try {
-                const price = await this.scrapePrice(
-                    source.url, 
-                    source.cssSelector, 
-                    source.usePuppeteer
-                );
-                results.push({
-                    success: true,
-                    price,
-                    url: source.url
-                });
-            } catch (error) {
-                results.push({
-                    success: false,
-                    error: error.message,
-                    url: source.url
-                });
-            }
+        if (!product || !Array.isArray(product.sources) || product.sources.length === 0) {
+            return [];
         }
-        
-        return results;
+
+        const promises = product.sources.map(source =>
+            this.scrapePrice(
+                source.url,
+                source.cssSelector,
+                source.usePuppeteer
+            )
+        );
+
+        const settledResults = await Promise.allSettled(promises);
+
+        return settledResults.map((result, i) => {
+            const source = product.sources[i];
+            if (result.status === 'fulfilled') {
+                return {
+                    success: true,
+                    price: result.value,
+                    url: source.url
+                };
+            } else {
+                return {
+                    success: false,
+                    error: result.reason?.message || 'Unknown scrape error',
+                    url: source.url
+                };
+            }
+        });
     }
 }
 

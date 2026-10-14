@@ -41,6 +41,7 @@ const ProductCard = {
 
         const cleanLowest = this.sanitizePrice(product.lowestPrice, product.referencePrice);
         const isATL = this.isAtAllTimeLow(product);
+        const isActive = product.active !== false;
         const delta = product.priceDelta;
         const deltaClass = delta < 0 ? 'negative' : 'positive';
         const deltaSign = delta < 0 ? '' : '+';
@@ -53,9 +54,10 @@ const ProductCard = {
         // List View Variant
         if (viewMode === 'list') {
             return `
-                <article class="product-card list-card" data-id="${id}">
+                <article class="product-card list-card ${!isActive ? 'is-paused' : ''}" data-id="${id}">
                     <div class="list-card-media">
                         <img class="product-card-image" src="${imageUrl}" alt="${title}" onerror="this.src='/images/placeholder.svg'">
+                        ${!isActive ? `<span class="card-badge paused">Paused</span>` : ''}
                         ${isATL ? `<span class="card-badge atl">ATL</span>` : ''}
                     </div>
 
@@ -82,6 +84,9 @@ const ProductCard = {
                         </div>
 
                         <div class="list-card-actions" onclick="event.stopPropagation()">
+                            <button class="btn btn-secondary btn-sm" onclick="App.toggleProductActive('${id}', ${isActive})" title="${isActive ? 'Pause price tracking' : 'Resume price tracking'}">
+                                ${isActive ? 'Pause' : 'Resume'}
+                            </button>
                             ${lowestSource ? `
                                 <a href="${escapeHtml(lowestSource.url)}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm card-buy-btn">
                                     Buy ↗
@@ -98,10 +103,11 @@ const ProductCard = {
 
         // Grid Card Variant (Default)
         return `
-            <article class="product-card grid-card" data-id="${id}">
+            <article class="product-card grid-card ${!isActive ? 'is-paused' : ''}" data-id="${id}">
                 <div class="product-card-image-wrap">
                     <img class="product-card-image" src="${imageUrl}" alt="${title}" onerror="this.src='/images/placeholder.svg'">
                     <div class="card-badges-overlay">
+                        ${!isActive ? `<span class="card-badge paused">Paused</span>` : ''}
                         ${isATL ? `<span class="card-badge atl">ATL</span>` : ''}
                         ${delta != null ? `
                             <span class="card-badge delta ${deltaClass}">
@@ -135,8 +141,11 @@ const ProductCard = {
                         <button class="btn btn-primary btn-sm card-view-btn" onclick="App.showProductDetail('${id}')">
                             View Details →
                         </button>
+                        <button class="btn btn-secondary btn-sm" onclick="App.toggleProductActive('${id}', ${isActive})" title="${isActive ? 'Pause automatic price tracking' : 'Resume automatic price tracking'}">
+                            ${isActive ? 'Pause' : 'Resume'}
+                        </button>
                         ${lowestSource ? `
-                            <a href="${escapeHtml(lowestSource.url)}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm card-buy-btn" title="Buy directly on ${escapeHtml(lowestSource.siteName)}">
+                            <a href="${escapeHtml(lowestSource.url)}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm card-buy-btn" title="Buy directly on ${escapeHtml(lowestSource.siteName)}">
                                 Buy ↗
                             </a>
                         ` : ''}

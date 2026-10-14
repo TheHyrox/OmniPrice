@@ -21,10 +21,12 @@ const createProductSchema = z.object({
     // Supports external URLs, internal /images/... paths, or base64 data URLs up to ~25MB
     image: z.string().max(25 * 1024 * 1024, 'Image payload exceeds 25MB limit').nullable().optional(),
     sources: z.array(sourceSchema).min(1, 'At least one source is required').max(20),
+    active: z.boolean().optional().default(true),
 });
 
 const updateProductSchema = createProductSchema.partial().extend({
     sources: z.array(sourceSchema).min(1, 'At least one source is required').max(20).optional(),
+    active: z.boolean().optional(),
 });
 
 // ─── Stores ───────────────────────────────────────────────────────────────────
