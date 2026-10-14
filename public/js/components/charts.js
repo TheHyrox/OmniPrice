@@ -504,6 +504,7 @@ const Charts = {
                 backgroundColor: color + '15',
                 borderWidth: 2.5,
                 fill: false,
+                cubicInterpolationMode: 'monotone',
                 tension: 0.25,
                 pointRadius: sortedDates.length > 40 ? 1 : 3.5,
                 pointHoverRadius: 6,
@@ -756,6 +757,7 @@ const Charts = {
                     backgroundColor: gradient,
                     borderWidth: 2,
                     fill: true,
+                    cubicInterpolationMode: 'monotone',
                     tension: 0.3,
                     pointRadius: 0,
                     pointHoverRadius: 4

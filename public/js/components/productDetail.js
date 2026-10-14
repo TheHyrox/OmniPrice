@@ -473,6 +473,7 @@ const ProductDetail = {
                 backgroundColor: color + '15',
                 borderWidth: 2.5,
                 fill: false,
+                cubicInterpolationMode: 'monotone',
                 tension: 0.25,
                 pointRadius: dateLabels.length > 40 ? 1 : 4,
                 pointHoverRadius: 6,
