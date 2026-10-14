@@ -4,7 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="OmniPrice">
     <title>OmniPrice – Price Tracker</title>
+    <link rel="manifest" href="/manifest.json">
     <link rel="stylesheet" href="/css/styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -102,6 +107,7 @@
                 </div>
 
                 <div id="productsGrid" class="products-grid"></div>
+                <div id="productsPagination" class="products-pagination"></div>
             </section>
 
             <!-- Stores Tab -->
@@ -272,6 +278,20 @@
                         </div>
                         <div id="discordStatusMsg" style="margin-top: 12px; font-size: 0.875rem; display: none;"></div>
                     </div>
+                    <div class="settings-card" style="grid-column: 1 / -1; max-width: 680px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                            <h3 style="margin-bottom: 0; padding-bottom: 0; border-bottom: none;">Web Push & Browser Notifications</h3>
+                            <span id="pushStatusBadge" class="badge" style="padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; background: var(--bg-tertiary); color: var(--text-secondary);">Checking...</span>
+                        </div>
+                        <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 16px; line-height: 1.5;">
+                            Receive native OS notifications directly in your browser or installed PWA when a price drops below your target or a deal ends.
+                        </p>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                            <button id="enablePushBtn" class="btn btn-primary">Enable Web Push Notifications</button>
+                            <button id="testPushBtn" class="btn btn-secondary" style="display: none;">Send Test Push</button>
+                        </div>
+                        <div id="pushStatusMsg" style="margin-top: 12px; font-size: 0.875rem; display: none;"></div>
+                    </div>
                 </div>
             </section>
 
@@ -429,9 +449,22 @@
                         </select>
                     </div>
                     <div class="form-group">
+                        <label for="alertTypeSelect">Alert Condition *</label>
+                        <select id="alertTypeSelect" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 0.95rem;">
+                            <option value="drop">📉 Price Drop (Price falls to or below target)</option>
+                            <option value="rise">📈 Price Rise (Price rises to or above target)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
                         <label for="alertTargetPrice">Target Price (€) *</label>
                         <input type="number" id="alertTargetPrice" step="0.01" min="0" placeholder="e.g., 149.99" required />
                         <span id="alertProductCurrentPriceHint" style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px; display: block;"></span>
+                    </div>
+                    <div class="form-group" id="notifyOnRiseGroup" style="margin-top: 6px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.875rem;">
+                            <input type="checkbox" id="alertNotifyOnRise" style="width: auto; margin: 0; cursor: pointer;" />
+                            <span>Notify when deal ends (price bounces back above target)</span>
+                        </label>
                     </div>
                     <div class="form-group">
                         <label for="alertWebhookUrl">Custom Discord Webhook (Optional)</label>

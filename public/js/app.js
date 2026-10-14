@@ -4,12 +4,18 @@ const App = {
     alerts: [],
     currentView: 'card',
     currentSort: 'delta',
+    pagination: {
+        page: 1,
+        limit: 12,
+        total: 0,
+        totalPages: 1
+    },
     filters: {
         search: '',
         priceMin: null,
         priceMax: null,
         tags: [],
-        dealType: 'all' // 'all' | 'deals' | 'atl'
+        dealType: 'all' // 'all' | 'deals' | 'atl' | 'active' | 'paused'
     },
     allTags: [],
 
@@ -21,6 +27,7 @@ const App = {
         await this.loadAlerts();
         await this.loadSettings();
         this.setupChartTimeframes();
+        this.initServiceWorkerAndPush();
     },
 
     bindEvents() {
@@ -42,35 +49,43 @@ const App = {
 
         document.getElementById('sortSelect').addEventListener('change', (e) => {
             this.currentSort = e.target.value;
-            this.renderProducts();
+            this.pagination.page = 1;
+            this.loadProducts(1);
         });
 
-        // Search Input with Clear Button
+        // Search Input with Clear Button (debounced for server pagination)
+        let searchTimeout;
         const searchInput = document.getElementById('searchInput');
         const clearSearchBtn = document.getElementById('clearSearchBtn');
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
                 this.filters.search = e.target.value.toLowerCase().trim();
                 if (clearSearchBtn) clearSearchBtn.style.display = e.target.value ? 'block' : 'none';
-                this.renderProducts();
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    this.pagination.page = 1;
+                    this.loadProducts(1);
+                }, 300);
             });
             if (clearSearchBtn) {
                 clearSearchBtn.addEventListener('click', () => {
                     searchInput.value = '';
                     this.filters.search = '';
                     clearSearchBtn.style.display = 'none';
-                    this.renderProducts();
+                    this.pagination.page = 1;
+                    this.loadProducts(1);
                 });
             }
         }
 
-        // Quick Filters (All, Deals, ATL)
+        // Quick Filters (All, Deals, ATL, Active, Paused)
         document.querySelectorAll('.quick-filter-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.quick-filter-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 this.filters.dealType = btn.dataset.filter;
-                this.renderProducts();
+                this.pagination.page = 1;
+                this.loadProducts(1);
             });
         });
 
@@ -84,15 +99,24 @@ const App = {
             }
         };
 
+        let priceTimeout;
+        const onPriceInput = () => {
+            clearTimeout(priceTimeout);
+            priceTimeout = setTimeout(() => {
+                this.pagination.page = 1;
+                this.loadProducts(1);
+            }, 350);
+        };
+
         priceMin?.addEventListener('input', (e) => {
             this.filters.priceMin = e.target.value ? parseFloat(e.target.value) : null;
             updatePriceClear();
-            this.renderProducts();
+            onPriceInput();
         });
         priceMax?.addEventListener('input', (e) => {
             this.filters.priceMax = e.target.value ? parseFloat(e.target.value) : null;
             updatePriceClear();
-            this.renderProducts();
+            onPriceInput();
         });
         clearPriceBtn?.addEventListener('click', () => {
             if (priceMin) priceMin.value = '';
@@ -100,7 +124,8 @@ const App = {
             this.filters.priceMin = null;
             this.filters.priceMax = null;
             updatePriceClear();
-            this.renderProducts();
+            this.pagination.page = 1;
+            this.loadProducts(1);
         });
 
         document.getElementById('addProductBtn').addEventListener('click', () => this.openModal());
@@ -119,15 +144,24 @@ const App = {
         document.getElementById('storeForm')?.addEventListener('submit', (e) => this.handleStoreFormSubmit(e));
         document.getElementById('syncAllStoresBtn')?.addEventListener('click', () => this.syncAllStores());
 
-        // Alerts Modal & SMTP
+        // Alerts Modal
         document.getElementById('addAlertBtn')?.addEventListener('click', () => this.openAlertModal());
         document.getElementById('closeAlertModal')?.addEventListener('click', () => this.closeAlertModal());
         document.getElementById('cancelAlertModal')?.addEventListener('click', () => this.closeAlertModal());
         document.getElementById('alertForm')?.addEventListener('submit', (e) => this.handleAlertFormSubmit(e));
         document.getElementById('alertProductSelect')?.addEventListener('change', (e) => this.onAlertProductSelectChange(e));
+        document.getElementById('alertTypeSelect')?.addEventListener('change', (e) => {
+            const notifyGroup = document.getElementById('notifyOnRiseGroup');
+            if (notifyGroup) {
+                notifyGroup.style.display = e.target.value === 'rise' ? 'none' : 'block';
+            }
+        });
 
+        // Notifications: Discord & Web Push
         document.getElementById('saveDiscordBtn')?.addEventListener('click', () => this.saveDiscordSettings());
         document.getElementById('testDiscordBtn')?.addEventListener('click', () => this.testDiscordWebhook());
+        document.getElementById('enablePushBtn')?.addEventListener('click', () => this.subscribeToPush());
+        document.getElementById('testPushBtn')?.addEventListener('click', () => this.sendTestPush());
 
         document.getElementById('backToProducts').addEventListener('click', () => this.navigateToTab('products'));
 
@@ -161,8 +195,11 @@ const App = {
         });
         document.getElementById(`${tabName}-tab`)?.classList.add('active');
 
-        if (tabName === 'charts' && this.products.length > 0) {
-            setTimeout(() => Charts.init(this.products), 100);
+        if (tabName === 'charts') {
+            API.products.getAll().then(allProducts => {
+                const list = Array.isArray(allProducts) ? allProducts : (allProducts.products || []);
+                setTimeout(() => Charts.init(list), 100);
+            });
         }
         if (tabName === 'alerts') {
             this.loadAlerts();
@@ -176,19 +213,43 @@ const App = {
         this.navigateToTab(this.previousTab || 'products');
     },
 
-    async loadProducts() {
+    async loadProducts(page = null) {
+        if (page !== null) {
+            this.pagination.page = page;
+        }
         const grid = document.getElementById('productsGrid');
-        grid.innerHTML = ProductCard.renderLoading();
+        if (grid) grid.innerHTML = ProductCard.renderLoading();
 
         try {
-            this.products = await API.products.getAll();
-            this.updateTags();
-            this.renderProducts();
-            if (document.getElementById('charts-tab')?.classList.contains('active')) {
-                Charts.init(this.products);
+            const params = {
+                page: this.pagination.page,
+                limit: this.pagination.limit,
+                sort: this.currentSort
+            };
+            if (this.filters.search) params.search = this.filters.search;
+            if (this.filters.dealType && this.filters.dealType !== 'all') params.dealType = this.filters.dealType;
+            if (this.filters.priceMin !== null) params.minPrice = this.filters.priceMin;
+            if (this.filters.priceMax !== null) params.maxPrice = this.filters.priceMax;
+            if (this.filters.tags && this.filters.tags.length > 0) params.tag = this.filters.tags[0];
+
+            const res = await API.products.getAll(params);
+            if (res && res.products && res.pagination) {
+                this.products = res.products;
+                this.pagination = res.pagination;
+            } else if (Array.isArray(res)) {
+                this.products = res;
+                this.pagination.total = res.length;
+                this.pagination.totalPages = Math.max(1, Math.ceil(res.length / this.pagination.limit));
             }
+
+            // Fetch tags list for filter buttons
+            const allTags = await API.products.getTags().catch(() => []);
+            this.allTags = (allTags && allTags.length > 0) ? allTags : [...new Set(this.products.flatMap(p => p.tags || []))];
+            this.renderTagFilters();
+
+            this.renderProducts();
         } catch (error) {
-            grid.innerHTML = `<div class="empty-state"><p>Error loading products: ${error.message}</p></div>`;
+            if (grid) grid.innerHTML = `<div class="empty-state"><p>Error loading products: ${error.message}</p></div>`;
         }
     },
 
@@ -201,9 +262,9 @@ const App = {
             return;
         }
 
-        const totalCount = this.products.length;
+        const totalCount = this.pagination?.total || this.products.length;
         const activeCount = this.products.filter(p => p.active !== false).length;
-        const pausedCount = totalCount - activeCount;
+        const pausedCount = Math.max(0, this.products.length - activeCount);
         const dealsCount = this.products.filter(p => p.priceDelta != null && p.priceDelta < 0).length;
         const atlCount = this.products.filter(p => ProductCard.isAtAllTimeLow(p)).length;
 
@@ -269,63 +330,61 @@ const App = {
         this.renderProductsKpis();
         const grid = document.getElementById('productsGrid');
         if (!grid) return;
-        
-        let filtered = this.products.filter(p => {
-            if (this.filters.search) {
-                const searchMatch = p.title.toLowerCase().includes(this.filters.search) ||
-                    (p.tags || []).some(t => t.toLowerCase().includes(this.filters.search));
-                if (!searchMatch) return false;
-            }
-            
-            const price = ProductCard.sanitizePrice(p.lowestPrice, p.referencePrice);
-            if (this.filters.priceMin !== null && (price === null || price < this.filters.priceMin)) return false;
-            if (this.filters.priceMax !== null && (price === null || price > this.filters.priceMax)) return false;
-            if (this.filters.tags.length > 0) {
-                if (!this.filters.tags.some(t => (p.tags || []).includes(t))) return false;
-            }
 
-            if (this.filters.dealType === 'deals') {
-                if (p.priceDelta == null || p.priceDelta >= 0) return false;
-            } else if (this.filters.dealType === 'atl') {
-                if (!ProductCard.isAtAllTimeLow(p)) return false;
-            } else if (this.filters.dealType === 'active') {
-                if (p.active === false) return false;
-            } else if (this.filters.dealType === 'paused') {
-                if (p.active !== false) return false;
-            }
-            
-            return true;
-        });
-
-        filtered.sort((a, b) => {
-            const pA = ProductCard.sanitizePrice(a.lowestPrice, a.referencePrice) ?? Infinity;
-            const pB = ProductCard.sanitizePrice(b.lowestPrice, b.referencePrice) ?? Infinity;
-
-            switch (this.currentSort) {
-                case 'delta':
-                    const deltaA = a.priceDelta ?? Infinity;
-                    const deltaB = b.priceDelta ?? Infinity;
-                    return deltaA - deltaB;
-                case 'price-asc':
-                    return pA - pB;
-                case 'price-desc':
-                    return pB - pA;
-                case 'alpha':
-                    return a.title.localeCompare(b.title);
-                case 'date':
-                    return new Date(b.createdAt) - new Date(a.createdAt);
-                default:
-                    return 0;
-            }
-        });
-
-        if (filtered.length === 0) {
+        if (!this.products || this.products.length === 0) {
             grid.innerHTML = ProductCard.renderEmpty();
+            this.renderPagination();
             return;
         }
 
         grid.className = `products-grid ${this.currentView === 'list' ? 'list-view' : ''}`;
-        grid.innerHTML = filtered.map(p => ProductCard.render(p, this.currentView)).join('');
+        grid.innerHTML = this.products.map(p => ProductCard.render(p, this.currentView)).join('');
+        this.renderPagination();
+    },
+
+    renderPagination() {
+        const container = document.getElementById('productsPagination');
+        if (!container) return;
+
+        if (!this.pagination || this.pagination.total === 0) {
+            container.innerHTML = '';
+            container.style.display = 'none';
+            return;
+        }
+
+        container.style.display = 'flex';
+        const { page, totalPages, total, limit } = this.pagination;
+        const startItem = total > 0 ? (page - 1) * limit + 1 : 0;
+        const endItem = Math.min(page * limit, total);
+
+        container.innerHTML = `
+            <div class="pagination-info">
+                Showing <strong>${startItem}–${endItem}</strong> of <strong>${total}</strong> products
+            </div>
+            <div class="pagination-controls">
+                <button class="pagination-btn" id="paginationPrevBtn" ${page <= 1 ? 'disabled' : ''}>← Prev</button>
+                <span class="pagination-page-indicator">Page ${page} of ${totalPages}</span>
+                <button class="pagination-btn" id="paginationNextBtn" ${page >= totalPages ? 'disabled' : ''}>Next →</button>
+                <select class="pagination-size-select" id="paginationLimitSelect" title="Items per page">
+                    <option value="6" ${limit === 6 ? 'selected' : ''}>6 / page</option>
+                    <option value="12" ${limit === 12 ? 'selected' : ''}>12 / page</option>
+                    <option value="24" ${limit === 24 ? 'selected' : ''}>24 / page</option>
+                    <option value="48" ${limit === 48 ? 'selected' : ''}>48 / page</option>
+                </select>
+            </div>
+        `;
+
+        document.getElementById('paginationPrevBtn')?.addEventListener('click', () => {
+            if (page > 1) this.loadProducts(page - 1);
+        });
+        document.getElementById('paginationNextBtn')?.addEventListener('click', () => {
+            if (page < totalPages) this.loadProducts(page + 1);
+        });
+        document.getElementById('paginationLimitSelect')?.addEventListener('change', (e) => {
+            this.pagination.limit = parseInt(e.target.value, 10);
+            this.pagination.page = 1;
+            this.loadProducts(1);
+        });
     },
 
     filterByTag(tag) {
@@ -334,31 +393,33 @@ const App = {
         if (index >= 0) {
             this.filters.tags.splice(index, 1);
         } else {
-            this.filters.tags.push(tag);
+            this.filters.tags = [tag];
         }
-        this.updateTags();
-        this.renderProducts();
+        this.renderTagFilters();
+        this.pagination.page = 1;
+        this.loadProducts(1);
     },
 
-    updateTags() {
-        const allTags = [...new Set(this.products.flatMap(p => p.tags || []))];
-        this.allTags = allTags;
-        
+    renderTagFilters() {
         const container = document.getElementById('tagFilters');
         if (!container) return;
 
-        container.innerHTML = allTags.map(tag => `
+        container.innerHTML = (this.allTags || []).map(tag => `
             <button class="tag-filter ${this.filters.tags.includes(tag) ? 'active' : ''}" data-tag="${escapeHtml(tag)}">
                 #${escapeHtml(tag)}
             </button>
         `).join('');
-        
+
         container.querySelectorAll('.tag-filter').forEach(btn => {
             btn.addEventListener('click', () => {
                 const tag = btn.dataset.tag;
                 this.filterByTag(tag);
             });
         });
+    },
+
+    updateTags() {
+        this.renderTagFilters();
     },
 
     setView(view) {
@@ -495,6 +556,19 @@ const App = {
                             <input type="text" placeholder="e.g. .a-price .a-offscreen, span.price" value="${escapeHtml(source.cssSelector || '')}" class="source-selector-input" required />
                         </div>
                     </div>
+
+                    <div class="modal-source-row modal-source-actions-row" style="margin-top: 10px;">
+                        <div class="source-field" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+                            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.8125rem; cursor: pointer; margin: 0;">
+                                <input type="checkbox" class="source-puppeteer-input" ${source.usePuppeteer ? 'checked' : ''} style="width: auto; margin: 0;" />
+                                <span>Use Puppeteer (Dynamic/JS sites)</span>
+                            </label>
+                            <button type="button" class="btn btn-secondary btn-sm test-selector-btn" onclick="App.testSourceSelector(this)">
+                                Test Selector
+                            </button>
+                        </div>
+                        <div class="test-selector-result" style="display: none; width: 100%; margin-top: 8px; font-size: 0.8125rem;"></div>
+                    </div>
                 </div>
             </div>
         `;
@@ -565,9 +639,10 @@ const App = {
             const url = item.querySelector('.source-url-input')?.value?.trim();
             const cssSelector = item.querySelector('.source-selector-input')?.value?.trim();
             const siteName = item.querySelector('.source-name-input')?.value?.trim();
+            const usePuppeteer = item.querySelector('.source-puppeteer-input')?.checked || false;
             
             if (url && cssSelector && siteName) {
-                data.sources.push({ url, cssSelector, siteName });
+                data.sources.push({ url, cssSelector, siteName, usePuppeteer });
             }
         });
 
@@ -630,6 +705,87 @@ const App = {
             await this.showProductDetail(productId);
         } catch (error) {
             alert('Error adding source: ' + error.message);
+        }
+    },
+
+    async testSourceSelector(btn) {
+        const itemRow = btn.closest('.source-item') || btn.closest('.modal-source-item');
+        if (!itemRow) return;
+
+        const urlInput = itemRow.querySelector('.source-url-input');
+        const selectorInput = itemRow.querySelector('.source-selector-input');
+        const puppeteerInput = itemRow.querySelector('.source-puppeteer-input');
+        const resultDiv = itemRow.querySelector('.test-selector-result');
+
+        const url = urlInput?.value?.trim();
+        const cssSelector = selectorInput?.value?.trim();
+        const usePuppeteer = puppeteerInput?.checked || false;
+
+        if (!url || !cssSelector) {
+            alert('Please enter both a Product Page URL and a CSS Selector first.');
+            return;
+        }
+
+        btn.disabled = true;
+        const originalText = btn.textContent;
+        btn.textContent = 'Testing...';
+
+        if (resultDiv) {
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<span style="color: var(--text-secondary);">Connecting and extracting price...</span>';
+        }
+
+        try {
+            const res = await API.scraper.testSelector(url, cssSelector, usePuppeteer);
+            if (res.success && res.price !== null) {
+                if (resultDiv) {
+                    resultDiv.innerHTML = `<span style="color: #34c759; font-weight: 600;">✓ Price parsed successfully: €${Number(res.price).toFixed(2)}</span>`;
+                }
+            } else {
+                if (resultDiv) {
+                    resultDiv.innerHTML = `<span style="color: #ff3b30;">✗ Could not parse price: ${escapeHtml(res.error || 'Empty element')}</span>`;
+                }
+            }
+        } catch (error) {
+            if (resultDiv) {
+                resultDiv.innerHTML = `<span style="color: #ff3b30;">✗ Test failed: ${escapeHtml(error.message)}</span>`;
+            }
+        } finally {
+            btn.disabled = false;
+            btn.textContent = originalText;
+        }
+    },
+
+    async testNewSourceSelector() {
+        const url = document.getElementById('newSourceUrl')?.value?.trim();
+        const cssSelector = document.getElementById('newSourceSelector')?.value?.trim();
+        const resultDiv = document.getElementById('newSourceTestResult');
+
+        if (!url || !cssSelector) {
+            alert('Please enter both a Product Page URL and a CSS Selector first.');
+            return;
+        }
+
+        if (resultDiv) {
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<span style="color: var(--text-secondary);">Connecting and extracting price...</span>';
+        }
+
+        try {
+            const res = await API.scraper.testSelector(url, cssSelector, false);
+            if (res.success && res.price !== null) {
+                if (resultDiv) {
+                    resultDiv.innerHTML = `<span style="color: #34c759; font-weight: 600;">✓ Price parsed successfully: €${Number(res.price).toFixed(2)}</span>`;
+                }
+            } else {
+                if (resultDiv) {
+                    resultDiv.innerHTML = `<span style="color: #ff3b30;">✗ Could not parse price: ${escapeHtml(res.error || 'Empty element')}</span>`;
+                }
+            }
+        } catch (error) {
+            if (resultDiv) {
+                resultDiv.innerHTML = `<span style="color: #ff3b30;">✗ Test failed: ${escapeHtml(error.message)}</span>`;
+            }
         }
     },
 
@@ -896,7 +1052,8 @@ const App = {
         container.innerHTML = this.alerts.map(alert => {
             const product = alert.product;
             const currentPrice = product?.lowestPrice != null ? product.lowestPrice : null;
-            const isMet = currentPrice != null && currentPrice <= alert.targetPrice;
+            const isRise = alert.alertType === 'rise';
+            const isMet = currentPrice != null && (isRise ? currentPrice >= alert.targetPrice : currentPrice <= alert.targetPrice);
             
             let statusBadge = '';
             if (!alert.active) {
@@ -906,6 +1063,10 @@ const App = {
             } else {
                 statusBadge = '<span class="alert-status-badge active">● Monitoring</span>';
             }
+
+            const typeBadge = isRise
+                ? '<span style="font-size:0.75rem; background:rgba(239,68,68,0.12); color:#ef4444; padding:2px 6px; border-radius:4px; font-weight:600;">📈 Price Rise</span>'
+                : '<span style="font-size:0.75rem; background:rgba(16,185,129,0.12); color:#10b981; padding:2px 6px; border-radius:4px; font-weight:600;">📉 Price Drop</span>';
 
             const formattedTarget = `€${Number(alert.targetPrice).toFixed(2)}`;
             const formattedCurrent = currentPrice != null ? `€${Number(currentPrice).toFixed(2)}` : 'Not scraped yet';
@@ -927,13 +1088,16 @@ const App = {
                         }
                         <div class="alert-card-title-wrap">
                             <h3 class="alert-card-title" title="${escapedTitle}">${escapedTitle}</h3>
-                            ${statusBadge}
+                            <div style="display: flex; gap: 6px; align-items: center; margin-top: 4px;">
+                                ${typeBadge}
+                                ${statusBadge}
+                            </div>
                         </div>
                     </div>
 
                     <div class="alert-card-body">
                         <div class="alert-stat">
-                            <span class="alert-stat-label">Target Price</span>
+                            <span class="alert-stat-label">${isRise ? 'Threshold Price' : 'Target Price'}</span>
                             <span class="alert-stat-value target">${formattedTarget}</span>
                         </div>
                         <div class="alert-stat">
@@ -943,7 +1107,8 @@ const App = {
                     </div>
 
                     <div class="alert-meta">
-                        <div><strong>Notification:</strong> ${channelText}</div>
+                        <div><strong>Trigger:</strong> ${isRise ? `Price ≥ €${Number(alert.targetPrice).toFixed(2)}` : `Price ≤ €${Number(alert.targetPrice).toFixed(2)}${alert.notifyOnRise ? ' (+ notify on deal end)' : ''}`}</div>
+                        <div><strong>Notification:</strong> ${channelText} + Web Push</div>
                         <div style="font-size: 0.75rem; color: var(--text-tertiary);">${lastTriggeredText}</div>
                     </div>
 
@@ -952,7 +1117,7 @@ const App = {
                             <button class="btn btn-secondary btn-sm" onclick="App.toggleAlert('${alert._id}', ${alert.active})" title="${alert.active ? 'Pause' : 'Resume'} alert">
                                 ${alert.active ? 'Pause' : 'Resume'}
                             </button>
-                            <button class="btn btn-ghost btn-sm" onclick="App.triggerTestAlert('${alert._id}')" title="Send a test notification to Discord">
+                            <button class="btn btn-ghost btn-sm" onclick="App.triggerTestAlert('${alert._id}')" title="Send a test notification">
                                 Test
                             </button>
                         </div>
@@ -970,6 +1135,9 @@ const App = {
         const title = document.getElementById('alertModalTitle');
         const select = document.getElementById('alertProductSelect');
         const hint = document.getElementById('alertProductCurrentPriceHint');
+        const typeSelect = document.getElementById('alertTypeSelect');
+        const notifyGroup = document.getElementById('notifyOnRiseGroup');
+        const notifyCheckbox = document.getElementById('alertNotifyOnRise');
 
         if (!modal || !select) return;
 
@@ -987,10 +1155,16 @@ const App = {
             select.value = alert.productId;
             document.getElementById('alertTargetPrice').value = alert.targetPrice;
             document.getElementById('alertWebhookUrl').value = alert.webhookUrl || '';
+            if (typeSelect) typeSelect.value = alert.alertType || 'drop';
+            if (notifyCheckbox) notifyCheckbox.checked = Boolean(alert.notifyOnRise);
+            if (notifyGroup) notifyGroup.style.display = (alert.alertType === 'rise') ? 'none' : 'block';
         } else {
             title.textContent = 'Create Price Alert';
             document.getElementById('alertId').value = '';
             document.getElementById('alertForm')?.reset();
+            if (typeSelect) typeSelect.value = 'drop';
+            if (notifyCheckbox) notifyCheckbox.checked = false;
+            if (notifyGroup) notifyGroup.style.display = 'block';
             if (hint) hint.textContent = '';
         }
 
@@ -1002,6 +1176,8 @@ const App = {
         document.getElementById('alertForm')?.reset();
         const hint = document.getElementById('alertProductCurrentPriceHint');
         if (hint) hint.textContent = '';
+        const notifyGroup = document.getElementById('notifyOnRiseGroup');
+        if (notifyGroup) notifyGroup.style.display = 'block';
     },
 
     onAlertProductSelectChange(e) {
@@ -1038,6 +1214,8 @@ const App = {
         const productId = document.getElementById('alertProductSelect').value;
         const targetPrice = parseFloat(document.getElementById('alertTargetPrice').value);
         const webhookUrl = document.getElementById('alertWebhookUrl').value.trim();
+        const alertType = document.getElementById('alertTypeSelect')?.value || 'drop';
+        const notifyOnRise = document.getElementById('alertNotifyOnRise')?.checked || false;
 
         if (!productId) {
             alert('Please select a product');
@@ -1049,10 +1227,11 @@ const App = {
         }
 
         try {
+            const payload = { productId, targetPrice, webhookUrl, alertType, notifyOnRise };
             if (id) {
-                await API.alerts.update(id, { productId, targetPrice, webhookUrl });
+                await API.alerts.update(id, payload);
             } else {
-                await API.alerts.create({ productId, targetPrice, webhookUrl });
+                await API.alerts.create(payload);
             }
             this.closeAlertModal();
             await this.loadAlerts();
@@ -1182,6 +1361,154 @@ const App = {
             if (btn) {
                 btn.disabled = false;
                 btn.textContent = 'Send Test Notification';
+            }
+        }
+    },
+
+    // ==========================================
+    // Web Push & PWA Management
+    // ==========================================
+    async initServiceWorkerAndPush() {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+            this.updatePushUI('unsupported');
+            return;
+        }
+
+        try {
+            const registration = await navigator.serviceWorker.register('/sw.js');
+            const subscription = await registration.pushManager.getSubscription();
+            if (subscription) {
+                this.updatePushUI('subscribed');
+            } else {
+                this.updatePushUI('unsubscribed');
+            }
+        } catch (err) {
+            console.warn('[PWA] Service Worker registration failed:', err);
+            this.updatePushUI('unsupported');
+        }
+    },
+
+    updatePushUI(state) {
+        const badge = document.getElementById('pushStatusBadge');
+        const enableBtn = document.getElementById('enablePushBtn');
+        const testBtn = document.getElementById('testPushBtn');
+
+        if (state === 'subscribed') {
+            if (badge) {
+                badge.textContent = 'Subscribed';
+                badge.style.background = '#dcfce7';
+                badge.style.color = '#15803d';
+            }
+            if (enableBtn) {
+                enableBtn.textContent = 'Web Push Active';
+                enableBtn.disabled = true;
+                enableBtn.classList.remove('btn-primary');
+                enableBtn.classList.add('btn-secondary');
+            }
+            if (testBtn) testBtn.style.display = 'inline-block';
+        } else if (state === 'unsubscribed') {
+            if (badge) {
+                badge.textContent = 'Not Subscribed';
+                badge.style.background = 'var(--bg-tertiary)';
+                badge.style.color = 'var(--text-secondary)';
+            }
+            if (enableBtn) {
+                enableBtn.textContent = 'Enable Web Push Notifications';
+                enableBtn.disabled = false;
+                enableBtn.classList.add('btn-primary');
+                enableBtn.classList.remove('btn-secondary');
+            }
+            if (testBtn) testBtn.style.display = 'none';
+        } else {
+            if (badge) {
+                badge.textContent = 'Not Supported';
+                badge.style.background = '#fee2e2';
+                badge.style.color = '#b91c1c';
+            }
+            if (enableBtn) {
+                enableBtn.textContent = 'Web Push Unsupported';
+                enableBtn.disabled = true;
+            }
+            if (testBtn) testBtn.style.display = 'none';
+        }
+    },
+
+    async subscribeToPush() {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+            alert('Web Push is not supported in this browser.');
+            return;
+        }
+
+        const enableBtn = document.getElementById('enablePushBtn');
+        const msg = document.getElementById('pushStatusMsg');
+        if (enableBtn) enableBtn.disabled = true;
+
+        try {
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                if (msg) {
+                    msg.style.display = 'block';
+                    msg.style.color = '#ef4444';
+                    msg.textContent = 'Notification permission was denied. Please allow notifications in site settings.';
+                }
+                this.updatePushUI('unsubscribed');
+                return;
+            }
+
+            const registration = await navigator.serviceWorker.ready;
+            const { publicKey } = await API.push.getVapidKey();
+            if (!publicKey) throw new Error('Could not retrieve VAPID public key from server');
+
+            const applicationServerKey = window.Utils.urlBase64ToUint8Array(publicKey);
+            const subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey
+            });
+
+            await API.push.subscribe(subscription);
+            this.updatePushUI('subscribed');
+
+            if (msg) {
+                msg.style.display = 'block';
+                msg.style.color = '#10b981';
+                msg.textContent = '✓ Successfully subscribed to Web Push! Alerts will appear on your device.';
+            }
+        } catch (err) {
+            console.error('[WebPush] Subscription error:', err);
+            if (msg) {
+                msg.style.display = 'block';
+                msg.style.color = '#ef4444';
+                msg.textContent = `Subscription error: ${err.message}`;
+            }
+            this.updatePushUI('unsubscribed');
+        }
+    },
+
+    async sendTestPush() {
+        const testBtn = document.getElementById('testPushBtn');
+        const msg = document.getElementById('pushStatusMsg');
+        if (testBtn) {
+            testBtn.disabled = true;
+            testBtn.textContent = 'Sending...';
+        }
+
+        try {
+            const res = await API.push.sendTestNotification();
+            if (msg) {
+                msg.style.display = 'block';
+                msg.style.color = '#10b981';
+                msg.textContent = `✓ Push notification sent to ${res.delivered || 1} device(s)!`;
+            }
+        } catch (err) {
+            if (msg) {
+                msg.style.display = 'block';
+                msg.style.color = '#ef4444';
+                msg.textContent = `Failed to send test push: ${err.message}`;
+            }
+        } finally {
+            if (testBtn) {
+                testBtn.disabled = false;
+                testBtn.textContent = 'Send Test Push';
             }
         }
     },

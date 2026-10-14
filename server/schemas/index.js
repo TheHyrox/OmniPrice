@@ -53,12 +53,16 @@ const createAlertSchema = z.object({
         .or(z.literal(''))
         .nullable(),
     active: z.boolean().optional().default(true),
+    alertType: z.enum(['drop', 'rise']).optional().default('drop'),
+    notifyOnRise: z.boolean().optional().default(false),
 });
 
 const updateAlertSchema = z.object({
     targetPrice: positiveNumber.optional(),
     webhookUrl: z.string().url().optional().or(z.literal('')).nullable(),
     active: z.boolean().optional(),
+    alertType: z.enum(['drop', 'rise']).optional(),
+    notifyOnRise: z.boolean().optional(),
 });
 
 const testWebhookSchema = z.object({

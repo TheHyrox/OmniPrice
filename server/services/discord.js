@@ -164,6 +164,97 @@ class DiscordNotifier {
             status: response.status
         };
     }
+
+    /**
+     * Sends a price rise / deal ended notification embed to Discord.
+     */
+    async sendPriceRiseAlert({ alert, product, currentPrice, previousPrice, storeName, sourceUrl }) {
+        const webhookUrl = (alert.webhookUrl && alert.webhookUrl.trim()) 
+            ? alert.webhookUrl.trim() 
+            : await this.getDefaultWebhookUrl();
+
+        if (!webhookUrl) return;
+
+        const targetPrice = alert.targetPrice;
+        const diff = previousPrice != null ? (currentPrice - previousPrice) : (currentPrice - targetPrice);
+
+        const fields = [
+            {
+                name: 'Current Price',
+                value: `**€${Number(currentPrice).toFixed(2)}**`,
+                inline: true
+            },
+            {
+                name: 'Target / Baseline',
+                value: `€${Number(targetPrice).toFixed(2)}`,
+                inline: true
+            }
+        ];
+
+        if (previousPrice != null) {
+            fields.push({
+                name: 'Previous Low',
+                value: `€${Number(previousPrice).toFixed(2)}`,
+                inline: true
+            });
+        }
+
+        if (diff > 0) {
+            fields.push({
+                name: 'Price Increase',
+                value: `+€${diff.toFixed(2)}`,
+                inline: true
+            });
+        }
+
+        if (storeName) {
+            fields.push({
+                name: 'Merchant',
+                value: storeName,
+                inline: true
+            });
+        }
+
+        if (sourceUrl) {
+            fields.push({
+                name: 'Store Link',
+                value: `[View Product at ${storeName || 'Merchant'}](${sourceUrl})`,
+                inline: false
+            });
+        }
+
+        const embed = {
+            title: `Price Rise / Deal Ended: ${product.title}`,
+            url: sourceUrl || undefined,
+            color: 0xF59E0B, // Amber / Warning
+            description: `Notice: **${product.title}** has increased in price and is no longer at its low point.`,
+            fields,
+            footer: {
+                text: 'OmniPrice Price-Rise Alert'
+            },
+            timestamp: new Date().toISOString()
+        };
+
+        if (product.image && (product.image.startsWith('http://') || product.image.startsWith('https://'))) {
+            embed.thumbnail = { url: product.image };
+        }
+
+        const payload = {
+            username: 'OmniPrice Alerts',
+            avatar_url: 'https://cdn-icons-png.flaticon.com/512/3135/3135706.png',
+            embeds: [embed]
+        };
+
+        const response = await axios.post(webhookUrl, payload, {
+            headers: { 'Content-Type': 'application/json' },
+            timeout: 10000
+        });
+
+        return {
+            success: true,
+            status: response.status
+        };
+    }
 }
 
 module.exports = new DiscordNotifier();

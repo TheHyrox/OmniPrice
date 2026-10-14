@@ -68,7 +68,7 @@ The app will connect to database **`omniprice`** with four collections:
 
 ## Docker & Docker Compose Setup
 
-An example compose file is provided at [`docker-compose.exemple.yml`](docker-compose.exemple.yml):
+An example compose file is provided at [`docker-compose.example.yml`](docker-compose.example.yml):
 
 ```yaml
 services:

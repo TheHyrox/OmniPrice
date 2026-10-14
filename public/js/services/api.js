@@ -26,8 +26,15 @@ const API = {
     },
 
     products: {
-        async getAll() {
-            return API.request('/products');
+        async getAll(params = {}) {
+            const query = new URLSearchParams();
+            Object.entries(params).forEach(([key, val]) => {
+                if (val !== undefined && val !== null && val !== '') {
+                    query.append(key, val);
+                }
+            });
+            const qs = query.toString();
+            return API.request(qs ? `/products?${qs}` : '/products');
         },
 
         async getById(id) {
@@ -86,6 +93,13 @@ const API = {
         async scrapeAll() {
             return API.request('/scraper/all', {
                 method: 'POST'
+            });
+        },
+
+        async testSelector(url, cssSelector, usePuppeteer = false) {
+            return API.request('/scraper/test', {
+                method: 'POST',
+                body: { url, cssSelector, usePuppeteer }
             });
         }
     },
@@ -173,6 +187,25 @@ const API = {
 
         async triggerTest(id) {
             return API.request(`/alerts/${id}/test-trigger`, {
+                method: 'POST'
+            });
+        }
+    },
+
+    push: {
+        async getVapidKey() {
+            return API.request('/alerts/push/vapid-key');
+        },
+
+        async subscribe(subscription) {
+            return API.request('/alerts/push/subscribe', {
+                method: 'POST',
+                body: subscription
+            });
+        },
+
+        async sendTestNotification() {
+            return API.request('/alerts/push/test', {
                 method: 'POST'
             });
         }

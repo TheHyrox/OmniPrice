@@ -2,9 +2,49 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db/adapter');
 const discord = require('../services/discord');
+const webPush = require('../services/web-push');
 const { validate } = require('../middleware/validate');
 const { createAlertSchema, updateAlertSchema, testWebhookSchema } = require('../schemas');
 const { webhookTestLimiter } = require('../middleware/rate-limiters');
+
+// ─── Web Push Endpoints (must precede /:id) ──────────────────────────────────
+
+// GET VAPID public key for Web Push subscription
+router.get('/push/vapid-key', async (req, res) => {
+    try {
+        const publicKey = await webPush.getPublicKey();
+        res.json({ publicKey });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// POST save browser Web Push subscription
+router.post('/push/subscribe', async (req, res) => {
+    try {
+        const subscription = await webPush.subscribe(req.body);
+        res.json({ success: true, subscription });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// POST test Web Push notification to all subscribed clients
+router.post('/push/test', async (req, res) => {
+    try {
+        const result = await webPush.sendNotificationToAll({
+            title: 'OmniPrice Push Notification',
+            body: 'Web Push alerts are active and running successfully!',
+            icon: '/images/placeholder.svg',
+            url: '/'
+        });
+        res.json({ success: true, ...result });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ─── Alert Endpoints ─────────────────────────────────────────────────────────
 
 // GET all alerts (enriched with product info)
 router.get('/', async (req, res) => {
@@ -56,7 +96,7 @@ router.get('/:id', async (req, res) => {
 // POST create alert
 router.post('/', validate(createAlertSchema), async (req, res) => {
     try {
-        const { productId, targetPrice, webhookUrl, active } = req.body;
+        const { productId, targetPrice, webhookUrl, active, alertType, notifyOnRise } = req.body;
 
         // Verify product exists
         const product = await db.getProductById(productId);
@@ -68,7 +108,9 @@ router.post('/', validate(createAlertSchema), async (req, res) => {
             productId,
             targetPrice: Number(targetPrice),
             webhookUrl: webhookUrl || '',
-            active: active !== undefined ? Boolean(active) : true
+            active: active !== undefined ? Boolean(active) : true,
+            alertType: alertType || 'drop',
+            notifyOnRise: Boolean(notifyOnRise)
         });
 
         res.status(201).json(newAlert);
@@ -123,15 +165,38 @@ router.post('/:id/test-trigger', webhookTestLimiter, async (req, res) => {
         let storeName = product.lowestPriceSource?.siteName || (product.sources?.[0]?.siteName) || 'Online Merchant';
         let sourceUrl = product.lowestPriceSource?.url || (product.sources?.[0]?.url) || '';
 
-        await discord.sendPriceAlert({
-            alert,
-            product,
-            currentPrice,
-            storeName,
-            sourceUrl
-        });
+        if (alert.alertType === 'rise') {
+            await discord.sendPriceRiseAlert({
+                alert,
+                product,
+                currentPrice,
+                previousPrice: alert.targetPrice,
+                storeName,
+                sourceUrl
+            });
+            await webPush.sendNotificationToAll({
+                title: `📈 Test Price Rise: ${product.title}`,
+                body: `Price is at €${Number(currentPrice).toFixed(2)} (Alert: rise above €${alert.targetPrice})`,
+                icon: product.image || '/images/placeholder.svg',
+                url: sourceUrl || '/'
+            }).catch(() => {});
+        } else {
+            await discord.sendPriceAlert({
+                alert,
+                product,
+                currentPrice,
+                storeName,
+                sourceUrl
+            });
+            await webPush.sendNotificationToAll({
+                title: `🎉 Test Price Drop: ${product.title}`,
+                body: `Price is at €${Number(currentPrice).toFixed(2)} (Target: €${alert.targetPrice})`,
+                icon: product.image || '/images/placeholder.svg',
+                url: sourceUrl || '/'
+            }).catch(() => {});
+        }
 
-        res.json({ message: `Test Discord notification sent for "${product.title}"` });
+        res.json({ message: `Test notification sent for "${product.title}"` });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

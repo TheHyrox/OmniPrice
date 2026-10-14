@@ -4,6 +4,27 @@ const db = require('../db/adapter');
 const scraper = require('../services/scraper');
 const alertChecker = require('../services/alert-checker');
 const { scrapeAllLimiter, scrapeProductLimiter } = require('../middleware/rate-limiters');
+const { validate } = require('../middleware/validate');
+const { testScrapeSchema } = require('../schemas');
+
+// POST test scraper selector on a live URL without saving
+router.post('/test', scrapeProductLimiter, validate(testScrapeSchema), async (req, res) => {
+    try {
+        const { url, cssSelector, usePuppeteer } = req.body;
+        const price = await scraper.scrapePrice(url, cssSelector, usePuppeteer);
+        res.json({
+            success: true,
+            price,
+            url,
+            cssSelector
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
 
 // POST scrape single source for a product
 router.post('/product/:productId/source/:sourceIndex', scrapeProductLimiter, async (req, res) => {

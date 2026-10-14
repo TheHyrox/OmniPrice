@@ -351,12 +351,14 @@ const ProductDetail = {
                         </div>
                     </div>
 
-                    <div class="add-source-footer" style="justify-content: flex-end;">
+                    <div class="add-source-footer" style="justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="App.testNewSourceSelector()">Test Selector</button>
                         <div class="add-source-actions">
                             <button type="button" class="btn btn-ghost" onclick="App.showAddSourceForm('${id}')">Cancel</button>
                             <button type="button" class="btn btn-primary" onclick="App.addSource('${id}')">Save Source</button>
                         </div>
                     </div>
+                    <div id="newSourceTestResult" style="display: none; padding: 6px 12px; font-size: 0.8125rem;"></div>
                 </div>
 
                 <!-- Sources List -->

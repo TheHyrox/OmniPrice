@@ -16,6 +16,7 @@ class DatabaseAdapter {
     }
 
     async getProducts() { return this._execute('getProducts'); }
+    async getPaginatedProducts(options) { return this._execute('getPaginatedProducts', options); }
     async getProductById(id) { return this._execute('getProductById', id); }
     async createProduct(data) { return this._execute('createProduct', data); }
     async updateProduct(id, data) { return this._execute('updateProduct', id, data); }

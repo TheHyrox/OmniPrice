@@ -57,6 +57,8 @@ const alertSchema = new mongoose.Schema({
     targetPrice: { type: Number, required: true },
     webhookUrl: { type: String, default: '' },
     active: { type: Boolean, default: true },
+    alertType: { type: String, enum: ['drop', 'rise'], default: 'drop' },
+    notifyOnRise: { type: Boolean, default: false },
     lastTriggeredAt: { type: String, default: null },
     lastTriggeredPrice: { type: Number, default: null },
     createdAt: { type: String, default: () => new Date().toISOString() },
@@ -159,6 +161,98 @@ class MongoDatabase {
     }
 
     // Products
+    async getPaginatedProducts(options = {}) {
+        const page = Math.max(1, parseInt(options.page, 10) || 1);
+        const limit = Math.max(1, Math.min(100, parseInt(options.limit, 10) || 20));
+        const skip = (page - 1) * limit;
+
+        const query = {};
+
+        if (options.active !== undefined && options.active !== '') {
+            query.active = options.active === 'true' || options.active === true;
+        }
+
+        if (options.tag) {
+            query.tags = options.tag;
+        }
+
+        if (options.search) {
+            const regex = new RegExp(options.search, 'i');
+            query.$or = [{ title: regex }, { tags: regex }, { description: regex }];
+        }
+
+        if (options.dealType === 'deals') {
+            query.priceDelta = { $lt: 0 };
+        } else if (options.dealType === 'active') {
+            query.active = true;
+        } else if (options.dealType === 'paused') {
+            query.active = false;
+        }
+
+        if ((options.minPrice != null && options.minPrice !== '') || (options.maxPrice != null && options.maxPrice !== '')) {
+            query.lowestPrice = {};
+            if (options.minPrice != null && options.minPrice !== '') {
+                query.lowestPrice.$gte = parseFloat(options.minPrice);
+            }
+            if (options.maxPrice != null && options.maxPrice !== '') {
+                query.lowestPrice.$lte = parseFloat(options.maxPrice);
+            }
+        }
+
+        let sortObj = { createdAt: -1 };
+        switch (options.sort) {
+            case 'delta':
+                sortObj = { priceDelta: 1 };
+                break;
+            case 'price-asc':
+                sortObj = { lowestPrice: 1 };
+                break;
+            case 'price-desc':
+                sortObj = { lowestPrice: -1 };
+                break;
+            case 'alpha':
+                sortObj = { title: 1 };
+                break;
+            case 'date':
+                sortObj = { createdAt: -1 };
+                break;
+        }
+
+        const [total, products] = await Promise.all([
+            Product.countDocuments(query),
+            Product.find(query).sort(sortObj).skip(skip).limit(limit).lean()
+        ]);
+
+        const productIds = products.map(p => p._id);
+        const records = productIds.length > 0
+            ? await PriceRecord.find({ productId: { $in: productIds } }).sort({ date: 1 }).lean()
+            : [];
+
+        const historyByProduct = new Map();
+        for (const rec of records) {
+            if (!historyByProduct.has(rec.productId)) {
+                historyByProduct.set(rec.productId, []);
+            }
+            historyByProduct.get(rec.productId).push(rec);
+        }
+
+        const enrichedProducts = products.map(p => ({
+            ...p,
+            active: p.active !== false,
+            priceHistory: historyByProduct.get(p._id) || []
+        }));
+
+        return {
+            products: enrichedProducts,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.max(1, Math.ceil(total / limit))
+            }
+        };
+    }
+
     async getProducts() {
         const [products, records] = await Promise.all([
             Product.find({}).lean(),
@@ -429,6 +523,8 @@ class MongoDatabase {
             targetPrice: Number(data.targetPrice),
             webhookUrl: data.webhookUrl ? data.webhookUrl.trim() : '',
             active: data.active !== undefined ? Boolean(data.active) : true,
+            alertType: data.alertType === 'rise' ? 'rise' : 'drop',
+            notifyOnRise: Boolean(data.notifyOnRise),
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         });
