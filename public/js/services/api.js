@@ -26,15 +26,8 @@ const API = {
     },
 
     products: {
-        async getAll(params = {}) {
-            const query = new URLSearchParams();
-            Object.entries(params).forEach(([key, val]) => {
-                if (val !== undefined && val !== null && val !== '') {
-                    query.append(key, val);
-                }
-            });
-            const qs = query.toString();
-            return API.request(qs ? `/products?${qs}` : '/products');
+        async getAll() {
+            return API.request('/products');
         },
 
         async getById(id) {

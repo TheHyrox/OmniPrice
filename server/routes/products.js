@@ -9,13 +9,9 @@ const { validate } = require('../middleware/validate');
 const { createProductSchema, updateProductSchema } = require('../schemas');
 
 
-// GET all products (supports optional ?page=1&limit=20 pagination)
+// GET all products
 router.get('/', async (req, res) => {
     try {
-        if (req.query.page !== undefined || req.query.limit !== undefined) {
-            const result = await db.getPaginatedProducts(req.query);
-            return res.json(result);
-        }
         const products = await db.getProducts();
         res.json(products);
     } catch (error) {
