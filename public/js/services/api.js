@@ -94,6 +94,13 @@ const API = {
                 method: 'POST',
                 body: { url, cssSelector, usePuppeteer }
             });
+        },
+
+        async autodiscover(url) {
+            return API.request('/scraper/autodiscover', {
+                method: 'POST',
+                body: { url }
+            });
         }
     },
 
