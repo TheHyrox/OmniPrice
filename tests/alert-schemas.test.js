@@ -30,6 +30,39 @@ test('Schema - createAlertSchema', async (t) => {
         assert.equal(parsed.webhookUrl, 'https://discord.com/api/webhooks/123/abc');
     });
 
+    await t.test('accepts percentage_drop alert with thresholdPercent', () => {
+        const input = {
+            productId: 'prod-pct',
+            alertType: 'percentage_drop',
+            thresholdPercent: 15,
+            notifyOnRise: true
+        };
+        const parsed = createAlertSchema.parse(input);
+        assert.equal(parsed.productId, 'prod-pct');
+        assert.equal(parsed.alertType, 'percentage_drop');
+        assert.equal(parsed.thresholdPercent, 15);
+        assert.equal(parsed.notifyOnRise, true);
+    });
+
+    await t.test('rejects percentage_drop alert without thresholdPercent', () => {
+        const input = {
+            productId: 'prod-pct',
+            alertType: 'percentage_drop'
+        };
+        assert.throws(() => createAlertSchema.parse(input));
+    });
+
+    await t.test('accepts all-time low (atl) alert without targetPrice', () => {
+        const input = {
+            productId: 'prod-atl',
+            alertType: 'atl'
+        };
+        const parsed = createAlertSchema.parse(input);
+        assert.equal(parsed.productId, 'prod-atl');
+        assert.equal(parsed.alertType, 'atl');
+        assert.equal(parsed.active, true);
+    });
+
     await t.test('rejects invalid alertType', () => {
         const input = {
             productId: 'prod-789',

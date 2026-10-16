@@ -45,7 +45,8 @@ const updateStoreSchema = createStoreSchema.partial().extend({
 
 const createAlertSchema = z.object({
     productId: z.string().min(1, 'Product ID is required'),
-    targetPrice: positiveNumber,
+    targetPrice: positiveNumber.optional().nullable(),
+    thresholdPercent: z.number().positive('Percentage must be greater than 0').max(99.9, 'Percentage must be less than 100').optional().nullable(),
     webhookUrl: z
         .string()
         .url('Webhook URL must be a valid URL')
@@ -53,15 +54,35 @@ const createAlertSchema = z.object({
         .or(z.literal(''))
         .nullable(),
     active: z.boolean().optional().default(true),
-    alertType: z.enum(['drop', 'rise']).optional().default('drop'),
+    alertType: z.enum(['drop', 'rise', 'percentage_drop', 'atl']).optional().default('drop'),
     notifyOnRise: z.boolean().optional().default(false),
+}).superRefine((data, ctx) => {
+    if (data.alertType === 'drop' || data.alertType === 'rise') {
+        if (data.targetPrice == null || isNaN(data.targetPrice) || data.targetPrice <= 0) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'Target price is required for price drop/rise alerts',
+                path: ['targetPrice']
+            });
+        }
+    }
+    if (data.alertType === 'percentage_drop') {
+        if (data.thresholdPercent == null || isNaN(data.thresholdPercent) || data.thresholdPercent <= 0) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: 'Percentage drop threshold is required for % drop alerts',
+                path: ['thresholdPercent']
+            });
+        }
+    }
 });
 
 const updateAlertSchema = z.object({
-    targetPrice: positiveNumber.optional(),
+    targetPrice: positiveNumber.optional().nullable(),
+    thresholdPercent: z.number().positive('Percentage must be greater than 0').max(99.9, 'Percentage must be less than 100').optional().nullable(),
     webhookUrl: z.string().url().optional().or(z.literal('')).nullable(),
     active: z.boolean().optional(),
-    alertType: z.enum(['drop', 'rise']).optional(),
+    alertType: z.enum(['drop', 'rise', 'percentage_drop', 'atl']).optional(),
     notifyOnRise: z.boolean().optional(),
 });
 

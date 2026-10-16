@@ -255,6 +255,196 @@ class DiscordNotifier {
             status: response.status
         };
     }
+
+    /**
+     * Sends an All-Time Low notification embed to Discord.
+     */
+    async sendAllTimeLowAlert({ alert, product, currentPrice, previousPrice, storeName, sourceUrl }) {
+        const webhookUrl = (alert.webhookUrl && alert.webhookUrl.trim()) 
+            ? alert.webhookUrl.trim() 
+            : await this.getDefaultWebhookUrl();
+
+        if (!webhookUrl) return;
+
+        const refPrice = product.referencePrice;
+        let savingsAmount = 0;
+        let savingsPercent = '0';
+        if (refPrice && refPrice > currentPrice) {
+            savingsAmount = refPrice - currentPrice;
+            savingsPercent = ((savingsAmount / refPrice) * 100).toFixed(1);
+        }
+
+        const fields = [
+            {
+                name: '🔥 Lowest Price (ATL)',
+                value: `**€${Number(currentPrice).toFixed(2)}**`,
+                inline: true
+            }
+        ];
+
+        if (refPrice) {
+            fields.push({
+                name: 'Reference Price',
+                value: `~~€${Number(refPrice).toFixed(2)}~~`,
+                inline: true
+            });
+        }
+
+        if (savingsAmount > 0) {
+            fields.push({
+                name: 'Discount vs Ref',
+                value: `-€${savingsAmount.toFixed(2)} (-${savingsPercent}%)`,
+                inline: true
+            });
+        }
+
+        if (previousPrice != null && previousPrice > currentPrice) {
+            fields.push({
+                name: 'Previous Low',
+                value: `€${Number(previousPrice).toFixed(2)}`,
+                inline: true
+            });
+        }
+
+        if (storeName) {
+            fields.push({
+                name: 'Merchant',
+                value: storeName,
+                inline: true
+            });
+        }
+
+        if (sourceUrl) {
+            fields.push({
+                name: 'Store Link',
+                value: `[View Deal at ${storeName || 'Merchant'}](${sourceUrl})`,
+                inline: false
+            });
+        }
+
+        const embed = {
+            title: `🔥 All-Time Low: ${product.title}`,
+            url: sourceUrl || undefined,
+            color: 0xF59E0B, // Amber / Gold
+            description: `Unprecedented deal! **${product.title}** has just reached its lowest price ever recorded on OmniPrice!`,
+            fields,
+            footer: {
+                text: 'OmniPrice All-Time Low Alert'
+            },
+            timestamp: new Date().toISOString()
+        };
+
+        if (product.image && (product.image.startsWith('http://') || product.image.startsWith('https://'))) {
+            embed.thumbnail = { url: product.image };
+        }
+
+        const payload = {
+            username: 'OmniPrice Deals',
+            avatar_url: 'https://cdn-icons-png.flaticon.com/512/3135/3135706.png',
+            embeds: [embed]
+        };
+
+        const response = await axios.post(webhookUrl, payload, {
+            headers: { 'Content-Type': 'application/json' },
+            timeout: 10000
+        });
+
+        return {
+            success: true,
+            status: response.status
+        };
+    }
+
+    /**
+     * Sends a percentage drop notification embed to Discord.
+     */
+    async sendPercentageDropAlert({ alert, product, currentPrice, dropPercent, storeName, sourceUrl }) {
+        const webhookUrl = (alert.webhookUrl && alert.webhookUrl.trim()) 
+            ? alert.webhookUrl.trim() 
+            : await this.getDefaultWebhookUrl();
+
+        if (!webhookUrl) return;
+
+        const refPrice = product.referencePrice;
+        const discountAmount = refPrice && refPrice > currentPrice ? (refPrice - currentPrice) : 0;
+        const formattedPercent = Number(dropPercent).toFixed(1);
+
+        const fields = [
+            {
+                name: 'Current Price',
+                value: `**€${Number(currentPrice).toFixed(2)}**`,
+                inline: true
+            }
+        ];
+
+        if (refPrice) {
+            fields.push({
+                name: 'Reference Price',
+                value: `~~€${Number(refPrice).toFixed(2)}~~`,
+                inline: true
+            });
+        }
+
+        fields.push({
+            name: 'Savings',
+            value: `-€${discountAmount.toFixed(2)} (-${formattedPercent}%)`,
+            inline: true
+        });
+
+        fields.push({
+            name: 'Target Threshold',
+            value: `≥ ${alert.thresholdPercent}% off`,
+            inline: true
+        });
+
+        if (storeName) {
+            fields.push({
+                name: 'Merchant',
+                value: storeName,
+                inline: true
+            });
+        }
+
+        if (sourceUrl) {
+            fields.push({
+                name: 'Store Link',
+                value: `[View Deal at ${storeName || 'Merchant'}](${sourceUrl})`,
+                inline: false
+            });
+        }
+
+        const embed = {
+            title: `🏷️ ${alert.thresholdPercent}% Price Drop: ${product.title}`,
+            url: sourceUrl || undefined,
+            color: 0x10B981, // Green
+            description: `Great news! **${product.title}** has dropped by **${formattedPercent}%**, surpassing your **${alert.thresholdPercent}%** drop threshold!`,
+            fields,
+            footer: {
+                text: 'OmniPrice Discount Alert'
+            },
+            timestamp: new Date().toISOString()
+        };
+
+        if (product.image && (product.image.startsWith('http://') || product.image.startsWith('https://'))) {
+            embed.thumbnail = { url: product.image };
+        }
+
+        const payload = {
+            username: 'OmniPrice Alerts',
+            avatar_url: 'https://cdn-icons-png.flaticon.com/512/3135/3135706.png',
+            embeds: [embed]
+        };
+
+        const response = await axios.post(webhookUrl, payload, {
+            headers: { 'Content-Type': 'application/json' },
+            timeout: 10000
+        });
+
+        return {
+            success: true,
+            status: response.status
+        };
+    }
 }
 
 module.exports = new DiscordNotifier();

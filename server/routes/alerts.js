@@ -69,7 +69,8 @@ router.get('/', async (req, res) => {
                     image: product.image,
                     referencePrice: product.referencePrice,
                     lowestPrice: product.lowestPrice,
-                    lowestPriceSource: product.lowestPriceSource
+                    lowestPriceSource: product.lowestPriceSource,
+                    priceHistory: product.priceHistory
                 } : null
             };
         });
@@ -96,7 +97,7 @@ router.get('/:id', async (req, res) => {
 // POST create alert
 router.post('/', validate(createAlertSchema), async (req, res) => {
     try {
-        const { productId, targetPrice, webhookUrl, active, alertType, notifyOnRise } = req.body;
+        const { productId, targetPrice, thresholdPercent, webhookUrl, active, alertType, notifyOnRise } = req.body;
 
         // Verify product exists
         const product = await db.getProductById(productId);
@@ -104,9 +105,15 @@ router.post('/', validate(createAlertSchema), async (req, res) => {
             return res.status(404).json({ error: 'Product not found' });
         }
 
+        let computedTargetPrice = targetPrice != null ? Number(targetPrice) : null;
+        if (alertType === 'percentage_drop' && thresholdPercent != null && product.referencePrice) {
+            computedTargetPrice = Number((product.referencePrice * (1 - Number(thresholdPercent) / 100)).toFixed(2));
+        }
+
         const newAlert = await db.createAlert({
             productId,
-            targetPrice: Number(targetPrice),
+            targetPrice: computedTargetPrice,
+            thresholdPercent: thresholdPercent != null ? Number(thresholdPercent) : null,
             webhookUrl: webhookUrl || '',
             active: active !== undefined ? Boolean(active) : true,
             alertType: alertType || 'drop',
@@ -122,8 +129,21 @@ router.post('/', validate(createAlertSchema), async (req, res) => {
 // PUT update alert
 router.put('/:id', validate(updateAlertSchema), async (req, res) => {
     try {
-        const updated = await db.updateAlert(req.params.id, req.body);
-        if (!updated) return res.status(404).json({ error: 'Alert not found' });
+        const existing = await db.getAlertById(req.params.id);
+        if (!existing) return res.status(404).json({ error: 'Alert not found' });
+
+        const updateData = { ...req.body };
+        const effectiveType = updateData.alertType || existing.alertType;
+        const effectivePercent = updateData.thresholdPercent !== undefined ? updateData.thresholdPercent : existing.thresholdPercent;
+
+        if (effectiveType === 'percentage_drop' && effectivePercent != null) {
+            const product = await db.getProductById(existing.productId);
+            if (product && product.referencePrice) {
+                updateData.targetPrice = Number((product.referencePrice * (1 - Number(effectivePercent) / 100)).toFixed(2));
+            }
+        }
+
+        const updated = await db.updateAlert(req.params.id, updateData);
         res.json(updated);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -161,16 +181,47 @@ router.post('/:id/test-trigger', webhookTestLimiter, async (req, res) => {
         const product = await db.getProductById(alert.productId);
         if (!product) return res.status(404).json({ error: 'Associated product not found' });
 
-        const currentPrice = product.lowestPrice != null ? product.lowestPrice : alert.targetPrice;
+        const currentPrice = product.lowestPrice != null ? product.lowestPrice : (alert.targetPrice || product.referencePrice || 99.99);
         let storeName = product.lowestPriceSource?.siteName || (product.sources?.[0]?.siteName) || 'Online Merchant';
         let sourceUrl = product.lowestPriceSource?.url || (product.sources?.[0]?.url) || '';
 
-        if (alert.alertType === 'rise') {
+        if (alert.alertType === 'atl') {
+            await discord.sendAllTimeLowAlert({
+                alert,
+                product,
+                currentPrice,
+                previousPrice: alert.lastTriggeredPrice || null,
+                storeName,
+                sourceUrl
+            });
+            await webPush.sendNotificationToAll({
+                title: `🔥 Test All-Time Low: ${product.title}`,
+                body: `Price is at €${Number(currentPrice).toFixed(2)} (All-time low trigger)`,
+                icon: product.image || '/images/placeholder.svg',
+                url: sourceUrl || '/'
+            }).catch(() => {});
+        } else if (alert.alertType === 'percentage_drop') {
+            const dropPercent = product.referencePrice ? ((product.referencePrice - currentPrice) / product.referencePrice) * 100 : (alert.thresholdPercent || 15);
+            await discord.sendPercentageDropAlert({
+                alert,
+                product,
+                currentPrice,
+                dropPercent,
+                storeName,
+                sourceUrl
+            });
+            await webPush.sendNotificationToAll({
+                title: `🎉 Test ${alert.thresholdPercent || 15}% Drop: ${product.title}`,
+                body: `Price is at €${Number(currentPrice).toFixed(2)} (${dropPercent.toFixed(1)}% drop trigger)`,
+                icon: product.image || '/images/placeholder.svg',
+                url: sourceUrl || '/'
+            }).catch(() => {});
+        } else if (alert.alertType === 'rise') {
             await discord.sendPriceRiseAlert({
                 alert,
                 product,
                 currentPrice,
-                previousPrice: alert.targetPrice,
+                previousPrice: alert.targetPrice || currentPrice,
                 storeName,
                 sourceUrl
             });

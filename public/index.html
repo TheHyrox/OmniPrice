@@ -451,14 +451,29 @@
                     <div class="form-group">
                         <label for="alertTypeSelect">Alert Condition *</label>
                         <select id="alertTypeSelect" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 0.95rem;">
-                            <option value="drop">📉 Price Drop (Price falls to or below target)</option>
-                            <option value="rise">📈 Price Rise (Price rises to or above target)</option>
+                            <option value="drop">📉 Target Price Drop (Falls to or below €X)</option>
+                            <option value="percentage_drop">🏷️ % Discount Threshold (Drops by > X% from reference)</option>
+                            <option value="atl">🔥 All-Time Low (Hits a new record low)</option>
+                            <option value="rise">📈 Price Rise (Price rises to or above €X)</option>
                         </select>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" id="targetPriceGroup">
                         <label for="alertTargetPrice">Target Price (€) *</label>
-                        <input type="number" id="alertTargetPrice" step="0.01" min="0" placeholder="e.g., 149.99" required />
+                        <input type="number" id="alertTargetPrice" step="0.01" min="0" placeholder="e.g., 149.99" />
                         <span id="alertProductCurrentPriceHint" style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px; display: block;"></span>
+                    </div>
+                    <div class="form-group" id="thresholdPercentGroup" style="display: none;">
+                        <label for="alertThresholdPercent">Drop Threshold (%) *</label>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <input type="number" id="alertThresholdPercent" min="1" max="99" step="1" placeholder="e.g., 15" style="width: 110px;" />
+                            <span style="font-size: 0.95rem; font-weight: 500; color: var(--text-secondary);">% off reference price</span>
+                        </div>
+                        <span id="alertPercentCalculationHint" style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px; display: block;"></span>
+                    </div>
+                    <div class="form-group" id="atlInfoGroup" style="display: none;">
+                        <div style="padding: 12px 14px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; font-size: 0.875rem; color: var(--text-primary); line-height: 1.45;">
+                            🔥 <strong>All-Time Low Trigger:</strong> You will be notified whenever any merchant sets a new historical lowest price for this product.
+                        </div>
                     </div>
                     <div class="form-group" id="notifyOnRiseGroup" style="margin-top: 6px;">
                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.875rem;">

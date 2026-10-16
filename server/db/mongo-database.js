@@ -54,10 +54,11 @@ const settingsSchema = new mongoose.Schema({
 const alertSchema = new mongoose.Schema({
     _id: { type: String, default: uuidv4 },
     productId: { type: String, required: true },
-    targetPrice: { type: Number, required: true },
+    targetPrice: { type: Number, default: null },
+    thresholdPercent: { type: Number, default: null },
     webhookUrl: { type: String, default: '' },
     active: { type: Boolean, default: true },
-    alertType: { type: String, enum: ['drop', 'rise'], default: 'drop' },
+    alertType: { type: String, enum: ['drop', 'rise', 'percentage_drop', 'atl'], default: 'drop' },
     notifyOnRise: { type: Boolean, default: false },
     lastTriggeredAt: { type: String, default: null },
     lastTriggeredPrice: { type: Number, default: null },
@@ -428,10 +429,11 @@ class MongoDatabase {
         const alert = new Alert({
             _id: uuidv4(),
             productId: data.productId,
-            targetPrice: Number(data.targetPrice),
+            targetPrice: data.targetPrice != null ? Number(data.targetPrice) : null,
+            thresholdPercent: data.thresholdPercent != null ? Number(data.thresholdPercent) : null,
             webhookUrl: data.webhookUrl ? data.webhookUrl.trim() : '',
             active: data.active !== undefined ? Boolean(data.active) : true,
-            alertType: data.alertType === 'rise' ? 'rise' : 'drop',
+            alertType: data.alertType || 'drop',
             notifyOnRise: Boolean(data.notifyOnRise),
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
@@ -442,7 +444,12 @@ class MongoDatabase {
 
     async updateAlert(id, data) {
         const updateData = { ...data, updatedAt: new Date().toISOString() };
-        if (updateData.targetPrice !== undefined) updateData.targetPrice = Number(updateData.targetPrice);
+        if (updateData.targetPrice !== undefined) {
+            updateData.targetPrice = updateData.targetPrice != null ? Number(updateData.targetPrice) : null;
+        }
+        if (updateData.thresholdPercent !== undefined) {
+            updateData.thresholdPercent = updateData.thresholdPercent != null ? Number(updateData.thresholdPercent) : null;
+        }
         const alert = await Alert.findOneAndUpdate(
             { _id: id },
             { $set: updateData },

@@ -126,12 +126,8 @@ const App = {
         document.getElementById('cancelAlertModal')?.addEventListener('click', () => this.closeAlertModal());
         document.getElementById('alertForm')?.addEventListener('submit', (e) => this.handleAlertFormSubmit(e));
         document.getElementById('alertProductSelect')?.addEventListener('change', (e) => this.onAlertProductSelectChange(e));
-        document.getElementById('alertTypeSelect')?.addEventListener('change', (e) => {
-            const notifyGroup = document.getElementById('notifyOnRiseGroup');
-            if (notifyGroup) {
-                notifyGroup.style.display = e.target.value === 'rise' ? 'none' : 'block';
-            }
-        });
+        document.getElementById('alertTypeSelect')?.addEventListener('change', (e) => this.onAlertTypeSelectChange(e.target.value));
+        document.getElementById('alertThresholdPercent')?.addEventListener('input', () => this.updateAlertPercentHint());
 
         // Notifications: Discord & Web Push
         document.getElementById('saveDiscordBtn')?.addEventListener('click', () => this.saveDiscordSettings());
@@ -1001,8 +997,40 @@ const App = {
         container.innerHTML = this.alerts.map(alert => {
             const product = alert.product;
             const currentPrice = product?.lowestPrice != null ? product.lowestPrice : null;
-            const isRise = alert.alertType === 'rise';
-            const isMet = currentPrice != null && (isRise ? currentPrice >= alert.targetPrice : currentPrice <= alert.targetPrice);
+            const alertType = alert.alertType || 'drop';
+            const isRise = alertType === 'rise';
+            const isATL = alertType === 'atl';
+            const isPct = alertType === 'percentage_drop';
+
+            let isMet = false;
+            let targetDisplay = '';
+            let targetLabel = 'Target Price';
+            let triggerText = '';
+
+            if (isATL) {
+                targetLabel = 'Condition';
+                targetDisplay = 'Historic Record Low';
+                isMet = product ? ProductCard.isAtAllTimeLow(product) : (alert.lastTriggeredAt != null);
+                triggerText = `Any new All-Time Low price${alert.notifyOnRise ? ' (+ notify on deal end)' : ''}`;
+            } else if (isPct) {
+                targetLabel = 'Drop Threshold';
+                const pct = alert.thresholdPercent || 15;
+                const ref = product?.referencePrice;
+                const computedTarget = ref ? (ref * (1 - pct / 100)) : alert.targetPrice;
+                targetDisplay = `≥ ${pct}% off${computedTarget != null ? ` (≤ €${Number(computedTarget).toFixed(2)})` : ''}`;
+                isMet = currentPrice != null && computedTarget != null && currentPrice <= computedTarget;
+                triggerText = `Price drops ≥ ${pct}% below ref${ref ? ` (€${Number(ref).toFixed(2)})` : ''}${alert.notifyOnRise ? ' (+ notify on deal end)' : ''}`;
+            } else if (isRise) {
+                targetLabel = 'Threshold Price';
+                targetDisplay = `€${Number(alert.targetPrice).toFixed(2)}`;
+                isMet = currentPrice != null && currentPrice >= alert.targetPrice;
+                triggerText = `Price ≥ €${Number(alert.targetPrice).toFixed(2)}`;
+            } else {
+                targetLabel = 'Target Price';
+                targetDisplay = `€${Number(alert.targetPrice).toFixed(2)}`;
+                isMet = currentPrice != null && currentPrice <= alert.targetPrice;
+                triggerText = `Price ≤ €${Number(alert.targetPrice).toFixed(2)}${alert.notifyOnRise ? ' (+ notify on deal end)' : ''}`;
+            }
             
             let statusBadge = '';
             if (!alert.active) {
@@ -1013,11 +1041,17 @@ const App = {
                 statusBadge = '<span class="alert-status-badge active">● Monitoring</span>';
             }
 
-            const typeBadge = isRise
-                ? '<span style="font-size:0.75rem; background:rgba(239,68,68,0.12); color:#ef4444; padding:2px 6px; border-radius:4px; font-weight:600;">📈 Price Rise</span>'
-                : '<span style="font-size:0.75rem; background:rgba(16,185,129,0.12); color:#10b981; padding:2px 6px; border-radius:4px; font-weight:600;">📉 Price Drop</span>';
+            let typeBadge = '';
+            if (isATL) {
+                typeBadge = '<span style="font-size:0.75rem; background:rgba(245,158,11,0.15); color:#d97706; padding:2px 6px; border-radius:4px; font-weight:600;">🔥 All-Time Low</span>';
+            } else if (isPct) {
+                typeBadge = `<span style="font-size:0.75rem; background:rgba(16,185,129,0.15); color:#059669; padding:2px 6px; border-radius:4px; font-weight:600;">🏷️ ≥ ${alert.thresholdPercent || 15}% Drop</span>`;
+            } else if (isRise) {
+                typeBadge = '<span style="font-size:0.75rem; background:rgba(239,68,68,0.12); color:#ef4444; padding:2px 6px; border-radius:4px; font-weight:600;">📈 Price Rise</span>';
+            } else {
+                typeBadge = '<span style="font-size:0.75rem; background:rgba(59,130,246,0.12); color:#2563eb; padding:2px 6px; border-radius:4px; font-weight:600;">📉 Price Drop</span>';
+            }
 
-            const formattedTarget = `€${Number(alert.targetPrice).toFixed(2)}`;
             const formattedCurrent = currentPrice != null ? `€${Number(currentPrice).toFixed(2)}` : 'Not scraped yet';
             const channelText = alert.webhookUrl ? 'Custom Webhook' : 'Default Discord Webhook';
 
@@ -1046,8 +1080,8 @@ const App = {
 
                     <div class="alert-card-body">
                         <div class="alert-stat">
-                            <span class="alert-stat-label">${isRise ? 'Threshold Price' : 'Target Price'}</span>
-                            <span class="alert-stat-value target">${formattedTarget}</span>
+                            <span class="alert-stat-label">${targetLabel}</span>
+                            <span class="alert-stat-value target">${targetDisplay}</span>
                         </div>
                         <div class="alert-stat">
                             <span class="alert-stat-label">Current Lowest</span>
@@ -1056,7 +1090,7 @@ const App = {
                     </div>
 
                     <div class="alert-meta">
-                        <div><strong>Trigger:</strong> ${isRise ? `Price ≥ €${Number(alert.targetPrice).toFixed(2)}` : `Price ≤ €${Number(alert.targetPrice).toFixed(2)}${alert.notifyOnRise ? ' (+ notify on deal end)' : ''}`}</div>
+                        <div><strong>Trigger:</strong> ${triggerText}</div>
                         <div><strong>Notification:</strong> ${channelText} + Web Push</div>
                         <div style="font-size: 0.75rem; color: var(--text-tertiary);">${lastTriggeredText}</div>
                     </div>
@@ -1079,14 +1113,74 @@ const App = {
         }).join('');
     },
 
+    onAlertTypeSelectChange(type) {
+        const targetPriceGroup = document.getElementById('targetPriceGroup');
+        const targetPriceInput = document.getElementById('alertTargetPrice');
+        const thresholdPercentGroup = document.getElementById('thresholdPercentGroup');
+        const thresholdPercentInput = document.getElementById('alertThresholdPercent');
+        const atlInfoGroup = document.getElementById('atlInfoGroup');
+        const notifyGroup = document.getElementById('notifyOnRiseGroup');
+
+        if (type === 'percentage_drop') {
+            if (targetPriceGroup) targetPriceGroup.style.display = 'none';
+            if (targetPriceInput) targetPriceInput.required = false;
+            if (thresholdPercentGroup) thresholdPercentGroup.style.display = 'block';
+            if (thresholdPercentInput) thresholdPercentInput.required = true;
+            if (atlInfoGroup) atlInfoGroup.style.display = 'none';
+            if (notifyGroup) notifyGroup.style.display = 'block';
+            this.updateAlertPercentHint();
+        } else if (type === 'atl') {
+            if (targetPriceGroup) targetPriceGroup.style.display = 'none';
+            if (targetPriceInput) targetPriceInput.required = false;
+            if (thresholdPercentGroup) thresholdPercentGroup.style.display = 'none';
+            if (thresholdPercentInput) thresholdPercentInput.required = false;
+            if (atlInfoGroup) atlInfoGroup.style.display = 'block';
+            if (notifyGroup) notifyGroup.style.display = 'block';
+        } else {
+            // 'drop' or 'rise'
+            if (targetPriceGroup) targetPriceGroup.style.display = 'block';
+            if (targetPriceInput) targetPriceInput.required = true;
+            if (thresholdPercentGroup) thresholdPercentGroup.style.display = 'none';
+            if (thresholdPercentInput) thresholdPercentInput.required = false;
+            if (atlInfoGroup) atlInfoGroup.style.display = 'none';
+            if (notifyGroup) notifyGroup.style.display = type === 'rise' ? 'none' : 'block';
+        }
+    },
+
+    updateAlertPercentHint() {
+        const select = document.getElementById('alertProductSelect');
+        const selectedOpt = select?.selectedOptions[0];
+        const percentInput = document.getElementById('alertThresholdPercent');
+        const hint = document.getElementById('alertPercentCalculationHint');
+        if (!hint) return;
+
+        const pct = parseFloat(percentInput?.value);
+        const ref = parseFloat(selectedOpt?.dataset.ref);
+
+        if (!selectedOpt || !selectedOpt.value) {
+            hint.textContent = 'Select a product above to calculate effective target price.';
+            return;
+        }
+
+        if (!isNaN(pct) && pct > 0 && !isNaN(ref) && ref > 0) {
+            const target = ref * (1 - pct / 100);
+            hint.textContent = `Target trigger price: €${target.toFixed(2)} (${pct}% below reference €${ref.toFixed(2)})`;
+        } else if (!isNaN(ref) && ref > 0) {
+            hint.textContent = `Product reference price: €${ref.toFixed(2)}`;
+        } else {
+            hint.textContent = '';
+        }
+    },
+
     openAlertModal(alert = null) {
         const modal = document.getElementById('alertModal');
         const title = document.getElementById('alertModalTitle');
         const select = document.getElementById('alertProductSelect');
         const hint = document.getElementById('alertProductCurrentPriceHint');
         const typeSelect = document.getElementById('alertTypeSelect');
-        const notifyGroup = document.getElementById('notifyOnRiseGroup');
         const notifyCheckbox = document.getElementById('alertNotifyOnRise');
+        const targetInput = document.getElementById('alertTargetPrice');
+        const pctInput = document.getElementById('alertThresholdPercent');
 
         if (!modal || !select) return;
 
@@ -1102,19 +1196,22 @@ const App = {
             title.textContent = 'Edit Price Alert';
             document.getElementById('alertId').value = alert._id;
             select.value = alert.productId;
-            document.getElementById('alertTargetPrice').value = alert.targetPrice;
+            if (targetInput) targetInput.value = alert.targetPrice || '';
+            if (pctInput) pctInput.value = alert.thresholdPercent || 15;
             document.getElementById('alertWebhookUrl').value = alert.webhookUrl || '';
-            if (typeSelect) typeSelect.value = alert.alertType || 'drop';
+            const type = alert.alertType || 'drop';
+            if (typeSelect) typeSelect.value = type;
             if (notifyCheckbox) notifyCheckbox.checked = Boolean(alert.notifyOnRise);
-            if (notifyGroup) notifyGroup.style.display = (alert.alertType === 'rise') ? 'none' : 'block';
+            this.onAlertTypeSelectChange(type);
         } else {
             title.textContent = 'Create Price Alert';
             document.getElementById('alertId').value = '';
             document.getElementById('alertForm')?.reset();
             if (typeSelect) typeSelect.value = 'drop';
+            if (pctInput) pctInput.value = 15;
             if (notifyCheckbox) notifyCheckbox.checked = false;
-            if (notifyGroup) notifyGroup.style.display = 'block';
             if (hint) hint.textContent = '';
+            this.onAlertTypeSelectChange('drop');
         }
 
         modal.classList.add('active');
@@ -1125,8 +1222,7 @@ const App = {
         document.getElementById('alertForm')?.reset();
         const hint = document.getElementById('alertProductCurrentPriceHint');
         if (hint) hint.textContent = '';
-        const notifyGroup = document.getElementById('notifyOnRiseGroup');
-        if (notifyGroup) notifyGroup.style.display = 'block';
+        this.onAlertTypeSelectChange('drop');
     },
 
     onAlertProductSelectChange(e) {
@@ -1155,28 +1251,42 @@ const App = {
                 targetInput.value = ref;
             }
         }
+
+        this.updateAlertPercentHint();
     },
 
     async handleAlertFormSubmit(e) {
         e.preventDefault();
         const id = document.getElementById('alertId').value;
         const productId = document.getElementById('alertProductSelect').value;
-        const targetPrice = parseFloat(document.getElementById('alertTargetPrice').value);
-        const webhookUrl = document.getElementById('alertWebhookUrl').value.trim();
         const alertType = document.getElementById('alertTypeSelect')?.value || 'drop';
+        const webhookUrl = document.getElementById('alertWebhookUrl').value.trim();
         const notifyOnRise = document.getElementById('alertNotifyOnRise')?.checked || false;
 
         if (!productId) {
             alert('Please select a product');
             return;
         }
-        if (isNaN(targetPrice) || targetPrice <= 0) {
-            alert('Please enter a valid target price');
-            return;
+
+        const payload = { productId, alertType, webhookUrl, notifyOnRise };
+
+        if (alertType === 'percentage_drop') {
+            const thresholdPercent = parseFloat(document.getElementById('alertThresholdPercent').value);
+            if (isNaN(thresholdPercent) || thresholdPercent <= 0 || thresholdPercent >= 100) {
+                alert('Please enter a valid drop percentage between 1 and 99%');
+                return;
+            }
+            payload.thresholdPercent = thresholdPercent;
+        } else if (alertType === 'drop' || alertType === 'rise') {
+            const targetPrice = parseFloat(document.getElementById('alertTargetPrice').value);
+            if (isNaN(targetPrice) || targetPrice <= 0) {
+                alert('Please enter a valid target price');
+                return;
+            }
+            payload.targetPrice = targetPrice;
         }
 
         try {
-            const payload = { productId, targetPrice, webhookUrl, alertType, notifyOnRise };
             if (id) {
                 await API.alerts.update(id, payload);
             } else {
