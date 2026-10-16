@@ -114,6 +114,15 @@ const App = {
 
         document.getElementById('addSourceBtn').addEventListener('click', () => this.addSourceRow());
 
+        // 1-Click Auto-Fill Metadata Discovery
+        document.getElementById('autodiscoverBtn')?.addEventListener('click', () => this.handleAutoDiscover());
+        document.getElementById('autodiscoverUrlInput')?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.handleAutoDiscover();
+            }
+        });
+
         document.getElementById('addStoreBtn')?.addEventListener('click', () => this.openStoreModal());
         document.getElementById('closeStoreModal')?.addEventListener('click', () => this.closeStoreModal());
         document.getElementById('cancelStoreModal')?.addEventListener('click', () => this.closeStoreModal());
@@ -432,6 +441,13 @@ const App = {
         if (activeBox) activeBox.checked = true;
         document.getElementById('imagePreview').innerHTML = '<span class="placeholder">No image</span>';
         document.getElementById('sourcesContainer').innerHTML = '';
+        const autoInput = document.getElementById('autodiscoverUrlInput');
+        if (autoInput) autoInput.value = '';
+        const autoStatus = document.getElementById('autodiscoverStatus');
+        if (autoStatus) {
+            autoStatus.style.display = 'none';
+            autoStatus.textContent = '';
+        }
     },
 
     populateForm(product) {
@@ -572,6 +588,123 @@ const App = {
                 document.getElementById('imageUrl').value = e.target.result;
             };
             reader.readAsDataURL(file);
+        }
+    },
+
+    async handleAutoDiscover() {
+        const input = document.getElementById('autodiscoverUrlInput');
+        const btn = document.getElementById('autodiscoverBtn');
+        const btnText = document.getElementById('autodiscoverBtnText');
+        const status = document.getElementById('autodiscoverStatus');
+        const url = input?.value.trim();
+
+        if (!url) {
+            if (status) {
+                status.style.display = 'block';
+                status.style.color = '#ef4444';
+                status.textContent = 'Please enter or paste a valid product page URL.';
+            }
+            input?.focus();
+            return;
+        }
+
+        try {
+            if (btn) btn.disabled = true;
+            if (btnText) btnText.textContent = '⏳ Extracting...';
+            if (status) {
+                status.style.display = 'block';
+                status.style.color = 'var(--text-secondary)';
+                status.textContent = 'Fetching and parsing store metadata...';
+            }
+
+            const res = await API.scraper.autodiscover(url);
+            const data = res.data;
+
+            if (!data) throw new Error('No metadata returned from server');
+
+            // 1. Title
+            if (data.title) {
+                document.getElementById('productTitle').value = data.title;
+            }
+
+            // 2. Reference Price
+            if (data.price != null && data.price > 0) {
+                document.getElementById('productRefPrice').value = data.price;
+            }
+
+            // 3. Image
+            if (data.image) {
+                document.getElementById('imageUrl').value = data.image;
+                this.previewImageUrl(data.image);
+            }
+
+            // 4. Description
+            if (data.description && !document.getElementById('productDescription').value) {
+                document.getElementById('productDescription').value = data.description;
+            }
+
+            // 5. Populate or create the source row
+            let firstSource = document.querySelector('.modal-source-item');
+            if (!firstSource) {
+                this.addSourceRow();
+                firstSource = document.querySelector('.modal-source-item');
+            }
+
+            if (firstSource) {
+                const urlInput = firstSource.querySelector('.source-url');
+                const nameInput = firstSource.querySelector('.source-sitename');
+                const selectorInput = firstSource.querySelector('.source-selector');
+                const presetSelect = firstSource.querySelector('.source-preset-select');
+                const badge = firstSource.querySelector('.source-store-badge');
+
+                if (urlInput) urlInput.value = url;
+                if (nameInput) nameInput.value = data.siteName || '';
+                if (badge && data.siteName) badge.textContent = data.siteName;
+
+                // Check if any preset store matches data.siteName
+                let matchedStore = null;
+                if (data.siteName && this.stores) {
+                    const normSite = data.siteName.toLowerCase().replace(/[\s-_]/g, '');
+                    matchedStore = this.stores.find(s => {
+                        const normStore = s.name.toLowerCase().replace(/[\s-_]/g, '');
+                        return normStore.includes(normSite) || normSite.includes(normStore);
+                    });
+                }
+
+                if (matchedStore) {
+                    if (presetSelect) presetSelect.value = matchedStore._id;
+                    if (selectorInput) selectorInput.value = matchedStore.cssSelector;
+                    if (nameInput) nameInput.value = matchedStore.name;
+                    if (badge) badge.textContent = matchedStore.name;
+                } else if (selectorInput && !selectorInput.value) {
+                    // Default fallback CSS selectors commonly used across e-commerce
+                    selectorInput.value = '[itemprop="price"], .price, .product-price, .current-price';
+                }
+            }
+
+            if (status) {
+                status.style.display = 'block';
+                status.style.color = '#10b981';
+                const parts = [];
+                if (data.title) parts.push('title');
+                if (data.price) parts.push(`price (€${Number(data.price).toFixed(2)})`);
+                if (data.image) parts.push('image');
+                if (data.siteName) parts.push(`store (${data.siteName})`);
+                if (data.availability && data.availability !== 'unknown') {
+                    parts.push(data.availability === 'in_stock' ? 'in stock' : data.availability);
+                }
+
+                status.textContent = `✓ Auto-filled ${parts.join(', ')} from ${data.sourceType || 'metadata'}!`;
+            }
+        } catch (error) {
+            if (status) {
+                status.style.display = 'block';
+                status.style.color = '#ef4444';
+                status.textContent = 'Auto-discovery notice: ' + (error.message || 'Could not auto-extract details. You can fill in the fields manually.');
+            }
+        } finally {
+            if (btn) btn.disabled = false;
+            if (btnText) btnText.textContent = '✨ Auto-Fill';
         }
     },
 

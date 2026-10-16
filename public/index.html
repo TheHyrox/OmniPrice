@@ -361,6 +361,26 @@
                 <form id="productForm" class="product-form">
                     <input type="hidden" id="productId" />
 
+                    <!-- Quick Auto-Fill Banner -->
+                    <div class="autodiscover-card" id="autodiscoverCard" style="margin-bottom: 20px; padding: 14px 16px; background: linear-gradient(135deg, rgba(37,99,235,0.06) 0%, rgba(59,130,246,0.12) 100%); border: 1px solid rgba(37,99,235,0.25); border-radius: 10px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="font-weight: 600; font-size: 0.9rem; color: var(--primary); display: flex; align-items: center; gap: 6px;">
+                                <span>✨</span> 1-Click Auto-Fill from Product URL
+                            </span>
+                            <span class="badge" style="font-size: 0.7rem; font-weight: 600; background: rgba(37,99,235,0.15); color: var(--primary); padding: 2px 8px; border-radius: 4px;">Smart Onboarding</span>
+                        </div>
+                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 10px; line-height: 1.4;">
+                            Paste any store product link to automatically extract the title, retail price, product image, and merchant name.
+                        </p>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <input type="url" id="autodiscoverUrlInput" placeholder="https://www.amazon.fr/dp/... or store product link" style="flex: 1; padding: 9px 12px; font-size: 0.875rem; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary);" />
+                            <button type="button" id="autodiscoverBtn" class="btn btn-primary" style="white-space: nowrap; padding: 9px 16px;">
+                                <span id="autodiscoverBtnText">✨ Auto-Fill</span>
+                            </button>
+                        </div>
+                        <div id="autodiscoverStatus" style="font-size: 0.8rem; margin-top: 8px; display: none;"></div>
+                    </div>
+
                     <!-- Section 1: Basic Information -->
                     <div class="modal-card-section">
                         <div class="modal-section-title">
