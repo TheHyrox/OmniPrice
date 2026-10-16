@@ -292,6 +292,50 @@
                         </div>
                         <div id="pushStatusMsg" style="margin-top: 12px; font-size: 0.875rem; display: none;"></div>
                     </div>
+
+                    <!-- Database Backup & Restore Card -->
+                    <div class="settings-card" style="grid-column: 1 / -1; max-width: 680px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                            <h3 style="margin-bottom: 0; padding-bottom: 0; border-bottom: none;">Database Backup & Restore</h3>
+                            <span class="badge" style="padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; background: rgba(59, 130, 246, 0.12); color: #2563eb;">JSON Snapshot</span>
+                        </div>
+                        <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 18px; line-height: 1.5;">
+                            Export a complete backup of all tracked products, price history graphs, store presets, alerts, and settings. You can restore this file at any time or migrate it to another server.
+                        </p>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 16px;">
+                            <!-- Download Section -->
+                            <div style="padding: 14px 16px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                                <div>
+                                    <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 2px;">Export Database</div>
+                                    <div style="font-size: 0.8rem; color: var(--text-secondary);">Download entire database as a single .json file</div>
+                                </div>
+                                <button id="downloadBackupBtn" class="btn btn-primary">⬇️ Download Backup</button>
+                            </div>
+
+                            <!-- Restore Section -->
+                            <div style="padding: 14px 16px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px;">
+                                <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 2px;">Restore from Backup</div>
+                                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 14px;">Upload an OmniPrice backup file (.json) to restore data</div>
+                                
+                                <div style="display: flex; gap: 18px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; font-size: 0.875rem;">
+                                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                        <input type="radio" name="restoreMode" value="replace" checked style="cursor: pointer;" />
+                                        <span>Replace all data (Clean restore)</span>
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                        <input type="radio" name="restoreMode" value="merge" style="cursor: pointer;" />
+                                        <span>Merge with existing data</span>
+                                    </label>
+                                </div>
+
+                                <input type="file" id="restoreFileInput" accept=".json" style="display: none;" />
+                                <button id="selectRestoreFileBtn" class="btn btn-secondary">📂 Select File & Restore</button>
+                            </div>
+                        </div>
+
+                        <div id="backupStatusMsg" style="margin-top: 14px; font-size: 0.875rem; display: none;"></div>
+                    </div>
                 </div>
             </section>
 

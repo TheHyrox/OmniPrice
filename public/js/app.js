@@ -135,6 +135,16 @@ const App = {
         document.getElementById('enablePushBtn')?.addEventListener('click', () => this.subscribeToPush());
         document.getElementById('testPushBtn')?.addEventListener('click', () => this.sendTestPush());
 
+        // Database Backup & Restore
+        document.getElementById('downloadBackupBtn')?.addEventListener('click', () => this.downloadBackup());
+        document.getElementById('selectRestoreFileBtn')?.addEventListener('click', () => {
+            document.getElementById('restoreFileInput')?.click();
+        });
+        document.getElementById('restoreFileInput')?.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) this.handleRestoreFile(file);
+        });
+
         document.getElementById('backToProducts').addEventListener('click', () => this.navigateToTab('products'));
 
         document.getElementById('productsGrid').addEventListener('click', (e) => {
@@ -1421,6 +1431,110 @@ const App = {
                 btn.disabled = false;
                 btn.textContent = 'Send Test Notification';
             }
+        }
+    },
+
+    // ==========================================
+    // Database Backup & Restore Management
+    // ==========================================
+    async downloadBackup() {
+        const btn = document.getElementById('downloadBackupBtn');
+        const status = document.getElementById('backupStatusMsg');
+        try {
+            if (btn) btn.disabled = true;
+            if (status) {
+                status.style.display = 'block';
+                status.style.color = 'var(--text-secondary)';
+                status.textContent = 'Generating database backup snapshot...';
+            }
+
+            const response = await fetch('/api/settings/backup');
+            if (!response.ok) {
+                const errJson = await response.json().catch(() => ({}));
+                throw new Error(errJson.error || 'Failed to generate backup');
+            }
+
+            const blob = await response.blob();
+            const disposition = response.headers.get('content-disposition');
+            let filename = `omniprice-backup-${new Date().toISOString().slice(0, 10)}.json`;
+            if (disposition && disposition.includes('filename=')) {
+                const match = disposition.match(/filename="?([^";]+)"?/);
+                if (match && match[1]) filename = match[1];
+            }
+
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+
+            if (status) {
+                status.style.color = '#10b981';
+                status.textContent = `✓ Database backup downloaded successfully (${filename})!`;
+            }
+        } catch (error) {
+            if (status) {
+                status.style.color = '#ef4444';
+                status.textContent = 'Backup failed: ' + error.message;
+            }
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    },
+
+    async handleRestoreFile(file) {
+        if (!file) return;
+        const status = document.getElementById('backupStatusMsg');
+        const restoreInput = document.getElementById('restoreFileInput');
+        const mode = document.querySelector('input[name="restoreMode"]:checked')?.value || 'replace';
+
+        const isReplace = mode === 'replace';
+        const confirmMsg = isReplace
+            ? '⚠️ WARNING: Clean Restore will REPLACE all current products, price history graphs, stores, and alerts with the backup file. Are you sure you want to proceed?'
+            : 'Merge Restore will add/update products, price histories, stores, and alerts from the backup into your current database. Proceed?';
+
+        if (!confirm(confirmMsg)) {
+            if (restoreInput) restoreInput.value = '';
+            return;
+        }
+
+        try {
+            if (status) {
+                status.style.display = 'block';
+                status.style.color = 'var(--text-secondary)';
+                status.textContent = 'Reading and importing backup file...';
+            }
+
+            const text = await file.text();
+            let parsed;
+            try {
+                parsed = JSON.parse(text);
+            } catch (_) {
+                throw new Error('Selected file is not valid JSON. Please choose a valid OmniPrice backup file.');
+            }
+
+            const result = await API.settings.restoreBackup(parsed, mode);
+
+            if (status) {
+                status.style.color = '#10b981';
+                status.textContent = `✓ Database restored successfully (${result.mode} mode): ${result.restored.products} products, ${result.restored.priceRecords} price records, ${result.restored.stores} stores, ${result.restored.alerts} alerts.`;
+            }
+
+            // Refresh app state
+            await this.loadProducts();
+            await this.loadStores();
+            await this.loadAlerts();
+            await this.loadSettings();
+        } catch (error) {
+            if (status) {
+                status.style.color = '#ef4444';
+                status.textContent = 'Restore failed: ' + error.message;
+            }
+        } finally {
+            if (restoreInput) restoreInput.value = '';
         }
     },
 

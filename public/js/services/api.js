@@ -107,6 +107,13 @@ const API = {
                 method: 'PUT',
                 body: data
             });
+        },
+
+        async restoreBackup(data, mode = 'replace') {
+            return API.request('/settings/restore', {
+                method: 'POST',
+                body: { data, mode }
+            });
         }
     },
 

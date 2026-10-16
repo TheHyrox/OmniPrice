@@ -45,6 +45,8 @@ class DatabaseAdapter {
     async createAlert(data) { return this._execute('createAlert', data); }
     async updateAlert(id, data) { return this._execute('updateAlert', id, data); }
     async deleteAlert(id) { return this._execute('deleteAlert', id); }
+    async exportBackup() { return this._execute('exportBackup'); }
+    async importBackup(data, mode) { return this._execute('importBackup', data, mode); }
 
     getMode() {
         return this.mode;

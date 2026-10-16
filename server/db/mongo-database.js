@@ -462,6 +462,123 @@ class MongoDatabase {
         const result = await Alert.deleteOne({ _id: id });
         return result.deletedCount > 0;
     }
+
+    async exportBackup() {
+        const [products, priceRecords, stores, alerts, settings] = await Promise.all([
+            Product.find({}).lean(),
+            PriceRecord.find({}).lean(),
+            Store.find({}).lean(),
+            Alert.find({}).lean(),
+            Setting.findOne({ _id: 'default_settings' }).lean()
+        ]);
+
+        return {
+            app: 'omniprice',
+            version: '2.0.0',
+            exportedAt: new Date().toISOString(),
+            stats: {
+                productsCount: products.length,
+                priceRecordsCount: priceRecords.length,
+                storesCount: stores.length,
+                alertsCount: alerts.length
+            },
+            data: {
+                products,
+                priceRecords,
+                stores,
+                alerts,
+                settings: settings || defaultSettings
+            }
+        };
+    }
+
+    async importBackup(payload, mode = 'replace') {
+        const data = (payload && payload.data) ? payload.data : (payload || {});
+        const products = Array.isArray(data.products) ? data.products : [];
+        const priceRecords = Array.isArray(data.priceRecords) ? data.priceRecords : [];
+        const stores = Array.isArray(data.stores) ? data.stores : [];
+        const alerts = Array.isArray(data.alerts) ? data.alerts : [];
+        const settings = data.settings || null;
+
+        if (mode === 'replace') {
+            await Promise.all([
+                Product.deleteMany({}),
+                PriceRecord.deleteMany({}),
+                Store.deleteMany({}),
+                Alert.deleteMany({})
+            ]);
+
+            if (products.length > 0) await Product.insertMany(products);
+            if (priceRecords.length > 0) await PriceRecord.insertMany(priceRecords);
+            if (stores.length > 0) await Store.insertMany(stores);
+            if (alerts.length > 0) await Alert.insertMany(alerts);
+            if (settings) {
+                const settingsData = { ...settings, _id: 'default_settings' };
+                await Setting.findOneAndUpdate(
+                    { _id: 'default_settings' },
+                    { $set: settingsData },
+                    { upsert: true, new: true }
+                );
+            }
+        } else {
+            // mode === 'merge'
+            for (const prod of products) {
+                const prodId = prod._id || uuidv4();
+                await Product.findOneAndUpdate(
+                    { _id: prodId },
+                    { $set: { ...prod, _id: prodId } },
+                    { upsert: true, new: true }
+                );
+            }
+
+            for (const record of priceRecords) {
+                const recId = record._id || uuidv4();
+                await PriceRecord.findOneAndUpdate(
+                    { _id: recId },
+                    { $set: { ...record, _id: recId } },
+                    { upsert: true, new: true }
+                );
+            }
+
+            for (const store of stores) {
+                const storeId = store._id || uuidv4();
+                await Store.findOneAndUpdate(
+                    { _id: storeId },
+                    { $set: { ...store, _id: storeId } },
+                    { upsert: true, new: true }
+                );
+            }
+
+            for (const alert of alerts) {
+                const alertId = alert._id || uuidv4();
+                await Alert.findOneAndUpdate(
+                    { _id: alertId },
+                    { $set: { ...alert, _id: alertId } },
+                    { upsert: true, new: true }
+                );
+            }
+
+            if (settings) {
+                await Setting.findOneAndUpdate(
+                    { _id: 'default_settings' },
+                    { $set: settings },
+                    { upsert: true, new: true }
+                );
+            }
+        }
+
+        return {
+            success: true,
+            mode,
+            restored: {
+                products: products.length,
+                priceRecords: priceRecords.length,
+                stores: stores.length,
+                alerts: alerts.length,
+                settings: Boolean(settings)
+            }
+        };
+    }
 }
 
 module.exports = MongoDatabase;
