@@ -3,9 +3,31 @@ const router = express.Router();
 const db = require('../db/adapter');
 const scraper = require('../services/scraper');
 const alertChecker = require('../services/alert-checker');
+const metadataExtractor = require('../services/metadata-extractor');
 const { scrapeAllLimiter, scrapeProductLimiter } = require('../middleware/rate-limiters');
 const { validate } = require('../middleware/validate');
 const { testScrapeSchema } = require('../schemas');
+
+// POST auto-discover metadata from URL (POC)
+router.post('/autodiscover', scrapeProductLimiter, async (req, res) => {
+    try {
+        const { url } = req.body;
+        if (!url || typeof url !== 'string') {
+            return res.status(400).json({ error: 'Valid URL is required' });
+        }
+
+        const metadata = await metadataExtractor.fetchAndExtract(url);
+        res.json({
+            success: true,
+            data: metadata
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
 
 // POST test scraper selector on a live URL without saving
 router.post('/test', scrapeProductLimiter, validate(testScrapeSchema), async (req, res) => {
