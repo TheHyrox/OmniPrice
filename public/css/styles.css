@@ -1107,6 +1107,12 @@ label {
     gap: 6px;
 }
 
+.chart-quick-presets .btn.active {
+    background: var(--accent);
+    color: #ffffff;
+    border-color: var(--accent);
+}
+
 .chart-tag-filters {
     display: flex;
     gap: 6px;

@@ -11,6 +11,7 @@ const Charts = {
     gridSearchQuery: '',
     gridSort: 'delta',
     eventsBound: false,
+    activePreset: null,
 
     palette: [
         '#0071e3',
@@ -89,6 +90,9 @@ const Charts = {
         document.getElementById('chartPresetTop5Btn')?.addEventListener('click', () => {
             this.selectTopDeals(5);
         });
+        document.getElementById('chartPresetPriceChangedBtn')?.addEventListener('click', () => {
+            this.selectPriceChanged();
+        });
         document.getElementById('chartSelectAllBtn')?.addEventListener('click', () => {
             this.selectAll();
         });
@@ -157,6 +161,13 @@ const Charts = {
         document.querySelectorAll('#chartTimeframeBtns .tf-btn').forEach(btn => {
             btn.classList.toggle('active', parseInt(btn.dataset.range, 10) === days);
         });
+
+        if (this.activePreset === 'priceChanged') {
+            const changedProducts = this.products.filter(product => this.hasPriceChangedInTimeframe(product, this.timeframe));
+            this.selectedProductIds = new Set(changedProducts.map(p => p._id));
+            this.renderChips();
+            this.renderKpis();
+        }
 
         if (this.currentView === 'comparison') {
             this.renderComparisonChart();
@@ -363,7 +374,14 @@ const Charts = {
         });
     },
 
+    updatePresetButtons() {
+        document.getElementById('chartPresetTop5Btn')?.classList.toggle('active', this.activePreset === 'top5');
+        document.getElementById('chartPresetPriceChangedBtn')?.classList.toggle('active', this.activePreset === 'priceChanged');
+    },
+
     toggleProductSelection(id) {
+        this.activePreset = null;
+        this.updatePresetButtons();
         if (this.selectedProductIds.has(id)) {
             this.selectedProductIds.delete(id);
         } else {
@@ -375,6 +393,8 @@ const Charts = {
     },
 
     selectTopDeals(n = 5) {
+        this.activePreset = 'top5';
+        this.updatePresetButtons();
         const sorted = [...this.products].sort((a, b) => (a.priceDelta ?? 0) - (b.priceDelta ?? 0));
         this.selectedProductIds = new Set(sorted.slice(0, n).map(p => p._id));
         this.renderChips();
@@ -382,7 +402,93 @@ const Charts = {
         this.renderComparisonChart();
     },
 
+    selectPriceChanged() {
+        this.activePreset = 'priceChanged';
+        this.updatePresetButtons();
+        const changedProducts = this.products.filter(product => this.hasPriceChangedInTimeframe(product, this.timeframe));
+        this.selectedProductIds = new Set(changedProducts.map(p => p._id));
+        this.renderChips();
+        this.renderKpis();
+        this.renderComparisonChart();
+    },
+
+    hasPriceChangedInTimeframe(product, timeframe) {
+        if (!product || !product.priceHistory || product.priceHistory.length === 0) {
+            return false;
+        }
+
+        const sanitize = (price, refPrice) => {
+            if (typeof ProductCard !== 'undefined' && ProductCard.sanitizePrice) {
+                return ProductCard.sanitizePrice(price, refPrice);
+            }
+            const num = Number(price);
+            return (!isNaN(num) && num > 0) ? num : null;
+        };
+
+        const getMinPrice = (entry, refPrice) => {
+            if (!entry) return null;
+            let prices = [];
+            if (Array.isArray(entry.prices) && entry.prices.length > 0) {
+                prices = entry.prices.map(p => sanitize(p.price, refPrice));
+            } else if (entry.price != null) {
+                prices = [sanitize(entry.price, refPrice)];
+            }
+            const valid = prices.filter(p => typeof p === 'number' && !isNaN(p) && p > 0);
+            return valid.length > 0 ? Math.min(...valid) : null;
+        };
+
+        const history = product.priceHistory
+            .slice()
+            .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        const entries = history
+            .map(h => ({ date: new Date(h.date), price: getMinPrice(h, product.referencePrice) }))
+            .filter(e => e.price !== null && !isNaN(e.date.getTime()));
+
+        if (entries.length === 0) {
+            return false;
+        }
+
+        const hasTimeframe = typeof timeframe === 'number' && timeframe > 0;
+        if (!hasTimeframe) {
+            if (entries.length < 2) return false;
+            const minP = Math.min(...entries.map(e => e.price));
+            const maxP = Math.max(...entries.map(e => e.price));
+            return Math.abs(maxP - minP) > 0.001;
+        }
+
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - timeframe);
+
+        const inRange = entries.filter(e => e.date >= cutoffDate);
+        const beforeRange = entries.filter(e => e.date < cutoffDate);
+
+        if (inRange.length === 0) {
+            return false;
+        }
+
+        const inMin = Math.min(...inRange.map(e => e.price));
+        const inMax = Math.max(...inRange.map(e => e.price));
+
+        // Price fluctuated within the timeframe itself
+        if (Math.abs(inMax - inMin) > 0.001) {
+            return true;
+        }
+
+        // Single price value in range: check if it differs from the last price before this timeframe
+        if (beforeRange.length > 0) {
+            const lastBeforePrice = beforeRange[beforeRange.length - 1].price;
+            if (Math.abs(inRange[0].price - lastBeforePrice) > 0.001) {
+                return true;
+            }
+        }
+
+        return false;
+    },
+
     selectAll() {
+        this.activePreset = null;
+        this.updatePresetButtons();
         this.selectedProductIds = new Set(this.products.map(p => p._id));
         this.renderChips();
         this.renderKpis();
@@ -390,6 +496,8 @@ const Charts = {
     },
 
     clearAll() {
+        this.activePreset = null;
+        this.updatePresetButtons();
         this.selectedProductIds.clear();
         this.renderChips();
         this.renderKpis();
