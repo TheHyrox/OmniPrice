@@ -423,6 +423,7 @@ const App = {
     openModal(product = null) {
         const modal = document.getElementById('productModal');
         const title = document.getElementById('modalTitle');
+        const modalContent = modal?.querySelector('.modal-content');
         
         if (product) {
             title.textContent = 'Edit Product';
@@ -435,10 +436,17 @@ const App = {
         
         this.renderModalTagSuggestions();
         modal.classList.add('active');
+
+        if (modalContent) modalContent.scrollTop = 0;
+        if (modal) modal.scrollTop = 0;
     },
 
     closeModal() {
-        document.getElementById('productModal').classList.remove('active');
+        const modal = document.getElementById('productModal');
+        const modalContent = modal?.querySelector('.modal-content');
+        modal.classList.remove('active');
+        if (modalContent) modalContent.scrollTop = 0;
+        if (modal) modal.scrollTop = 0;
         this.resetForm();
     },
 
@@ -878,7 +886,18 @@ const App = {
 
     addSourceRow() {
         const container = document.getElementById('sourcesContainer');
-        const currentCount = container.querySelectorAll('.modal-source-item').length;
+        
+        const existingItems = container.querySelectorAll('.modal-source-item');
+        existingItems.forEach(item => {
+            const statusBadge = item.querySelector('.source-status-badge');
+            const selectorInput = item.querySelector('.source-selector-input');
+            const isReady = statusBadge?.classList.contains('configured') || Boolean(selectorInput?.value?.trim());
+            if (isReady) {
+                item.classList.remove('expanded');
+            }
+        });
+
+        const currentCount = existingItems.length;
         container.insertAdjacentHTML('beforeend', this.sourceRowHTML({}, currentCount));
         this.updateSourcesCount();
 
@@ -888,6 +907,7 @@ const App = {
             lastItem.classList.add('expanded');
             const urlInput = lastItem.querySelector('.source-url-input');
             if (urlInput) urlInput.focus();
+            lastItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
     },
 
