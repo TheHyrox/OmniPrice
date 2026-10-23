@@ -113,6 +113,13 @@ const App = {
         document.getElementById('imageFile').addEventListener('change', (e) => this.handleImageFile(e));
 
         document.getElementById('addSourceBtn').addEventListener('click', () => this.addSourceRow());
+        document.getElementById('toggleAllSourcesBtn')?.addEventListener('click', () => this.toggleAllSources());
+
+        const tagsInput = document.getElementById('productTags');
+        if (tagsInput) {
+            tagsInput.addEventListener('input', () => this.updateModalTagSuggestions());
+            tagsInput.addEventListener('focus', () => this.renderModalTagSuggestions());
+        }
 
         // 1-Click Auto-Fill Metadata Discovery
         document.getElementById('autodiscoverBtn')?.addEventListener('click', () => this.handleAutoDiscover());
@@ -426,6 +433,7 @@ const App = {
             this.addSourceRow();
         }
         
+        this.renderModalTagSuggestions();
         modal.classList.add('active');
     },
 
@@ -448,6 +456,8 @@ const App = {
             autoStatus.style.display = 'none';
             autoStatus.textContent = '';
         }
+        this.renderModalTagSuggestions();
+        this.updateSourcesCount();
     },
 
     populateForm(product) {
@@ -466,13 +476,140 @@ const App = {
         
         const container = document.getElementById('sourcesContainer');
         if (product.sources && product.sources.length > 0) {
-            container.innerHTML = product.sources.map((s, i) => this.sourceRowHTML(s)).join('');
+            container.innerHTML = product.sources.map((s, i) => this.sourceRowHTML(s, i)).join('');
         } else {
             this.addSourceRow();
         }
+        this.updateSourcesCount();
+        this.renderModalTagSuggestions();
     },
 
-    sourceRowHTML(source = {}) {
+    renderModalTagSuggestions() {
+        const container = document.getElementById('modalTagSuggestions');
+        if (!container) return;
+
+        const allTags = [...new Set([
+            ...(this.allTags || []),
+            ...((this.products || []).flatMap(p => p.tags || []))
+        ])].filter(Boolean);
+
+        if (allTags.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+
+        const currentVal = document.getElementById('productTags')?.value || '';
+        const currentTags = currentVal.split(',')
+            .map(t => t.trim().toLowerCase())
+            .filter(Boolean);
+
+        container.innerHTML = allTags.map(tag => {
+            const isSelected = currentTags.includes(tag.toLowerCase());
+            return `
+                <button type="button" 
+                        class="tag-suggestion-chip ${isSelected ? 'active' : ''}" 
+                        data-tag="${escapeHtml(tag)}"
+                        onclick="App.toggleModalTag('${escapeHtml(tag)}')">
+                    <span class="tag-chip-icon">${isSelected ? '✓' : '+'}</span>
+                    <span>${escapeHtml(tag)}</span>
+                </button>
+            `;
+        }).join('');
+    },
+
+    toggleModalTag(tag) {
+        const input = document.getElementById('productTags');
+        if (!input) return;
+
+        let tags = input.value.split(',')
+            .map(t => t.trim())
+            .filter(Boolean);
+
+        const normTag = tag.trim().toLowerCase();
+        const existingIndex = tags.findIndex(t => t.toLowerCase() === normTag);
+
+        if (existingIndex >= 0) {
+            tags.splice(existingIndex, 1);
+        } else {
+            tags.push(tag.trim());
+        }
+
+        input.value = tags.join(', ');
+        this.updateModalTagSuggestions();
+        input.focus();
+    },
+
+    updateModalTagSuggestions() {
+        const input = document.getElementById('productTags');
+        const container = document.getElementById('modalTagSuggestions');
+        if (!input || !container) return;
+
+        const currentTags = input.value.split(',')
+            .map(t => t.trim().toLowerCase())
+            .filter(Boolean);
+
+        container.querySelectorAll('.tag-suggestion-chip').forEach(chip => {
+            const tag = (chip.dataset.tag || '').toLowerCase();
+            const isSelected = currentTags.includes(tag);
+            chip.classList.toggle('active', isSelected);
+            const iconSpan = chip.querySelector('.tag-chip-icon');
+            if (iconSpan) {
+                iconSpan.textContent = isSelected ? '✓' : '+';
+            }
+        });
+    },
+
+    extractDomainFromUrl(url) {
+        if (!url) return '';
+        try {
+            const parsed = new URL(url.startsWith('http') ? url : 'https://' + url);
+            return parsed.hostname.toLowerCase().replace(/^www\./, '');
+        } catch (_) {
+            const m = url.match(/(?:https?:\/\/)?(?:www\.)?([^\/\?#]+)/i);
+            return m ? m[1].toLowerCase() : '';
+        }
+    },
+
+    matchStoreFromUrl(url) {
+        if (!url || !this.stores || this.stores.length === 0) return null;
+        const hostname = this.extractDomainFromUrl(url);
+        if (!hostname) return null;
+
+        const parts = hostname.split('.');
+        const baseDomain = parts.length > 1 ? parts.slice(0, -1).join('.') : hostname;
+        const cleanHostnameAlpha = hostname.replace(/[^a-z0-9]/g, '');
+        const cleanBaseAlpha = baseDomain.replace(/[^a-z0-9]/g, '');
+
+        // 1. Direct match on store.defaultUrl hostname
+        for (const store of this.stores) {
+            if (store.defaultUrl) {
+                try {
+                    const sHost = this.extractDomainFromUrl(store.defaultUrl);
+                    if (sHost && (sHost === hostname || hostname.endsWith('.' + sHost) || sHost.endsWith('.' + hostname))) {
+                        return store;
+                    }
+                } catch (_) {}
+            }
+        }
+
+        // 2. Exact or clean match on store.name
+        for (const store of this.stores) {
+            const sName = (store.name || '').toLowerCase().trim();
+            const sNameAlpha = sName.replace(/[^a-z0-9]/g, '');
+            if (sNameAlpha.length < 2) continue;
+
+            if (cleanBaseAlpha === sNameAlpha || cleanHostnameAlpha === sNameAlpha) {
+                return store;
+            }
+            if (cleanHostnameAlpha.includes(sNameAlpha) || sNameAlpha.includes(cleanBaseAlpha)) {
+                return store;
+            }
+        }
+
+        return null;
+    },
+
+    sourceRowHTML(source = {}, index = 0) {
         const storeOptions = (this.stores || []).map(store => {
             const selected = source.siteName === store.name ? 'selected' : '';
             return `<option value="${escapeHtml(store._id)}" 
@@ -482,78 +619,166 @@ const App = {
                             ${selected}>${escapeHtml(store.name)}</option>`;
         }).join('');
 
-        const isKnownStore = (this.stores || []).some(s => s.name === source.siteName);
+        const domain = source.url ? this.extractDomainFromUrl(source.url) : '';
+        const hasSelector = Boolean(source.cssSelector);
 
         return `
-            <div class="modal-source-item source-item">
-                <div class="modal-source-header">
-                    <div class="modal-source-title">
-                        <span class="modal-source-index">Store Feed</span>
-                        <span class="source-store-badge">${escapeHtml(source.siteName || 'New Store')}</span>
+            <div class="modal-source-item source-item expanded" data-source-index="${index}">
+                <div class="modal-source-header" onclick="App.toggleSourceItem(this, event)">
+                    <div class="modal-source-header-left">
+                        <span class="source-index-badge">#${index + 1}</span>
+                        <div class="source-header-info">
+                            <span class="source-header-name">${escapeHtml(source.siteName || 'New Store')}</span>
+                            <span class="source-header-domain" style="${domain ? '' : 'display:none;'}">${escapeHtml(domain)}</span>
+                        </div>
                     </div>
-                    <button type="button" class="remove-source-btn" onclick="this.closest('.modal-source-item').remove()" title="Remove store feed">
-                        <span>Remove</span> ×
-                    </button>
+                    <div class="modal-source-header-right">
+                        <span class="source-status-badge ${hasSelector ? 'configured' : ''}">
+                            ${hasSelector ? '✓ Ready' : 'Incomplete'}
+                        </span>
+                        <button type="button" class="source-collapse-btn" title="Expand / Collapse" aria-label="Expand / Collapse">
+                            <svg class="chevron-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg>
+                        </button>
+                        <button type="button" class="remove-source-btn" onclick="App.removeSourceItem(this, event)" title="Remove store feed">
+                            <span>Remove</span> ×
+                        </button>
+                    </div>
                 </div>
 
                 <div class="modal-source-body">
                     <div class="modal-source-row">
                         <div class="source-field source-field-preset">
-                            <label>Store Template</label>
+                            <label>
+                                <span>Store Template</span>
+                                <span class="source-label-hint">Saved presets</span>
+                            </label>
                             <select class="source-preset-select" onchange="App.onSourcePresetSelectChange(this)">
                                 <option value="">Custom Store</option>
                                 ${storeOptions}
                             </select>
                         </div>
                         <div class="source-field source-field-name">
-                            <label>Store Name <span class="required">*</span></label>
-                            <input type="text" placeholder="e.g. Amazon, Fnac, Darty" value="${escapeHtml(source.siteName || '')}" class="source-name-input" required />
+                            <label>
+                                <span>Store Name <span class="required">*</span></span>
+                            </label>
+                            <input type="text" placeholder="e.g. Amazon, Fnac, Louis Moto" value="${escapeHtml(source.siteName || '')}" class="source-name-input" oninput="App.onSourceNameInput(this)" required />
                         </div>
                     </div>
 
-                    <div class="modal-source-row">
+                    <div class="modal-source-row full-width">
                         <div class="source-field source-field-url">
-                            <label>Product Page URL <span class="required">*</span></label>
-                            <input type="url" placeholder="https://www.example.com/product/12345" value="${escapeHtml(source.url || '')}" class="source-url-input" required />
+                            <label>
+                                <span>Product Page URL <span class="required">*</span></span>
+                                <span class="source-label-hint auto-detect-hint">Auto-matches saved store preset</span>
+                            </label>
+                            <input type="url" placeholder="https://www.example.com/product/12345" value="${escapeHtml(source.url || '')}" class="source-url-input" oninput="App.onSourceUrlInput(this)" onpaste="setTimeout(() => App.onSourceUrlInput(this), 20)" required />
                         </div>
                     </div>
 
-                    <div class="modal-source-row">
+                    <div class="modal-source-row full-width">
                         <div class="source-field source-field-selector">
                             <label>
                                 <span>CSS Price Selector <span class="required">*</span></span>
                                 <span class="source-label-hint">HTML tag or class containing the price</span>
                             </label>
-                            <input type="text" placeholder="e.g. .a-price .a-offscreen, span.price" value="${escapeHtml(source.cssSelector || '')}" class="source-selector-input" required />
+                            <input type="text" placeholder="e.g. .a-price .a-offscreen, span.price" value="${escapeHtml(source.cssSelector || '')}" class="source-selector-input" oninput="App.onSourceSelectorInput(this)" required />
                         </div>
                     </div>
 
-                    <div class="modal-source-row modal-source-actions-row" style="margin-top: 10px;">
-                        <div class="source-field" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
-                            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.8125rem; cursor: pointer; margin: 0;">
-                                <input type="checkbox" class="source-puppeteer-input" ${source.usePuppeteer ? 'checked' : ''} style="width: auto; margin: 0;" />
-                                <span>Use Puppeteer (Dynamic/JS sites)</span>
-                            </label>
+                    <div class="modal-source-footer">
+                        <label class="puppeteer-toggle-label">
+                            <input type="checkbox" class="source-puppeteer-input" ${source.usePuppeteer ? 'checked' : ''} />
+                            <span class="toggle-checkbox-custom"></span>
+                            <span class="toggle-label-content">
+                                <span class="toggle-title">Use Puppeteer</span>
+                                <span class="toggle-sub">For JavaScript-rendered & dynamic sites</span>
+                            </span>
+                        </label>
+                        <div class="modal-source-actions">
                             <button type="button" class="btn btn-secondary btn-sm test-selector-btn" onclick="App.testSourceSelector(this)">
-                                Test Selector
+                                ⚡ Test Selector
                             </button>
                         </div>
-                        <div class="test-selector-result" style="display: none; width: 100%; margin-top: 8px; font-size: 0.8125rem;"></div>
                     </div>
+                    <div class="test-selector-result" style="display: none;"></div>
                 </div>
             </div>
         `;
     },
 
+    onSourceUrlInput(urlInput) {
+        const itemRow = urlInput.closest('.modal-source-item') || urlInput.closest('.source-item');
+        if (!itemRow) return;
+
+        const url = urlInput.value.trim();
+        const domain = this.extractDomainFromUrl(url);
+
+        const domainBadge = itemRow.querySelector('.source-header-domain');
+        if (domainBadge) {
+            domainBadge.textContent = domain;
+            domainBadge.style.display = domain ? '' : 'none';
+        }
+
+        if (!url) return;
+
+        const matchedStore = this.matchStoreFromUrl(url);
+        if (matchedStore) {
+            const presetSelect = itemRow.querySelector('.source-preset-select');
+            const nameInput = itemRow.querySelector('.source-name-input');
+            const selectorInput = itemRow.querySelector('.source-selector-input');
+            const headerName = itemRow.querySelector('.source-header-name');
+            const statusBadge = itemRow.querySelector('.source-status-badge');
+
+            if (presetSelect) presetSelect.value = matchedStore._id;
+            if (nameInput) nameInput.value = matchedStore.name;
+            if (selectorInput && matchedStore.cssSelector) selectorInput.value = matchedStore.cssSelector;
+            if (headerName) headerName.textContent = matchedStore.name;
+            if (statusBadge) {
+                statusBadge.textContent = '✓ Ready';
+                statusBadge.classList.add('configured');
+            }
+        } else {
+            const nameInput = itemRow.querySelector('.source-name-input');
+            const headerName = itemRow.querySelector('.source-header-name');
+            if (nameInput && !nameInput.value && domain) {
+                const autoName = domain.split('.')[0];
+                const capitalized = autoName.charAt(0).toUpperCase() + autoName.slice(1);
+                nameInput.value = capitalized;
+                if (headerName) headerName.textContent = capitalized;
+            }
+        }
+    },
+
+    onSourceNameInput(nameInput) {
+        const itemRow = nameInput.closest('.modal-source-item') || nameInput.closest('.source-item');
+        if (!itemRow) return;
+        const headerName = itemRow.querySelector('.source-header-name');
+        if (headerName) {
+            headerName.textContent = nameInput.value.trim() || 'Custom Store';
+        }
+    },
+
+    onSourceSelectorInput(selectorInput) {
+        const itemRow = selectorInput.closest('.modal-source-item') || selectorInput.closest('.source-item');
+        if (!itemRow) return;
+        const statusBadge = itemRow.querySelector('.source-status-badge');
+        if (statusBadge) {
+            const hasSel = Boolean(selectorInput.value.trim());
+            statusBadge.textContent = hasSel ? '✓ Ready' : 'Incomplete';
+            statusBadge.classList.toggle('configured', hasSel);
+        }
+    },
+
     onSourcePresetSelectChange(selectElem) {
         const selectedOpt = selectElem.options[selectElem.selectedIndex];
-        const itemRow = selectElem.closest('.source-item') || selectElem.closest('#addSourceForm') || selectElem.closest('.add-source-card');
+        const itemRow = selectElem.closest('.modal-source-item') || selectElem.closest('.source-item') || selectElem.closest('#addSourceForm') || selectElem.closest('.add-source-card');
         if (!itemRow) return;
 
         const selectorInput = itemRow.querySelector('.source-selector-input') || itemRow.querySelector('#newSourceSelector');
         const nameInput = itemRow.querySelector('.source-name-input') || itemRow.querySelector('#newSourceName');
         const urlInput = itemRow.querySelector('.source-url-input') || itemRow.querySelector('#newSourceUrl');
-        const badge = itemRow.querySelector('.source-store-badge');
+        const headerName = itemRow.querySelector('.source-header-name');
+        const statusBadge = itemRow.querySelector('.source-status-badge');
 
         if (selectedOpt.value) {
             const name = selectedOpt.dataset.name;
@@ -561,16 +786,109 @@ const App = {
             const defaultUrl = selectedOpt.dataset.url;
             if (nameInput) nameInput.value = name;
             if (selectorInput) selectorInput.value = selector;
-            if (urlInput && !urlInput.value && defaultUrl) urlInput.value = defaultUrl;
-            if (badge) badge.textContent = name;
+            if (urlInput && !urlInput.value && defaultUrl) {
+                urlInput.value = defaultUrl;
+                this.onSourceUrlInput(urlInput);
+            }
+            if (headerName) headerName.textContent = name;
+            if (statusBadge) {
+                statusBadge.textContent = '✓ Ready';
+                statusBadge.classList.add('configured');
+            }
         } else {
-            if (badge) badge.textContent = nameInput?.value?.trim() || 'Custom Store';
+            if (headerName) headerName.textContent = nameInput?.value?.trim() || 'Custom Store';
+            if (statusBadge) {
+                const hasSel = Boolean(selectorInput?.value?.trim());
+                statusBadge.textContent = hasSel ? '✓ Ready' : 'Incomplete';
+                statusBadge.classList.toggle('configured', hasSel);
+            }
         }
+    },
+
+    toggleSourceItem(headerElem, event) {
+        if (event && (event.target.closest('.remove-source-btn') || event.target.closest('input') || event.target.closest('select'))) {
+            return;
+        }
+        const item = headerElem.closest('.modal-source-item');
+        if (item) {
+            item.classList.toggle('expanded');
+            this.syncToggleAllButton();
+        }
+    },
+
+    toggleAllSources() {
+        const container = document.getElementById('sourcesContainer');
+        const items = container.querySelectorAll('.modal-source-item');
+        if (!items.length) return;
+
+        const hasExpanded = Array.from(items).some(item => item.classList.contains('expanded'));
+        items.forEach(item => {
+            item.classList.toggle('expanded', !hasExpanded);
+        });
+
+        const btn = document.getElementById('toggleAllSourcesBtn');
+        if (btn) {
+            btn.textContent = hasExpanded ? 'Expand All' : 'Collapse All';
+        }
+    },
+
+    syncToggleAllButton() {
+        const container = document.getElementById('sourcesContainer');
+        const items = container.querySelectorAll('.modal-source-item');
+        const btn = document.getElementById('toggleAllSourcesBtn');
+        if (!btn) return;
+
+        if (items.length < 2) {
+            btn.style.display = 'none';
+            return;
+        }
+
+        btn.style.display = 'inline-flex';
+        const allExpanded = Array.from(items).every(item => item.classList.contains('expanded'));
+        btn.textContent = allExpanded ? 'Collapse All' : 'Expand All';
+    },
+
+    removeSourceItem(btn, event) {
+        if (event) event.stopPropagation();
+        const item = btn.closest('.modal-source-item');
+        if (item) {
+            item.remove();
+            this.updateSourcesCount();
+        }
+    },
+
+    updateSourcesCount() {
+        const container = document.getElementById('sourcesContainer');
+        if (!container) return;
+        const items = container.querySelectorAll('.modal-source-item');
+
+        items.forEach((item, idx) => {
+            const badge = item.querySelector('.source-index-badge');
+            if (badge) badge.textContent = `#${idx + 1}`;
+            item.dataset.sourceIndex = idx;
+        });
+
+        const countBadge = document.getElementById('sourcesCountBadge');
+        if (countBadge) {
+            countBadge.textContent = `${items.length} ${items.length === 1 ? 'store feed' : 'store feeds'}`;
+        }
+
+        this.syncToggleAllButton();
     },
 
     addSourceRow() {
         const container = document.getElementById('sourcesContainer');
-        container.insertAdjacentHTML('beforeend', this.sourceRowHTML());
+        const currentCount = container.querySelectorAll('.modal-source-item').length;
+        container.insertAdjacentHTML('beforeend', this.sourceRowHTML({}, currentCount));
+        this.updateSourcesCount();
+
+        const newItems = container.querySelectorAll('.modal-source-item');
+        const lastItem = newItems[newItems.length - 1];
+        if (lastItem) {
+            lastItem.classList.add('expanded');
+            const urlInput = lastItem.querySelector('.source-url-input');
+            if (urlInput) urlInput.focus();
+        }
     },
 
     previewImageUrl(url) {
@@ -651,35 +969,44 @@ const App = {
             }
 
             if (firstSource) {
-                const urlInput = firstSource.querySelector('.source-url');
-                const nameInput = firstSource.querySelector('.source-sitename');
-                const selectorInput = firstSource.querySelector('.source-selector');
+                const urlInput = firstSource.querySelector('.source-url-input');
+                const nameInput = firstSource.querySelector('.source-name-input');
+                const selectorInput = firstSource.querySelector('.source-selector-input');
                 const presetSelect = firstSource.querySelector('.source-preset-select');
-                const badge = firstSource.querySelector('.source-store-badge');
+                const headerName = firstSource.querySelector('.source-header-name');
 
-                if (urlInput) urlInput.value = url;
-                if (nameInput) nameInput.value = data.siteName || '';
-                if (badge && data.siteName) badge.textContent = data.siteName;
+                if (urlInput) {
+                    urlInput.value = url;
+                    this.onSourceUrlInput(urlInput);
+                }
+                if (nameInput && !nameInput.value && data.siteName) {
+                    nameInput.value = data.siteName;
+                }
+                if (headerName && data.siteName && (!presetSelect || !presetSelect.value)) {
+                    headerName.textContent = data.siteName;
+                }
 
-                // Check if any preset store matches data.siteName
-                let matchedStore = null;
-                if (data.siteName && this.stores) {
+                // Check if any preset store matches data.siteName if not already matched
+                if (data.siteName && presetSelect && !presetSelect.value && this.stores) {
                     const normSite = data.siteName.toLowerCase().replace(/[\s-_]/g, '');
-                    matchedStore = this.stores.find(s => {
+                    const matchedStore = this.stores.find(s => {
                         const normStore = s.name.toLowerCase().replace(/[\s-_]/g, '');
                         return normStore.includes(normSite) || normSite.includes(normStore);
                     });
+
+                    if (matchedStore) {
+                        presetSelect.value = matchedStore._id;
+                        if (selectorInput) selectorInput.value = matchedStore.cssSelector;
+                        if (nameInput) nameInput.value = matchedStore.name;
+                        if (headerName) headerName.textContent = matchedStore.name;
+                    }
                 }
 
-                if (matchedStore) {
-                    if (presetSelect) presetSelect.value = matchedStore._id;
-                    if (selectorInput) selectorInput.value = matchedStore.cssSelector;
-                    if (nameInput) nameInput.value = matchedStore.name;
-                    if (badge) badge.textContent = matchedStore.name;
-                } else if (selectorInput && !selectorInput.value) {
+                if (selectorInput && !selectorInput.value) {
                     // Default fallback CSS selectors commonly used across e-commerce
                     selectorInput.value = '[itemprop="price"], .price, .product-price, .current-price';
                 }
+                if (selectorInput) this.onSourceSelectorInput(selectorInput);
             }
 
             if (status) {
