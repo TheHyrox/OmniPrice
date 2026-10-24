@@ -402,8 +402,9 @@
                             </div>
                             <div class="form-group">
                                 <label for="productTags">Tags / Categories (comma-separated)</label>
-                                <input type="text" id="productTags" placeholder="e.g., moto, casque, accessoire" />
+                                <input type="text" id="productTags" placeholder="e.g., Electronics, Audio, Wishlist, Gaming..." autocomplete="off" />
                                 <span class="form-help">Used to group and filter your products</span>
+                                <div id="modalTagSuggestions" class="modal-tag-suggestions"></div>
                             </div>
                         </div>
                         <div class="form-group">
@@ -444,12 +445,16 @@
 
                     <!-- Section 3: Online Store Sources -->
                     <div class="modal-card-section">
-                        <div class="modal-section-title" style="justify-content: space-between;">
+                        <div class="modal-section-title" style="justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <span class="step-num">3</span>
                                 <h4>Price Feeds & Online Stores</h4>
+                                <span class="sources-count-pill" id="sourcesCountBadge">1 store feed</span>
                             </div>
-                            <button type="button" id="addSourceBtn" class="btn btn-secondary btn-sm">+ Add Store Feed</button>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <button type="button" id="toggleAllSourcesBtn" class="btn btn-ghost btn-sm" title="Expand or collapse all store feeds" style="display: none;">Collapse All</button>
+                                <button type="button" id="addSourceBtn" class="btn btn-secondary btn-sm">+ Add Store Feed</button>
+                            </div>
                         </div>
                         <p class="section-subtitle" style="margin-bottom: 14px;">Define which online shops to scrape prices from</p>
                         <div id="sourcesContainer" class="sources-container"></div>
