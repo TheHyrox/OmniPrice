@@ -313,7 +313,7 @@ const App = {
             if (this.filters.priceMin !== null && (price === null || price < this.filters.priceMin)) return false;
             if (this.filters.priceMax !== null && (price === null || price > this.filters.priceMax)) return false;
             if (this.filters.tags.length > 0) {
-                if (!this.filters.tags.some(t => (p.tags || []).includes(t))) return false;
+                if (!this.filters.tags.every(t => (p.tags || []).includes(t))) return false;
             }
 
             if (this.filters.dealType === 'deals') {
