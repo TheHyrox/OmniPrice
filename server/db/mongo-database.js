@@ -222,6 +222,24 @@ class MongoDatabase {
         const product = await Product.findOne({ _id: id });
         if (!product) return null;
 
+        if (Array.isArray(data.sources)) {
+            const oldSources = product.sources || [];
+            data.sources = data.sources.map(newSrc => {
+                const existing = oldSources.find(s => s.url === newSrc.url) 
+                    || oldSources.find(s => s.siteName === newSrc.siteName);
+
+                return {
+                    ...newSrc,
+                    lastPrice: newSrc.lastPrice !== undefined 
+                        ? newSrc.lastPrice 
+                        : (existing ? existing.lastPrice : null),
+                    lastScraped: newSrc.lastScraped !== undefined 
+                        ? newSrc.lastScraped 
+                        : (existing ? existing.lastScraped : null)
+                };
+            });
+        }
+
         Object.assign(product, data);
         if (data.active !== undefined) {
             product.active = Boolean(data.active);
