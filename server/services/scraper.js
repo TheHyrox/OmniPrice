@@ -1,6 +1,8 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 const puppeteer = require('puppeteer');
+const Semaphore = require('../utils/semaphore');
+const { assertSafeUrl } = require('../utils/ssrf');
 
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -8,6 +10,8 @@ class Scraper {
     constructor() {
         this.browser = null;
         this.launchPromise = null;
+        const puppeteerConcurrency = parseInt(process.env.PUPPETEER_CONCURRENCY || '1', 10) || 1;
+        this.puppeteerSemaphore = new Semaphore(puppeteerConcurrency);
     }
 
     async getBrowser() {
@@ -31,10 +35,14 @@ class Scraper {
             }
 
             try {
-                const browser = await puppeteer.launch({
+                const launchOptions = {
                     headless: true,
-                    args: ['--no-sandbox', '--disable-setuid-sandbox']
-                });
+                    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
+                };
+                if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+                    launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+                }
+                const browser = await puppeteer.launch(launchOptions);
 
                 // Auto-recover state on unexpected process termination or disconnect
                 browser.once('disconnected', () => {
@@ -184,7 +192,9 @@ class Scraper {
                     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
                     'Accept-Language': 'en-US,en;q=0.5',
                 },
-                timeout: 15000
+                timeout: 15000,
+                maxContentLength: 10 * 1024 * 1024,
+                maxBodyLength: 10 * 1024 * 1024
             });
             
             const $ = cheerio.load(response.data);
@@ -212,69 +222,72 @@ class Scraper {
     }
 
     async scrapeWithPuppeteer(url, cssSelector) {
-        let browser;
-        try {
-            browser = await this.getBrowser();
-        } catch (launchErr) {
-            console.error('[Scraper] Failed to acquire Puppeteer browser, retrying with fresh instance...', launchErr.message);
-            await this.closeBrowser();
-            browser = await this.getBrowser();
-        }
-
-        let page = null;
-        try {
-            page = await browser.newPage();
-            await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36');
-            
-            await page.goto(url, { 
-                waitUntil: 'networkidle2',
-                timeout: 30000 
-            });
-
-            await page.waitForSelector(cssSelector, { timeout: 10000 });
-            
-            const priceText = await page.$eval(cssSelector, el => {
-                const clone = el.cloneNode(true);
-                clone.querySelectorAll('sup, script, style').forEach(node => node.remove());
-                return clone.textContent.trim();
-            });
-            const price = this.parsePrice(priceText);
-            
-            if (price === null) {
-                throw new Error(`Could not parse price from: "${priceText}"`);
-            }
-            
-            return price;
-        } catch (error) {
-            const msg = (error.message || '').toLowerCase();
-            const isCrash =
-                !browser ||
-                (typeof browser.isConnected === 'function' && !browser.isConnected()) ||
-                msg.includes('target closed') ||
-                msg.includes('session closed') ||
-                msg.includes('protocol error') ||
-                msg.includes('browser has disconnected') ||
-                msg.includes('crashed') ||
-                msg.includes('navigating frame was detached');
-
-            if (isCrash) {
-                console.warn(`[Scraper] Puppeteer crash or disconnection detected (${error.message}). Discarding crashed browser instance for recovery.`);
+        return this.puppeteerSemaphore.run(async () => {
+            let browser;
+            try {
+                browser = await this.getBrowser();
+            } catch (launchErr) {
+                console.error('[Scraper] Failed to acquire Puppeteer browser, retrying with fresh instance...', launchErr.message);
                 await this.closeBrowser();
+                browser = await this.getBrowser();
             }
 
-            throw error;
-        } finally {
-            if (page) {
-                try {
-                    await page.close();
-                } catch (closeErr) {
-                    // Page may have already closed if navigation failed or browser crashed
+            let page = null;
+            try {
+                page = await browser.newPage();
+                await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36');
+                
+                await page.goto(url, { 
+                    waitUntil: 'networkidle2',
+                    timeout: 30000 
+                });
+
+                await page.waitForSelector(cssSelector, { timeout: 10000 });
+                
+                const priceText = await page.$eval(cssSelector, el => {
+                    const clone = el.cloneNode(true);
+                    clone.querySelectorAll('sup, script, style').forEach(node => node.remove());
+                    return clone.textContent.trim();
+                });
+                const price = this.parsePrice(priceText);
+                
+                if (price === null) {
+                    throw new Error(`Could not parse price from: "${priceText}"`);
+                }
+                
+                return price;
+            } catch (error) {
+                const msg = (error.message || '').toLowerCase();
+                const isCrash =
+                    !browser ||
+                    (typeof browser.isConnected === 'function' && !browser.isConnected()) ||
+                    msg.includes('target closed') ||
+                    msg.includes('session closed') ||
+                    msg.includes('protocol error') ||
+                    msg.includes('browser has disconnected') ||
+                    msg.includes('crashed') ||
+                    msg.includes('navigating frame was detached');
+
+                if (isCrash) {
+                    console.warn(`[Scraper] Puppeteer crash or disconnection detected (${error.message}). Discarding crashed browser instance for recovery.`);
+                    await this.closeBrowser();
+                }
+
+                throw error;
+            } finally {
+                if (page) {
+                    try {
+                        await page.close();
+                    } catch (closeErr) {
+                        // Page may have already closed if navigation failed or browser crashed
+                    }
                 }
             }
-        }
+        });
     }
 
     async scrapePrice(url, cssSelector, usePuppeteer = false, options = {}) {
+        await assertSafeUrl(url);
         const { maxRetries = 2, baseDelay = 1000 } = options;
 
         return this.withRetry(async () => {

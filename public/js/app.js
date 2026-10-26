@@ -194,7 +194,16 @@ const App = {
         document.getElementById(`${tabName}-tab`)?.classList.add('active');
 
         if (tabName === 'charts' && this.products.length > 0) {
-            setTimeout(() => Charts.init(this.products), 100);
+            if (!this.chartsProductsWithHistory) {
+                API.products.getAll({ includeHistory: true }).then(productsWithHistory => {
+                    this.chartsProductsWithHistory = productsWithHistory;
+                    Charts.init(productsWithHistory);
+                }).catch(() => {
+                    Charts.init(this.products);
+                });
+            } else {
+                setTimeout(() => Charts.init(this.chartsProductsWithHistory), 100);
+            }
         }
         if (tabName === 'alerts') {
             this.loadAlerts();
@@ -211,13 +220,17 @@ const App = {
     async loadProducts() {
         const grid = document.getElementById('productsGrid');
         grid.innerHTML = ProductCard.renderLoading();
+        this.chartsProductsWithHistory = null;
 
         try {
             this.products = await API.products.getAll();
             this.updateTags();
             this.renderProducts();
             if (document.getElementById('charts-tab')?.classList.contains('active')) {
-                Charts.init(this.products);
+                API.products.getAll({ includeHistory: true }).then(prodsWithHist => {
+                    this.chartsProductsWithHistory = prodsWithHist;
+                    Charts.init(prodsWithHist);
+                }).catch(() => Charts.init(this.products));
             }
         } catch (error) {
             grid.innerHTML = `<div class="empty-state"><p>Error loading products: ${error.message}</p></div>`;

@@ -21,6 +21,7 @@ const productSchema = new mongoose.Schema({
     lowestPrice: { type: Number, default: null },
     lowestPriceSource: { type: mongoose.Schema.Types.Mixed, default: null },
     priceDelta: { type: Number, default: null },
+    minPriceEver: { type: Number, default: null },
     active: { type: Boolean, default: true }
 }, { versionKey: false, collection: 'products' });
 
@@ -139,6 +140,23 @@ class MongoDatabase {
             }
             console.log('Migration of priceHistory to price_records completed.');
         }
+
+        // Backfill minPriceEver on products if missing
+        const productsMissingMin = await Product.find({ minPriceEver: { $exists: false } });
+        if (productsMissingMin.length > 0) {
+            for (const prod of productsMissingMin) {
+                let minEver = prod.lowestPrice || null;
+                const records = await PriceRecord.find({ productId: prod._id }).lean();
+                for (const rec of records) {
+                    for (const p of (rec.prices || [])) {
+                        if (p.price != null && p.price > 0 && (minEver == null || p.price < minEver)) {
+                            minEver = p.price;
+                        }
+                    }
+                }
+                await Product.updateOne({ _id: prod._id }, { $set: { minPriceEver: minEver } });
+            }
+        }
     }
 
     _updateVirtuals(product) {
@@ -155,6 +173,9 @@ class MongoDatabase {
             } else {
                 product.priceDelta = null;
             }
+            if (product.minPriceEver == null || product.lowestPrice < product.minPriceEver) {
+                product.minPriceEver = product.lowestPrice;
+            }
         } else {
             product.lowestPriceSource = null;
             product.priceDelta = null;
@@ -162,7 +183,18 @@ class MongoDatabase {
     }
 
     // Products
-    async getProducts() {
+    async getProducts(options = {}) {
+        const includeHistory = options && options.includeHistory === true;
+
+        if (!includeHistory) {
+            const products = await Product.find({}).lean();
+            return products.map(p => ({
+                ...p,
+                active: p.active !== false,
+                priceHistory: []
+            }));
+        }
+
         const [products, records] = await Promise.all([
             Product.find({}).lean(),
             PriceRecord.find({}).sort({ date: 1 }).lean()

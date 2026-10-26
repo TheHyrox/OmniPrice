@@ -15,7 +15,7 @@ class DatabaseAdapter {
         return this.primary[method](...args);
     }
 
-    async getProducts() { return this._execute('getProducts'); }
+    async getProducts(options) { return this._execute('getProducts', options); }
     async getProductById(id) { return this._execute('getProductById', id); }
     async createProduct(data) { return this._execute('createProduct', data); }
     async updateProduct(id, data) { return this._execute('updateProduct', id, data); }

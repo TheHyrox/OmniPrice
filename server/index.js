@@ -1,6 +1,9 @@
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const config = require('./config');
 
 const db = require('./db/adapter');
 const productRoutes = require('./routes/products');
@@ -13,13 +16,13 @@ const scraper = require('./services/scraper');
 const { apiLimiter } = require('./middleware/rate-limiters');
 
 const app = express();
-const PORT = process.env.PORT || 3005;
+const PORT = config.PORT || process.env.PORT || 3005;
 
 app.set('trust proxy', 1);
 
 app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 app.use(express.static(path.join(__dirname, '../public')));
 

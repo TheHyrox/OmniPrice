@@ -17,6 +17,7 @@ jspm_packages/
 .env
 .env.*
 !.env.example
+!.env.exemple
 
 package-lock.json
 .DS_Store

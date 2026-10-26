@@ -273,7 +273,14 @@ const Charts = {
     },
 
     isAtAllTimeLow(product) {
-        if (!product.lowestPrice || !product.priceHistory || product.priceHistory.length === 0) return false;
+        if (!product.lowestPrice) return false;
+        
+        // Fast path if minPriceEver is cached
+        if (product.minPriceEver != null && product.minPriceEver > 0) {
+            return product.lowestPrice <= product.minPriceEver * 1.005;
+        }
+
+        if (!product.priceHistory || product.priceHistory.length === 0) return false;
         
         let minEver = Infinity;
         product.priceHistory.forEach(h => {

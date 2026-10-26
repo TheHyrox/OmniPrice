@@ -15,19 +15,34 @@ const ProductCard = {
     },
 
     isAtAllTimeLow(product) {
-        if (!product.lowestPrice || !product.priceHistory || product.priceHistory.length === 0) return false;
-        let minEver = Infinity;
-        product.priceHistory.forEach(h => {
-            (h.prices || []).forEach(p => {
-                const clean = this.sanitizePrice(p.price, product.referencePrice);
-                if (clean != null && clean < minEver) {
-                    minEver = clean;
-                }
-            });
-        });
-        if (minEver === Infinity) return false;
+        if (!product.lowestPrice) return false;
         const currentClean = this.sanitizePrice(product.lowestPrice, product.referencePrice);
-        return currentClean != null && currentClean <= minEver * 1.005;
+        if (currentClean == null) return false;
+
+        // O(1) fast-path when minPriceEver is cached on product
+        if (product.minPriceEver != null && product.minPriceEver > 0) {
+            const cleanMin = this.sanitizePrice(product.minPriceEver, product.referencePrice);
+            if (cleanMin != null) {
+                return currentClean <= cleanMin * 1.005;
+            }
+        }
+
+        // Fallback for when full priceHistory is populated
+        if (product.priceHistory && product.priceHistory.length > 0) {
+            let minEver = Infinity;
+            product.priceHistory.forEach(h => {
+                (h.prices || []).forEach(p => {
+                    const clean = this.sanitizePrice(p.price, product.referencePrice);
+                    if (clean != null && clean < minEver) {
+                        minEver = clean;
+                    }
+                });
+            });
+            if (minEver === Infinity) return false;
+            return currentClean <= minEver * 1.005;
+        }
+
+        return false;
     },
 
     render(product, viewMode = 'card') {

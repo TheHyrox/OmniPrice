@@ -1,5 +1,6 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
+const { assertSafeUrl } = require('../utils/ssrf');
 
 class MetadataExtractor {
     constructor() {
@@ -354,6 +355,8 @@ class MetadataExtractor {
             throw new Error('Valid URL is required');
         }
 
+        await assertSafeUrl(url);
+
         const response = await axios.get(url, {
             headers: {
                 'User-Agent': this.userAgent,
@@ -361,7 +364,9 @@ class MetadataExtractor {
                 'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
             },
             timeout: 15000,
-            maxRedirects: 5
+            maxRedirects: 5,
+            maxContentLength: 10 * 1024 * 1024,
+            maxBodyLength: 10 * 1024 * 1024
         });
 
         return this.extractFromHtml(response.data, url);

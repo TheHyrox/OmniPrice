@@ -7,12 +7,14 @@ const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
 const { validate } = require('../middleware/validate');
 const { createProductSchema, updateProductSchema } = require('../schemas');
+const { assertSafeUrl } = require('../utils/ssrf');
 
 
 // GET all products
 router.get('/', async (req, res) => {
     try {
-        const products = await db.getProducts();
+        const includeHistory = req.query.includeHistory === 'true';
+        const products = await db.getProducts({ includeHistory });
         res.json(products);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -176,15 +178,21 @@ async function saveImage(imageData) {
     await fs.mkdir(imagesDir, { recursive: true });
     if (imageData.startsWith('http')) {
         try {
-            const response = await axios.get(imageData, { responseType: 'arraybuffer', timeout: 10000 });
+            await assertSafeUrl(imageData);
+            const response = await axios.get(imageData, { 
+                responseType: 'arraybuffer', 
+                timeout: 10000,
+                maxContentLength: 5 * 1024 * 1024, // 5MB cap
+                maxBodyLength: 5 * 1024 * 1024
+            });
             const ext = getExtFromContentType(response.headers['content-type']) || 'jpg';
             const filename = `${uuidv4()}.${ext}`;
             const filepath = path.join(imagesDir, filename);
             await fs.writeFile(filepath, response.data);
             return `/images/${filename}`;
         } catch (error) {
-            console.error('Failed to download image:', error.message);
-            return imageData;
+            console.error('Failed to download image safely:', error.message);
+            return null;
         }
     }
 

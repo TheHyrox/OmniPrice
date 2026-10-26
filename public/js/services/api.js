@@ -26,8 +26,9 @@ const API = {
     },
 
     products: {
-        async getAll() {
-            return API.request('/products');
+        async getAll(options = {}) {
+            const query = options.includeHistory ? '?includeHistory=true' : '';
+            return API.request(`/products${query}`);
         },
 
         async getById(id) {
