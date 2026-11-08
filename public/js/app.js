@@ -186,6 +186,11 @@ const App = {
             this.navigateToTab('products');
         });
 
+        // Header button side to Add Product to open Archive section
+        document.getElementById('viewArchiveHeaderBtn')?.addEventListener('click', () => {
+            this.navigateToTab('archive');
+        });
+
         // Quick filter Archive button navigation
         document.getElementById('viewArchiveQuickBtn')?.addEventListener('click', () => {
             this.navigateToTab('archive');

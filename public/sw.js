@@ -1,4 +1,4 @@
-const CACHE_NAME = 'omniprice-v7';
+const CACHE_NAME = 'omniprice-v8';
 const SHELL_ASSETS = [
     '/',
     '/index.html',

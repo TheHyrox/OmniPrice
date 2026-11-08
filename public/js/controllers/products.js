@@ -1076,6 +1076,10 @@ const ProductsController = {
         if (quickCount) {
             quickCount.textContent = archivedCount;
         }
+        const headerCount = document.getElementById('headerArchiveCount');
+        if (headerCount) {
+            headerCount.textContent = archivedCount;
+        }
     },
 
     renderArchivedProducts() {

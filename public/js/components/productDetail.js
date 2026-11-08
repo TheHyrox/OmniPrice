@@ -130,7 +130,7 @@ const ProductDetail = {
                 </button>
                 <div class="detail-top-actions">
                     <button class="btn btn-secondary" onclick="App.toggleProductArchive('${id}', ${Boolean(product.archived)})" title="${product.archived ? 'Restore to active tracking' : 'Move product to archive'}">
-                        ${product.archived ? '📦 Restore' : '📦 Archive'}
+                        ${product.archived ? 'Restore Product' : 'Archive'}
                     </button>
                     ${!product.archived ? `
                         <button class="btn btn-secondary" onclick="App.toggleProductActive('${id}', ${product.active !== false})" title="${product.active === false ? 'Resume automatic scraping' : 'Pause automatic scraping'}">
@@ -152,7 +152,6 @@ const ProductDetail = {
             ${product.archived ? `
                 <div class="archived-banner">
                     <div class="archived-banner-body">
-                        <span class="archived-banner-icon">📦</span>
                         <div>
                             <strong>This product is currently archived.</strong>
                             <p>Automated price tracking and notifications are suspended. You can restore this product at any time to resume tracking.</p>
@@ -172,9 +171,6 @@ const ProductDetail = {
 
                 <div class="detail-info">
                     <div class="detail-tags">
-                        ${product.healthStatus === 'ok' ? '<span class="health-badge ok">🟢 Feeds Healthy</span>' : ''}
-                        ${product.healthStatus === 'warning' ? '<span class="health-badge warning">🟡 Feeds Warning</span>' : ''}
-                        ${product.healthStatus === 'error' ? '<span class="health-badge error">🔴 Feeds Failing</span>' : ''}
                         ${(product.tags || []).map(tag => `<span class="tag">#${escapeHtml(tag)}</span>`).join('')}
                     </div>
                     <h1 class="detail-title">${title}</h1>
@@ -406,7 +402,6 @@ const ProductDetail = {
                                         <span class="source-color-dot" style="background-color: ${color}"></span>
                                         <strong class="source-name">${escapeHtml(source.siteName)}</strong>
                                         ${isCheapest ? `<span class="source-lowest-pill">Lowest Price</span>` : ''}
-                                        ${source.lastStatus === 'ok' ? `<span class="source-health-pill ok" title="Feed verified and active">🟢 OK</span>` : ''}
                                         ${source.lastStatus === 'error' ? `<span class="source-health-pill error" title="${escapeHtml(source.lastError || 'Scrape failed')}">🔴 Error: ${escapeHtml(source.lastError || 'Scrape failed')}</span>` : ''}
                                         ${source.usePuppeteer ? `<span class="source-puppeteer-pill" title="Rendered with Puppeteer">JS</span>` : ''}
                                     </div>

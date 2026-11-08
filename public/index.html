@@ -33,11 +33,6 @@
                     <li><a href="#charts" class="nav-link" data-tab="charts">Charts</a></li>
                     <li><a href="#alerts" class="nav-link" data-tab="alerts">Alerts</a></li>
                     <li><a href="#settings" class="nav-link" data-tab="settings">Settings</a></li>
-                    <li>
-                        <a href="#archive" class="nav-link" data-tab="archive">
-                            Archive <span id="navArchiveBadge" class="nav-counter-pill" style="display: none;">0</span>
-                        </a>
-                    </li>
                 </ul>
                 <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
                     <span class="theme-icon">◐</span>
@@ -55,6 +50,7 @@
                         <p class="tab-subtitle">Monitor price fluctuations, discover historical lows, and compare online merchants</p>
                     </div>
                     <div class="tab-actions">
+                        <button id="viewArchiveHeaderBtn" class="btn btn-secondary">Archived (<span id="headerArchiveCount">0</span>)</button>
                         <button id="addProductBtn" class="btn btn-primary">+ Add Product</button>
                     </div>
                 </div>

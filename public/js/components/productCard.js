@@ -45,20 +45,6 @@ const ProductCard = {
         return false;
     },
 
-    renderHealthBadge(product) {
-        const status = product.healthStatus || 'unknown';
-        if (status === 'ok') {
-            return `<span class="health-badge ok" title="All store feeds healthy">🟢 Healthy</span>`;
-        }
-        if (status === 'warning') {
-            return `<span class="health-badge warning" title="Some store feeds are failing">🟡 Issue</span>`;
-        }
-        if (status === 'error') {
-            return `<span class="health-badge error" title="Store feeds failing">🔴 Error</span>`;
-        }
-        return '';
-    },
-
     render(product, viewMode = 'card') {
         const id = escapeHtml(product._id);
         const title = escapeHtml(product.title);
@@ -75,7 +61,6 @@ const ProductCard = {
         const delta = product.priceDelta;
         const deltaClass = delta < 0 ? 'negative' : 'positive';
         const deltaSign = delta < 0 ? '' : '+';
-        const healthBadge = isArchived ? '' : this.renderHealthBadge(product);
 
         let savingsAmount = null;
         if (product.referencePrice && cleanLowest != null && cleanLowest < product.referencePrice) {
@@ -95,7 +80,6 @@ const ProductCard = {
                     <div class="product-card-body list-card-body">
                         <div class="product-card-info">
                             <div class="card-header-tags">
-                                ${healthBadge}
                                 ${tags.map(t => `<span class="tag" onclick="event.stopPropagation(); App.filterByTag('${escapeHtml(t)}')">#${escapeHtml(t)}</span>`).join('')}
                                 <span class="tag-store-count">${sourcesCount} store${sourcesCount !== 1 ? 's' : ''}</span>
                             </div>
@@ -164,7 +148,6 @@ const ProductCard = {
 
                 <div class="product-card-body">
                     <div class="card-tags-row">
-                        ${healthBadge}
                         ${tags.slice(0, 3).map(t => `<span class="tag" onclick="event.stopPropagation(); App.filterByTag('${escapeHtml(t)}')">#${escapeHtml(t)}</span>`).join('')}
                     </div>
 
