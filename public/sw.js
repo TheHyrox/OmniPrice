@@ -1,14 +1,21 @@
-const CACHE_NAME = 'omniprice-v2';
+const CACHE_NAME = 'omniprice-v3';
 const SHELL_ASSETS = [
     '/',
     '/index.html',
     '/css/styles.css',
-    '/js/app.js',
     '/js/utils.js',
     '/js/services/api.js',
+    '/js/services/toast.js',
+    '/js/services/confirm.js',
+    '/js/router.js',
     '/js/components/productCard.js',
     '/js/components/productDetail.js',
     '/js/components/charts.js',
+    '/js/controllers/stores.js',
+    '/js/controllers/alerts.js',
+    '/js/controllers/settings.js',
+    '/js/controllers/products.js',
+    '/js/app.js',
     '/images/placeholder.svg'
 ];
 
@@ -36,24 +43,31 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// Cache with network fallback
+// Network-First with Cache Fallback for instant updates and offline resiliency
 self.addEventListener('fetch', (event) => {
-    // Skip non-GET or API/external requests
+    // Skip non-GET or API requests
     if (event.request.method !== 'GET' || event.request.url.includes('/api/')) {
         return;
     }
 
     event.respondWith(
-        caches.match(event.request).then((cached) => {
-            return cached || fetch(event.request).then((response) => {
-                // Optionally cache newly requested static assets
+        fetch(event.request)
+            .then((response) => {
                 if (response.status === 200 && response.type === 'basic') {
                     const clone = response.clone();
                     caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
                 }
                 return response;
-            });
-        }).catch(() => caches.match('/index.html'))
+            })
+            .catch(() => {
+                return caches.match(event.request).then((cached) => {
+                    if (cached) return cached;
+                    if (event.request.headers.get('accept')?.includes('text/html')) {
+                        return caches.match('/index.html');
+                    }
+                    return null;
+                });
+            })
     );
 });
 
