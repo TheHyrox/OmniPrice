@@ -142,6 +142,25 @@ const App = {
         document.getElementById('alertTypeSelect')?.addEventListener('change', (e) => AlertsController.onAlertTypeSelectChange(e.target.value));
         document.getElementById('alertThresholdPercent')?.addEventListener('input', () => AlertsController.updateAlertPercentHint());
 
+        // Bundles Handlers
+        document.getElementById('createBundleBtn')?.addEventListener('click', () => BundlesController.openModal());
+        document.getElementById('closeBundleModal')?.addEventListener('click', () => BundlesController.closeModal());
+        document.getElementById('cancelBundleModal')?.addEventListener('click', () => BundlesController.closeModal());
+        document.getElementById('bundleForm')?.addEventListener('submit', (e) => BundlesController.handleFormSubmit(e));
+        document.getElementById('bundleSelectAllBtn')?.addEventListener('click', () => BundlesController.selectAllProducts());
+        document.getElementById('bundleDeselectAllBtn')?.addEventListener('click', () => BundlesController.deselectAllProducts());
+        document.getElementById('bundleProductSearch')?.addEventListener('input', (e) => {
+            BundlesController.searchQuery = e.target.value;
+            BundlesController.renderProductChecklist();
+        });
+        document.getElementById('backToBundles')?.addEventListener('click', () => this.navigateToTab('bundles'));
+        document.getElementById('bundlesGrid')?.addEventListener('click', (e) => {
+            const card = e.target.closest('.bundle-card');
+            if (card && !e.target.closest('a') && !e.target.closest('button')) {
+                BundlesController.showBundleDetail(card.dataset.id);
+            }
+        });
+
         // Settings Handlers
         document.getElementById('currencySetting')?.addEventListener('change', (e) => {
             SettingsController.handleCurrencyChange(e.target.value);
@@ -216,7 +235,7 @@ const App = {
     },
 
     navigateToTab(tabName, updateRoute = true) {
-        if (tabName !== 'product-detail') {
+        if (tabName !== 'product-detail' && tabName !== 'bundle-detail') {
             this.previousTab = tabName;
         }
 
@@ -250,6 +269,8 @@ const App = {
             }
         } else if (tabName === 'alerts') {
             AlertsController.loadAlerts();
+        } else if (tabName === 'bundles') {
+            BundlesController.loadBundles();
         } else if (tabName === 'stores') {
             StoresController.loadStores();
         } else if (tabName === 'settings') {
@@ -338,6 +359,12 @@ const App = {
     toggleAlert: (id, currentActive) => AlertsController.toggleAlert(id, currentActive),
     deleteAlert: (id) => AlertsController.deleteAlert(id),
     triggerTestAlert: (id) => AlertsController.triggerTestAlert(id),
+
+    // Bundles Controller delegations
+    openBundleModal: (id) => BundlesController.openModal(id),
+    closeBundleModal: () => BundlesController.closeModal(),
+    showBundleDetail: (id, updateRoute) => BundlesController.showBundleDetail(id, updateRoute),
+    deleteBundle: (id) => BundlesController.deleteBundle(id),
 
     // Settings Controller delegations
     saveDiscordSettings: () => SettingsController.saveDiscordSettings(),

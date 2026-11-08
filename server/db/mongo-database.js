@@ -106,11 +106,23 @@ const alertSchema = new mongoose.Schema({
 
 alertSchema.index({ productId: 1, active: 1 });
 
+const bundleSchema = new mongoose.Schema({
+    _id: { type: mongoose.Schema.Types.Mixed, default: uuidv4 },
+    name: { type: String, required: true },
+    description: { type: String, default: '' },
+    productIds: [{ type: mongoose.Schema.Types.Mixed, required: true }],
+    createdAt: { type: String, default: () => new Date().toISOString() },
+    updatedAt: { type: String, default: () => new Date().toISOString() }
+}, { versionKey: false, collection: 'bundles' });
+
+bundleSchema.index({ createdAt: -1 });
+
 const Product = mongoose.model('Product', productSchema);
 const PriceRecord = mongoose.model('PriceRecord', priceRecordSchema);
 const Store = mongoose.model('Store', storeSchema);
 const Setting = mongoose.model('Setting', settingsSchema);
 const Alert = mongoose.model('Alert', alertSchema);
+const Bundle = mongoose.model('Bundle', bundleSchema);
 
 const defaultStores = [
     { _id: uuidv4(), name: 'Louis Moto', cssSelector: 'span.heading1' },
@@ -135,6 +147,7 @@ class MongoDatabase {
         this.Store = Store;
         this.Setting = Setting;
         this.Alert = Alert;
+        this.Bundle = Bundle;
     }
 
     async init() {
@@ -615,13 +628,72 @@ class MongoDatabase {
         return result.deletedCount > 0;
     }
 
+    // Bundles
+    async getBundles() {
+        const bundles = await Bundle.find({}).sort({ createdAt: -1 }).lean();
+        return bundles.map(b => ({
+            ...b,
+            _id: String(b._id),
+            productIds: (b.productIds || []).map(String)
+        }));
+    }
+
+    async getBundleById(id) {
+        const bundle = await Bundle.findOne(toIdQuery(id)).lean();
+        return bundle ? {
+            ...bundle,
+            _id: String(bundle._id),
+            productIds: (bundle.productIds || []).map(String)
+        } : null;
+    }
+
+    async createBundle(data) {
+        const bundle = new Bundle({
+            _id: uuidv4(),
+            name: data.name.trim(),
+            description: (data.description || '').trim(),
+            productIds: (data.productIds || []).map(String),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        });
+        await bundle.save();
+        const obj = bundle.toObject();
+        obj._id = String(obj._id);
+        obj.productIds = (obj.productIds || []).map(String);
+        return obj;
+    }
+
+    async updateBundle(id, data) {
+        const updateData = { updatedAt: new Date().toISOString() };
+        if (data.name !== undefined) updateData.name = data.name.trim();
+        if (data.description !== undefined) updateData.description = data.description.trim();
+        if (data.productIds !== undefined) updateData.productIds = (data.productIds || []).map(String);
+
+        const bundle = await Bundle.findOneAndUpdate(
+            toIdQuery(id),
+            { $set: updateData },
+            { new: true }
+        ).lean();
+        return bundle ? {
+            ...bundle,
+            _id: String(bundle._id),
+            productIds: (bundle.productIds || []).map(String)
+        } : null;
+    }
+
+    async deleteBundle(id) {
+        const result = await Bundle.deleteOne(toIdQuery(id));
+        return result.deletedCount > 0;
+    }
+
     async exportBackup() {
-        const [products, priceRecords, stores, alerts, settings] = await Promise.all([
-            Product.find({}).lean(),
-            PriceRecord.find({}).lean(),
-            Store.find({}).lean(),
-            Alert.find({}).lean(),
-            Setting.findOne({ _id: 'default_settings' }).lean()
+        const [products, priceRecords, stores, alerts, bundles, settings] = await Promise.all([
+            this.Product.find({}).lean(),
+            this.PriceRecord.find({}).lean(),
+            this.Store.find({}).lean(),
+            this.Alert.find({}).lean(),
+            this.Bundle.find({}).lean(),
+            this.Setting.findOne({ _id: 'default_settings' }).lean()
         ]);
 
         return {
@@ -632,13 +704,15 @@ class MongoDatabase {
                 productsCount: products.length,
                 priceRecordsCount: priceRecords.length,
                 storesCount: stores.length,
-                alertsCount: alerts.length
+                alertsCount: alerts.length,
+                bundlesCount: bundles.length
             },
             data: {
                 products,
                 priceRecords,
                 stores,
                 alerts,
+                bundles,
                 settings: settings || defaultSettings
             }
         };
@@ -650,23 +724,26 @@ class MongoDatabase {
         const priceRecords = Array.isArray(data.priceRecords) ? data.priceRecords : [];
         const stores = Array.isArray(data.stores) ? data.stores : [];
         const alerts = Array.isArray(data.alerts) ? data.alerts : [];
+        const bundles = Array.isArray(data.bundles) ? data.bundles : [];
         const settings = data.settings || null;
 
         if (mode === 'replace') {
             await Promise.all([
-                Product.deleteMany({}),
-                PriceRecord.deleteMany({}),
-                Store.deleteMany({}),
-                Alert.deleteMany({})
+                this.Product.deleteMany({}),
+                this.PriceRecord.deleteMany({}),
+                this.Store.deleteMany({}),
+                this.Alert.deleteMany({}),
+                this.Bundle.deleteMany({})
             ]);
 
-            if (products.length > 0) await Product.insertMany(products);
-            if (priceRecords.length > 0) await PriceRecord.insertMany(priceRecords);
-            if (stores.length > 0) await Store.insertMany(stores);
-            if (alerts.length > 0) await Alert.insertMany(alerts);
+            if (products.length > 0) await this.Product.insertMany(products);
+            if (priceRecords.length > 0) await this.PriceRecord.insertMany(priceRecords);
+            if (stores.length > 0) await this.Store.insertMany(stores);
+            if (alerts.length > 0) await this.Alert.insertMany(alerts);
+            if (bundles.length > 0) await this.Bundle.insertMany(bundles);
             if (settings) {
                 const settingsData = { ...settings, _id: 'default_settings' };
-                await Setting.findOneAndUpdate(
+                await this.Setting.findOneAndUpdate(
                     { _id: 'default_settings' },
                     { $set: settingsData },
                     { upsert: true, new: true }
@@ -676,7 +753,7 @@ class MongoDatabase {
             // mode === 'merge'
             for (const prod of products) {
                 const prodId = prod._id || uuidv4();
-                await Product.findOneAndUpdate(
+                await this.Product.findOneAndUpdate(
                     { _id: prodId },
                     { $set: { ...prod, _id: prodId } },
                     { upsert: true, new: true }
@@ -685,7 +762,7 @@ class MongoDatabase {
 
             for (const record of priceRecords) {
                 const recId = record._id || uuidv4();
-                await PriceRecord.findOneAndUpdate(
+                await this.PriceRecord.findOneAndUpdate(
                     { _id: recId },
                     { $set: { ...record, _id: recId } },
                     { upsert: true, new: true }
@@ -694,7 +771,7 @@ class MongoDatabase {
 
             for (const store of stores) {
                 const storeId = store._id || uuidv4();
-                await Store.findOneAndUpdate(
+                await this.Store.findOneAndUpdate(
                     { _id: storeId },
                     { $set: { ...store, _id: storeId } },
                     { upsert: true, new: true }
@@ -703,15 +780,24 @@ class MongoDatabase {
 
             for (const alert of alerts) {
                 const alertId = alert._id || uuidv4();
-                await Alert.findOneAndUpdate(
+                await this.Alert.findOneAndUpdate(
                     { _id: alertId },
                     { $set: { ...alert, _id: alertId } },
                     { upsert: true, new: true }
                 );
             }
 
+            for (const bundle of bundles) {
+                const bundleId = bundle._id || uuidv4();
+                await this.Bundle.findOneAndUpdate(
+                    { _id: bundleId },
+                    { $set: { ...bundle, _id: bundleId } },
+                    { upsert: true, new: true }
+                );
+            }
+
             if (settings) {
-                await Setting.findOneAndUpdate(
+                await this.Setting.findOneAndUpdate(
                     { _id: 'default_settings' },
                     { $set: settings },
                     { upsert: true, new: true }
@@ -727,6 +813,7 @@ class MongoDatabase {
                 priceRecords: priceRecords.length,
                 stores: stores.length,
                 alerts: alerts.length,
+                bundles: bundles.length,
                 settings: Boolean(settings)
             }
         };

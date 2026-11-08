@@ -1,4 +1,4 @@
-const CACHE_NAME = 'omniprice-v8';
+const CACHE_NAME = 'omniprice-v9';
 const SHELL_ASSETS = [
     '/',
     '/index.html',
@@ -14,6 +14,7 @@ const SHELL_ASSETS = [
     '/js/components/charts.js',
     '/js/controllers/stores.js',
     '/js/controllers/alerts.js',
+    '/js/controllers/bundles.js',
     '/js/controllers/settings.js',
     '/js/controllers/products.js',
     '/js/app.js',

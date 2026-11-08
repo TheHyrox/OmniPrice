@@ -48,6 +48,11 @@ class DatabaseAdapter {
     async createAlert(data) { return this._execute('createAlert', data); }
     async updateAlert(id, data) { return this._execute('updateAlert', id, data); }
     async deleteAlert(id) { return this._execute('deleteAlert', id); }
+    async getBundles() { return this._execute('getBundles'); }
+    async getBundleById(id) { return this._execute('getBundleById', id); }
+    async createBundle(data) { return this._execute('createBundle', data); }
+    async updateBundle(id, data) { return this._execute('updateBundle', id, data); }
+    async deleteBundle(id) { return this._execute('deleteBundle', id); }
     async exportBackup() { return this._execute('exportBackup'); }
     async importBackup(data, mode) { return this._execute('importBackup', data, mode); }
 

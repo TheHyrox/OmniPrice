@@ -106,6 +106,16 @@ const updateSettingsSchema = z.object({
         .nullable(),
 }).strict();
 
+// ─── Bundles ──────────────────────────────────────────────────────────────────
+
+const createBundleSchema = z.object({
+    name: z.string().min(1, 'Bundle name is required').max(200),
+    description: z.string().max(2000).optional().default(''),
+    productIds: z.array(z.string().min(1)).min(1, 'At least one product is required in a bundle').max(50),
+});
+
+const updateBundleSchema = createBundleSchema.partial();
+
 // ─── Scraper ──────────────────────────────────────────────────────────────────
 
 const testScrapeSchema = z.object({
@@ -121,6 +131,8 @@ module.exports = {
     updateStoreSchema,
     createAlertSchema,
     updateAlertSchema,
+    createBundleSchema,
+    updateBundleSchema,
     testWebhookSchema,
     updateSettingsSchema,
     testScrapeSchema,

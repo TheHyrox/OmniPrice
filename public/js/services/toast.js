@@ -21,8 +21,8 @@ const Toast = (() => {
     const ICONS = {
         success: '✓',
         error: '✕',
-        warning: '⚠',
-        info: 'ℹ'
+        warning: '!',
+        info: 'i'
     };
 
     function show(message, type = 'info', duration = 4000) {

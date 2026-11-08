@@ -11,6 +11,7 @@ const scraperRoutes = require('./routes/scraper');
 const settingsRoutes = require('./routes/settings');
 const storeRoutes = require('./routes/stores');
 const alertRoutes = require('./routes/alerts');
+const bundleRoutes = require('./routes/bundles');
 const scheduler = require('./jobs/scheduler');
 const scraper = require('./services/scraper');
 const { apiLimiter } = require('./middleware/rate-limiters');
@@ -32,6 +33,7 @@ app.use('/api/scraper', scraperRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/stores', storeRoutes);
 app.use('/api/alerts', alertRoutes);
+app.use('/api/bundles', bundleRoutes);
 
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/index.html'));

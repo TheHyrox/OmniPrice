@@ -32,6 +32,7 @@
                     <li><a href="#stores" class="nav-link" data-tab="stores">Stores</a></li>
                     <li><a href="#charts" class="nav-link" data-tab="charts">Charts</a></li>
                     <li><a href="#alerts" class="nav-link" data-tab="alerts">Alerts</a></li>
+                    <li><a href="#bundles" class="nav-link" data-tab="bundles">Bundles</a></li>
                     <li><a href="#settings" class="nav-link" data-tab="settings">Settings</a></li>
                 </ul>
                 <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
@@ -376,6 +377,28 @@
                 <div id="archivedProductsGrid" class="products-grid"></div>
             </section>
 
+            <!-- Bundles Tab -->
+            <section id="bundles-tab" class="tab-content">
+                <div class="tab-header">
+                    <div>
+                        <h1>Product Bundles</h1>
+                        <p class="tab-subtitle">Combine items into custom bundles to monitor aggregated setup costs, combined discounts, and price evolution</p>
+                    </div>
+                    <div class="tab-actions">
+                        <button id="createBundleBtn" class="btn btn-primary">+ Create Bundle</button>
+                    </div>
+                </div>
+
+                <!-- Bundles Grid -->
+                <div id="bundlesGrid" class="bundles-grid"></div>
+            </section>
+
+            <!-- Bundle Detail View (hidden by default) -->
+            <section id="bundle-detail" class="tab-content bundle-detail">
+                <button class="back-btn" id="backToBundles">← Back to Bundles</button>
+                <div id="bundleDetailContent"></div>
+            </section>
+
             <!-- Product Detail View (hidden by default) -->
             <section id="product-detail" class="tab-content product-detail">
                 <button class="back-btn" id="backToProducts" style="display: none;">← Back</button>
@@ -607,6 +630,49 @@
                 </form>
             </div>
         </div>
+
+        <!-- Create/Edit Bundle Modal -->
+        <div id="bundleModal" class="modal">
+            <div class="modal-content bundle-modal-content">
+                <div class="modal-header">
+                    <div>
+                        <h2 id="bundleModalTitle">Create Bundle</h2>
+                        <p class="modal-subtitle">Group tracked products together to monitor their total price trajectory</p>
+                    </div>
+                    <button class="modal-close" id="closeBundleModal" aria-label="Close modal">×</button>
+                </div>
+                <form id="bundleForm" class="product-form">
+                    <input type="hidden" id="bundleId" />
+                    <div class="form-group">
+                        <label for="bundleName">Bundle Name *</label>
+                        <input type="text" id="bundleName" required placeholder="e.g. Complete Simracing Cockpit Setup" />
+                    </div>
+                    <div class="form-group">
+                        <label for="bundleDescription">Description (Optional)</label>
+                        <textarea id="bundleDescription" rows="2" placeholder="Notes or components of this bundle..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <label style="margin-bottom: 0;">Select Included Products *</label>
+                            <div style="display: flex; gap: 8px;">
+                                <button type="button" class="btn btn-ghost btn-sm" id="bundleSelectAllBtn">Select All</button>
+                                <button type="button" class="btn btn-ghost btn-sm" id="bundleDeselectAllBtn">Clear All</button>
+                            </div>
+                        </div>
+                        <input type="text" id="bundleProductSearch" placeholder="Filter products to add..." style="margin-bottom: 10px;" />
+                        <div id="bundleProductsList" class="bundle-products-checklist"></div>
+                        <div id="bundlePickerSummary" class="bundle-picker-summary">
+                            <span>Selected: <strong id="bundleSelectedCount">0</strong> products</span>
+                            <span>Combined Today: <strong id="bundleSelectedTotal">—</strong></span>
+                        </div>
+                    </div>
+                    <div class="form-actions" style="margin-top: 24px;">
+                        <button type="button" class="btn btn-ghost" id="cancelBundleModal">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="saveBundleBtn">Save Bundle</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
     <script src="/js/utils.js"></script>
@@ -621,6 +687,7 @@
     <script src="/js/controllers/alerts.js"></script>
     <script src="/js/controllers/settings.js"></script>
     <script src="/js/controllers/products.js"></script>
+    <script src="/js/controllers/bundles.js"></script>
     <script src="/js/app.js"></script>
 </body>
 

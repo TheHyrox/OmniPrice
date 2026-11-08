@@ -17,7 +17,16 @@ const Router = (() => {
             }
         },
         {
-            pattern: /^#(products|stores|charts|alerts|settings|archive)$/,
+            pattern: /^#bundle\/([a-zA-Z0-9_-]+)$/,
+            handler: (match) => {
+                const bundleId = match[1];
+                if (window.App && typeof window.App.showBundleDetail === 'function') {
+                    window.App.showBundleDetail(bundleId, false);
+                }
+            }
+        },
+        {
+            pattern: /^#(products|stores|charts|alerts|bundles|settings|archive)$/,
             handler: (match) => {
                 const tabName = match[1];
                 if (window.App && typeof window.App.navigateToTab === 'function') {

@@ -19,12 +19,16 @@ test('Backup & Restore - Database Operations', async (t) => {
     const mockAlerts = [
         { _id: 'alert-1', productId: 'prod-1', alertType: 'drop', targetPrice: 130 }
     ];
+    const mockBundles = [
+        { _id: 'bundle-1', name: 'Sim Kit', productIds: ['prod-1', 'prod-2'] }
+    ];
     const mockSettings = { _id: 'default_settings', theme: 'dark', scrapeFrequency: 3600000 };
 
     db.Product.find = () => ({ lean: async () => mockProducts });
     db.PriceRecord.find = () => ({ lean: async () => mockPriceRecords });
     db.Store.find = () => ({ lean: async () => mockStores });
     db.Alert.find = () => ({ lean: async () => mockAlerts });
+    db.Bundle.find = () => ({ lean: async () => mockBundles });
     db.Setting.findOne = () => ({ lean: async () => mockSettings });
 
     await t.test('exportBackup exports complete snapshot with stats and metadata', async () => {
@@ -37,12 +41,14 @@ test('Backup & Restore - Database Operations', async (t) => {
             productsCount: 2,
             priceRecordsCount: 1,
             storesCount: 1,
-            alertsCount: 1
+            alertsCount: 1,
+            bundlesCount: 1
         });
         assert.deepEqual(backup.data.products, mockProducts);
         assert.deepEqual(backup.data.priceRecords, mockPriceRecords);
         assert.deepEqual(backup.data.stores, mockStores);
         assert.deepEqual(backup.data.alerts, mockAlerts);
+        assert.deepEqual(backup.data.bundles, mockBundles);
         assert.deepEqual(backup.data.settings, mockSettings);
     });
 
@@ -54,11 +60,13 @@ test('Backup & Restore - Database Operations', async (t) => {
         db.PriceRecord.deleteMany = async () => deleted.push('PriceRecord');
         db.Store.deleteMany = async () => deleted.push('Store');
         db.Alert.deleteMany = async () => deleted.push('Alert');
+        db.Bundle.deleteMany = async () => deleted.push('Bundle');
 
         db.Product.insertMany = async (items) => { inserted.products = items; };
         db.PriceRecord.insertMany = async (items) => { inserted.priceRecords = items; };
         db.Store.insertMany = async (items) => { inserted.stores = items; };
         db.Alert.insertMany = async (items) => { inserted.alerts = items; };
+        db.Bundle.insertMany = async (items) => { inserted.bundles = items; };
         db.Setting.findOneAndUpdate = async (q, u) => { inserted.settings = u.$set; };
 
         const payload = {
@@ -67,6 +75,7 @@ test('Backup & Restore - Database Operations', async (t) => {
                 priceRecords: [{ _id: 'r-new', productId: 'p-new', prices: [] }],
                 stores: [{ _id: 's-new', name: 'Dafy' }],
                 alerts: [{ _id: 'a-new', productId: 'p-new' }],
+                bundles: [{ _id: 'b-new', name: 'Gear', productIds: ['p-new'] }],
                 settings: { theme: 'light' }
             }
         };
@@ -75,11 +84,12 @@ test('Backup & Restore - Database Operations', async (t) => {
 
         assert.equal(result.success, true);
         assert.equal(result.mode, 'replace');
-        assert.equal(deleted.length, 4);
+        assert.equal(deleted.length, 5);
         assert.equal(result.restored.products, 1);
         assert.equal(result.restored.priceRecords, 1);
         assert.equal(result.restored.stores, 1);
         assert.equal(result.restored.alerts, 1);
+        assert.equal(result.restored.bundles, 1);
         assert.equal(result.restored.settings, true);
         assert.equal(inserted.products[0].title, 'Boots');
     });

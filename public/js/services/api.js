@@ -207,6 +207,36 @@ const API = {
         }
     },
 
+    bundles: {
+        async getAll() {
+            return API.request('/bundles');
+        },
+
+        async getById(id) {
+            return API.request(`/bundles/${id}`);
+        },
+
+        async create(data) {
+            return API.request('/bundles', {
+                method: 'POST',
+                body: data
+            });
+        },
+
+        async update(id, data) {
+            return API.request(`/bundles/${id}`, {
+                method: 'PUT',
+                body: data
+            });
+        },
+
+        async delete(id) {
+            return API.request(`/bundles/${id}`, {
+                method: 'DELETE'
+            });
+        }
+    },
+
     push: {
         async getVapidKey() {
             return API.request('/alerts/push/vapid-key');
@@ -248,6 +278,12 @@ API.updateAlert = (id, data) => API.alerts.update(id, data);
 API.deleteAlert = (id) => API.alerts.delete(id);
 API.testDiscordWebhook = (url) => API.alerts.testWebhook(url);
 API.triggerTestAlert = (id) => API.alerts.triggerTest(id);
+
+API.getBundles = () => API.bundles.getAll();
+API.getBundle = (id) => API.bundles.getById(id);
+API.createBundle = (data) => API.bundles.create(data);
+API.updateBundle = (id, data) => API.bundles.update(id, data);
+API.deleteBundle = (id) => API.bundles.delete(id);
 
 API.getSettings = () => API.settings.get();
 API.updateSettings = (data) => API.settings.update(data);

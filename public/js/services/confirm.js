@@ -16,7 +16,7 @@ const Confirm = (() => {
         modal.innerHTML = `
             <div class="modal-content confirm-modal-content">
                 <div class="confirm-modal-header">
-                    <div class="confirm-icon" id="confirmDialogIcon">⚠</div>
+                    <div class="confirm-icon" id="confirmDialogIcon">!</div>
                     <h3 id="confirmDialogTitle" class="confirm-title">Are you sure?</h3>
                 </div>
                 <p id="confirmDialogMessage" class="confirm-message"></p>
@@ -63,11 +63,11 @@ const Confirm = (() => {
 
             if (danger) {
                 confirmBtn.className = 'btn btn-danger';
-                iconElem.textContent = '🗑';
+                iconElem.textContent = '!';
                 iconElem.className = 'confirm-icon danger';
             } else {
                 confirmBtn.className = 'btn btn-primary';
-                iconElem.textContent = 'ℹ';
+                iconElem.textContent = 'i';
                 iconElem.className = 'confirm-icon primary';
             }
 
