@@ -166,7 +166,7 @@ const StoresController = {
 
         if (!confirmed) return;
 
-        const btn = document.getElementById('syncStoresBtn');
+        const btn = document.getElementById('syncAllStoresBtn');
         const originalText = btn ? btn.textContent : '';
         if (btn) {
             btn.disabled = true;

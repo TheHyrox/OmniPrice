@@ -115,7 +115,7 @@ const SettingsController = {
     },
 
     async downloadBackup() {
-        const btn = document.getElementById('exportBackupBtn');
+        const btn = document.getElementById('downloadBackupBtn');
         const originalText = btn ? btn.textContent : '';
         if (btn) {
             btn.disabled = true;
@@ -153,8 +153,7 @@ const SettingsController = {
     async handleRestoreFile(file) {
         if (!file) return;
 
-        const modeSelect = document.getElementById('restoreModeSelect');
-        const mode = modeSelect ? modeSelect.value : 'replace';
+        const mode = document.querySelector('input[name="restoreMode"]:checked')?.value || 'replace';
 
         let text;
         let parsed;
@@ -185,7 +184,7 @@ const SettingsController = {
 
         if (!confirmed) return;
 
-        const btn = document.getElementById('restoreBackupBtn');
+        const btn = document.getElementById('selectRestoreFileBtn');
         const originalText = btn ? btn.textContent : '';
         if (btn) {
             btn.disabled = true;

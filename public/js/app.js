@@ -163,7 +163,15 @@ const App = {
             if (file) SettingsController.handleRestoreFile(file);
         });
 
-        // Product Detail navigation
+        // Card click navigation
+        document.getElementById('productsGrid')?.addEventListener('click', (e) => {
+            const card = e.target.closest('.product-card');
+            if (card && !e.target.closest('a') && !e.target.closest('button')) {
+                this.showProductDetail(card.dataset.id);
+            }
+        });
+
+        // Product Detail back button navigation
         document.getElementById('backToProducts')?.addEventListener('click', () => {
             this.navigateToTab('products');
         });
@@ -174,19 +182,12 @@ const App = {
             this.previousTab = tabName;
         }
 
-        // Hide product detail view if switching tabs
-        const detailView = document.getElementById('productDetail');
-        if (detailView) detailView.style.display = 'none';
-
-        const productsTab = document.getElementById('products-tab');
-        if (productsTab && tabName === 'products') productsTab.style.display = 'block';
+        document.querySelectorAll('.tab-content').forEach(tab => {
+            tab.classList.remove('active');
+        });
 
         document.querySelectorAll('.nav-link').forEach(link => {
             link.classList.toggle('active', link.dataset.tab === tabName);
-        });
-
-        document.querySelectorAll('.tab-content').forEach(tab => {
-            tab.classList.remove('active');
         });
 
         const activeContent = document.getElementById(`${tabName}-tab`);
@@ -195,7 +196,16 @@ const App = {
         }
 
         if (tabName === 'charts' && window.Charts) {
-            setTimeout(() => Charts.init(ProductsController.products), 50);
+            if (!this.chartsProductsWithHistory) {
+                API.getProducts({ includeHistory: true }).then(productsWithHistory => {
+                    this.chartsProductsWithHistory = productsWithHistory;
+                    Charts.init(productsWithHistory);
+                }).catch(() => {
+                    Charts.init(ProductsController.products);
+                });
+            } else {
+                setTimeout(() => Charts.init(this.chartsProductsWithHistory), 100);
+            }
         } else if (tabName === 'alerts') {
             AlertsController.loadAlerts();
         } else if (tabName === 'stores') {

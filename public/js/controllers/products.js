@@ -4,22 +4,22 @@
  */
 const ProductsController = {
     products: [],
-    currentView: 'grid',
-    currentSort: 'recent',
+    currentView: 'card',
+    currentSort: 'delta',
     filters: {
         search: '',
-        tag: null,
-        onlyATL: false,
-        onlyDeals: false,
-        status: 'all'
+        priceMin: null,
+        priceMax: null,
+        tags: [],
+        dealType: 'all'
     },
     allTags: [],
 
     async loadProducts() {
         try {
-            const container = document.getElementById('productsContainer');
-            if (container && this.products.length === 0) {
-                container.innerHTML = ProductCard.renderLoading();
+            const grid = document.getElementById('productsGrid');
+            if (grid && (!this.products || this.products.length === 0)) {
+                grid.innerHTML = ProductCard.renderLoading();
             }
 
             this.products = await API.getProducts({ includeHistory: true });
@@ -30,11 +30,12 @@ const ProductsController = {
             this.renderProducts();
 
             // Refresh open detail view if active
-            const detailView = document.getElementById('productDetail');
-            if (detailView && detailView.style.display !== 'none' && ProductDetail.currentProduct) {
+            const detailSection = document.getElementById('product-detail');
+            if (detailSection && detailSection.classList.contains('active') && ProductDetail.currentProduct) {
                 const refreshed = this.products.find(p => p._id === ProductDetail.currentProduct._id);
                 if (refreshed) {
-                    ProductDetail.render(refreshed);
+                    const content = document.getElementById('productDetailContent');
+                    if (content) content.innerHTML = ProductDetail.render(refreshed);
                 }
             }
         } catch (error) {
@@ -67,7 +68,6 @@ const ProductsController = {
             }
         });
 
-        // Feed health breakdown
         const healthyFeeds = this.products.filter(p => p.healthStatus === 'ok').length;
         const issueFeeds = this.products.filter(p => p.healthStatus === 'warning' || p.healthStatus === 'error').length;
 
@@ -96,123 +96,118 @@ const ProductsController = {
     },
 
     renderProducts() {
-        const container = document.getElementById('productsContainer');
-        if (!container) return;
+        this.renderProductsKpis();
+        const grid = document.getElementById('productsGrid');
+        if (!grid) return;
 
-        let filtered = [...this.products];
+        let filtered = this.products.filter(p => {
+            if (this.filters.search) {
+                const searchMatch = (p.title || '').toLowerCase().includes(this.filters.search) ||
+                    (p.description || '').toLowerCase().includes(this.filters.search) ||
+                    (p.tags || []).some(t => t.toLowerCase().includes(this.filters.search)) ||
+                    (p.sources || []).some(s => (s.siteName || '').toLowerCase().includes(this.filters.search));
+                if (!searchMatch) return false;
+            }
 
-        // Search Filter
-        if (this.filters.search) {
-            const q = this.filters.search.toLowerCase();
-            filtered = filtered.filter(p => {
-                const titleMatch = (p.title || '').toLowerCase().includes(q);
-                const descMatch = (p.description || '').toLowerCase().includes(q);
-                const tagMatch = (p.tags || []).some(t => t.toLowerCase().includes(q));
-                const storeMatch = (p.sources || []).some(s => (s.siteName || '').toLowerCase().includes(q));
-                return titleMatch || descMatch || tagMatch || storeMatch;
-            });
-        }
+            const price = ProductCard.sanitizePrice(p.lowestPrice, p.referencePrice);
+            if (this.filters.priceMin !== null && (price === null || price < this.filters.priceMin)) return false;
+            if (this.filters.priceMax !== null && (price === null || price > this.filters.priceMax)) return false;
 
-        // Tag Filter
-        if (this.filters.tag) {
-            filtered = filtered.filter(p => (p.tags || []).includes(this.filters.tag));
-        }
+            if (this.filters.tags && this.filters.tags.length > 0) {
+                if (!this.filters.tags.every(t => (p.tags || []).includes(t))) return false;
+            }
 
-        // Only ATL Filter
-        if (this.filters.onlyATL) {
-            filtered = filtered.filter(p => ProductCard.isAtAllTimeLow(p));
-        }
+            if (this.filters.dealType === 'deals') {
+                if (p.priceDelta == null || p.priceDelta >= 0) return false;
+            } else if (this.filters.dealType === 'atl') {
+                if (!ProductCard.isAtAllTimeLow(p)) return false;
+            } else if (this.filters.dealType === 'active') {
+                if (p.active === false) return false;
+            } else if (this.filters.dealType === 'paused') {
+                if (p.active !== false) return false;
+            }
 
-        // Only Deals Filter
-        if (this.filters.onlyDeals) {
-            filtered = filtered.filter(p => {
-                const cleanLowest = ProductCard.sanitizePrice(p.lowestPrice, p.referencePrice);
-                return p.referencePrice && cleanLowest != null && cleanLowest < p.referencePrice;
-            });
-        }
+            return true;
+        });
 
-        // Status Filter
-        if (this.filters.status === 'active') {
-            filtered = filtered.filter(p => p.active !== false);
-        } else if (this.filters.status === 'paused') {
-            filtered = filtered.filter(p => p.active === false);
-        }
-
-        // Sorting
         filtered.sort((a, b) => {
-            if (this.currentSort === 'alpha') {
-                return (a.title || '').localeCompare(b.title || '');
-            } else if (this.currentSort === 'price_asc') {
-                return (a.lowestPrice || Infinity) - (b.lowestPrice || Infinity);
-            } else if (this.currentSort === 'price_desc') {
-                return (b.lowestPrice || -Infinity) - (a.lowestPrice || -Infinity);
-            } else if (this.currentSort === 'delta_asc') {
-                return (a.priceDelta || 0) - (b.priceDelta || 0);
-            } else {
-                // 'recent'
-                return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+            const pA = ProductCard.sanitizePrice(a.lowestPrice, a.referencePrice) ?? Infinity;
+            const pB = ProductCard.sanitizePrice(b.lowestPrice, b.referencePrice) ?? Infinity;
+
+            switch (this.currentSort) {
+                case 'delta': {
+                    const deltaA = a.priceDelta ?? Infinity;
+                    const deltaB = b.priceDelta ?? Infinity;
+                    return deltaA - deltaB;
+                }
+                case 'price-asc':
+                    return pA - pB;
+                case 'price-desc':
+                    return pB - pA;
+                case 'alpha':
+                    return (a.title || '').localeCompare(b.title || '');
+                case 'date':
+                    return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+                default:
+                    return 0;
             }
         });
 
         if (filtered.length === 0) {
-            container.innerHTML = ProductCard.renderEmpty();
+            grid.innerHTML = ProductCard.renderEmpty();
             return;
         }
 
-        container.className = this.currentView === 'list' ? 'products-list-view' : 'products-grid';
-        container.innerHTML = filtered.map(p => ProductCard.render(p, this.currentView)).join('');
+        grid.className = `products-grid ${this.currentView === 'list' ? 'list-view' : ''}`;
+        grid.innerHTML = filtered.map(p => ProductCard.render(p, this.currentView)).join('');
     },
 
     filterByTag(tag) {
-        if (this.filters.tag === tag) {
-            this.filters.tag = null;
+        if (!tag) {
+            this.filters.tags = [];
         } else {
-            this.filters.tag = tag;
+            const index = this.filters.tags.indexOf(tag);
+            if (index > -1) {
+                this.filters.tags.splice(index, 1);
+            } else {
+                this.filters.tags.push(tag);
+            }
         }
         this.updateTags();
         this.renderProducts();
     },
 
     updateTags() {
-        const tagMap = new Map();
-        this.products.forEach(p => {
-            (p.tags || []).forEach(t => {
-                tagMap.set(t, (tagMap.get(t) || 0) + 1);
-            });
-        });
+        const allTags = [...new Set(this.products.flatMap(p => p.tags || []))];
+        this.allTags = allTags;
 
-        this.allTags = Array.from(tagMap.entries())
-            .sort((a, b) => b[1] - a[1])
-            .map(entry => entry[0]);
+        const container = document.getElementById('tagFilters');
+        if (!container) return;
 
-        const tagContainer = document.getElementById('tagsFilterContainer');
-        if (!tagContainer) return;
-
-        if (this.allTags.length === 0) {
-            tagContainer.innerHTML = '';
-            tagContainer.style.display = 'none';
+        if (allTags.length === 0) {
+            container.innerHTML = '';
             return;
         }
 
-        tagContainer.style.display = 'flex';
-        tagContainer.innerHTML = `
-            <span class="tag-filter-pill ${!this.filters.tag ? 'active' : ''}" onclick="App.filterByTag(null)">
-                All Tags (${this.products.length})
-            </span>
-            ${this.allTags.map(tag => `
-                <span class="tag-filter-pill ${this.filters.tag === tag ? 'active' : ''}" onclick="App.filterByTag('${Utils.escapeHtml(tag)}')">
-                    #${Utils.escapeHtml(tag)} (${tagMap.get(tag)})
-                </span>
-            `).join('')}
-        `;
+        container.innerHTML = allTags.map(tag => `
+            <button class="tag-filter ${(this.filters.tags || []).includes(tag) ? 'active' : ''}" data-tag="${Utils.escapeHtml(tag)}">
+                #${Utils.escapeHtml(tag)}
+            </button>
+        `).join('');
+
+        container.querySelectorAll('.tag-filter').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tag = btn.dataset.tag;
+                this.filterByTag(tag);
+            });
+        });
     },
 
     setView(view) {
         this.currentView = view;
-        const gridBtn = document.getElementById('viewGridBtn');
-        const listBtn = document.getElementById('viewListBtn');
-        if (gridBtn) gridBtn.classList.toggle('active', view === 'grid');
-        if (listBtn) listBtn.classList.toggle('active', view === 'list');
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.view === view);
+        });
         this.renderProducts();
     },
 
@@ -235,7 +230,7 @@ const ProductsController = {
             this.populateForm(product);
         } else {
             title.textContent = 'Add Tracked Product';
-            this.addSourceRow(); // At least 1 empty source row
+            this.addSourceRow();
         }
 
         this.renderModalTagSuggestions();
@@ -592,9 +587,9 @@ const ProductsController = {
             item.dataset.sourceIndex = index;
         });
 
-        const countBadge = document.getElementById('modalSourcesCount');
+        const countBadge = document.getElementById('sourcesCountBadge');
         if (countBadge) {
-            countBadge.textContent = `${items.length} store${items.length !== 1 ? 's' : ''}`;
+            countBadge.textContent = `${items.length} store feed${items.length !== 1 ? 's' : ''}`;
         }
     },
 
@@ -795,12 +790,16 @@ const ProductsController = {
                 return;
             }
 
-            document.getElementById('products-tab').style.display = 'none';
-            const detailView = document.getElementById('productDetail');
-            detailView.style.display = 'block';
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
 
-            ProductDetail.render(product);
-            ProductDetail.initChart(product, 30);
+            const detailSection = document.getElementById('product-detail');
+            if (detailSection) detailSection.classList.add('active');
+
+            const contentElem = document.getElementById('productDetailContent');
+            if (contentElem) contentElem.innerHTML = ProductDetail.render(product);
+
+            setTimeout(() => ProductDetail.initChart(product, 30), 100);
 
             window.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -953,7 +952,6 @@ const ProductsController = {
             this.loadProducts();
         } catch (error) {
             Toast.error('Scrape failed: ' + error.message);
-            // Reload to show error health status
             await this.showProductDetail(productId, false);
         } finally {
             if (btn) {
@@ -1013,8 +1011,10 @@ const ProductsController = {
             Toast.success(`"${title}" deleted successfully`);
 
             // Return to products view if detail is open
-            document.getElementById('productDetail').style.display = 'none';
-            document.getElementById('products-tab').style.display = 'block';
+            const detailSection = document.getElementById('product-detail');
+            if (detailSection) detailSection.classList.remove('active');
+            const productsTab = document.getElementById('products-tab');
+            if (productsTab) productsTab.classList.add('active');
 
             if (window.Router) {
                 Router.navigate('products', true);
@@ -1031,6 +1031,11 @@ const ProductsController = {
             await API.updateProduct(id, { active: !currentActive });
             Toast.info(`Product tracking ${!currentActive ? 'resumed' : 'paused'}`);
             await this.loadProducts();
+
+            const detailSection = document.getElementById('product-detail');
+            if (detailSection && detailSection.classList.contains('active')) {
+                await this.showProductDetail(id, false);
+            }
         } catch (error) {
             Toast.error('Error updating tracking status: ' + error.message);
         }
