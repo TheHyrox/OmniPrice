@@ -32,7 +32,7 @@ class AlertChecker {
             }
 
             for (const alert of alerts) {
-                if (!alert.active) continue;
+                if (!alert.active || product.archived === true || product.active === false) continue;
                 if (product.lowestPrice == null) continue;
 
                 if (alert.alertType === 'rise') {

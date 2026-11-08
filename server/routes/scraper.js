@@ -124,7 +124,7 @@ router.post('/all', scrapeAllLimiter, async (req, res) => {
         
         let skippedCount = 0;
         for (const product of products) {
-            if (product.active === false) {
+            if (product.active === false || product.archived === true) {
                 skippedCount++;
                 continue;
             }

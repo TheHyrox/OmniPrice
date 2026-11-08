@@ -71,10 +71,11 @@ const ProductCard = {
         const cleanLowest = this.sanitizePrice(product.lowestPrice, product.referencePrice);
         const isATL = this.isAtAllTimeLow(product);
         const isActive = product.active !== false;
+        const isArchived = Boolean(product.archived);
         const delta = product.priceDelta;
         const deltaClass = delta < 0 ? 'negative' : 'positive';
         const deltaSign = delta < 0 ? '' : '+';
-        const healthBadge = this.renderHealthBadge(product);
+        const healthBadge = isArchived ? '' : this.renderHealthBadge(product);
 
         let savingsAmount = null;
         if (product.referencePrice && cleanLowest != null && cleanLowest < product.referencePrice) {
@@ -84,11 +85,11 @@ const ProductCard = {
         // List View Variant
         if (viewMode === 'list') {
             return `
-                <article class="product-card list-card ${!isActive ? 'is-paused' : ''}" data-id="${id}">
+                <article class="product-card list-card ${!isActive ? 'is-paused' : ''} ${isArchived ? 'is-archived' : ''}" data-id="${id}">
                     <div class="list-card-media">
                         <img class="product-card-image" src="${imageUrl}" alt="${title}" onerror="this.src='/images/placeholder.svg'">
-                        ${!isActive ? `<span class="card-badge paused">Paused</span>` : ''}
-                        ${isATL ? `<span class="card-badge atl">ATL</span>` : ''}
+                        ${isArchived ? `<span class="card-badge archived">Archived</span>` : (!isActive ? `<span class="card-badge paused">Paused</span>` : '')}
+                        ${isATL && !isArchived ? `<span class="card-badge atl">ATL</span>` : ''}
                     </div>
 
                     <div class="product-card-body list-card-body">
@@ -115,14 +116,26 @@ const ProductCard = {
                         </div>
 
                         <div class="list-card-actions" onclick="event.stopPropagation()">
-                            <button class="btn btn-secondary btn-sm" onclick="App.toggleProductActive('${id}', ${isActive})" title="${isActive ? 'Pause price tracking' : 'Resume price tracking'}">
-                                ${isActive ? 'Pause' : 'Resume'}
-                            </button>
-                            ${lowestSource ? `
-                                <a href="${escapeHtml(lowestSource.url)}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm card-buy-btn">
-                                    Buy ↗
-                                </a>
-                            ` : ''}
+                            ${isArchived ? `
+                                <button class="btn btn-secondary btn-sm" onclick="App.toggleProductArchive('${id}', true)" title="Restore to active tracking">
+                                    Restore
+                                </button>
+                                <button class="btn btn-ghost btn-sm" onclick="App.deleteProduct('${id}')" title="Delete permanently" style="color: var(--danger);">
+                                    Delete
+                                </button>
+                            ` : `
+                                <button class="btn btn-secondary btn-sm" onclick="App.toggleProductActive('${id}', ${isActive})" title="${isActive ? 'Pause price tracking' : 'Resume price tracking'}">
+                                    ${isActive ? 'Pause' : 'Resume'}
+                                </button>
+                                <button class="btn btn-ghost btn-sm" onclick="App.toggleProductArchive('${id}', false)" title="Move to archive">
+                                    Archive
+                                </button>
+                                ${lowestSource ? `
+                                    <a href="${escapeHtml(lowestSource.url)}" target="_blank" rel="noopener" class="btn btn-secondary btn-sm card-buy-btn">
+                                        Buy ↗
+                                    </a>
+                                ` : ''}
+                            `}
                             <button class="btn btn-ghost btn-sm" onclick="App.showProductDetail('${id}')">
                                 Details →
                             </button>
@@ -134,18 +147,18 @@ const ProductCard = {
 
         // Grid Card Variant (Default)
         return `
-            <article class="product-card grid-card ${!isActive ? 'is-paused' : ''}" data-id="${id}">
+            <article class="product-card grid-card ${!isActive ? 'is-paused' : ''} ${isArchived ? 'is-archived' : ''}" data-id="${id}">
                 <div class="product-card-image-wrap">
                     <img class="product-card-image" src="${imageUrl}" alt="${title}" onerror="this.src='/images/placeholder.svg'">
                     <div class="card-badges-overlay">
-                        ${!isActive ? `<span class="card-badge paused">Paused</span>` : ''}
-                        ${isATL ? `<span class="card-badge atl">ATL</span>` : ''}
-                        ${delta != null ? `
+                        ${isArchived ? `<span class="card-badge archived">Archived</span>` : (!isActive ? `<span class="card-badge paused">Paused</span>` : '')}
+                        ${isATL && !isArchived ? `<span class="card-badge atl">ATL</span>` : ''}
+                        ${delta != null && !isArchived ? `
                             <span class="card-badge delta ${deltaClass}">
                                 ${deltaSign}${delta.toFixed(1)}%
                             </span>
                         ` : ''}
-                        <span class="card-badge sources">${sourcesCount} stores</span>
+                        <span class="card-badge sources">${sourcesCount} store${sourcesCount !== 1 ? 's' : ''}</span>
                     </div>
                 </div>
 
@@ -170,20 +183,46 @@ const ProductCard = {
                     </div>
 
                     <div class="product-card-footer" onclick="event.stopPropagation()">
-                        <button class="btn btn-primary btn-sm card-view-btn" onclick="App.showProductDetail('${id}')">
-                            View Details →
-                        </button>
-                        <button class="btn btn-secondary btn-sm" onclick="App.toggleProductActive('${id}', ${isActive})" title="${isActive ? 'Pause automatic price tracking' : 'Resume automatic price tracking'}">
-                            ${isActive ? 'Pause' : 'Resume'}
-                        </button>
-                        ${lowestSource ? `
-                            <a href="${escapeHtml(lowestSource.url)}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm card-buy-btn" title="Buy directly on ${escapeHtml(lowestSource.siteName)}">
-                                Buy ↗
-                            </a>
-                        ` : ''}
+                        ${isArchived ? `
+                            <button class="btn btn-secondary btn-sm" onclick="App.toggleProductArchive('${id}', true)" title="Restore product">
+                                Restore
+                            </button>
+                            <button class="btn btn-primary btn-sm card-view-btn" onclick="App.showProductDetail('${id}')">
+                                Details →
+                            </button>
+                            <button class="btn btn-ghost btn-sm" onclick="App.deleteProduct('${id}')" title="Delete permanently" style="color: var(--danger);">
+                                Delete
+                            </button>
+                        ` : `
+                            <button class="btn btn-primary btn-sm card-view-btn" onclick="App.showProductDetail('${id}')">
+                                View Details →
+                            </button>
+                            <button class="btn btn-secondary btn-sm" onclick="App.toggleProductActive('${id}', ${isActive})" title="${isActive ? 'Pause automatic price tracking' : 'Resume automatic price tracking'}">
+                                ${isActive ? 'Pause' : 'Resume'}
+                            </button>
+                            <button class="btn btn-ghost btn-sm" onclick="App.toggleProductArchive('${id}', false)" title="Move to archive">
+                                Archive
+                            </button>
+                            ${lowestSource ? `
+                                <a href="${escapeHtml(lowestSource.url)}" target="_blank" rel="noopener" class="btn btn-ghost btn-sm card-buy-btn" title="Buy directly on ${escapeHtml(lowestSource.siteName)}">
+                                    Buy ↗
+                                </a>
+                            ` : ''}
+                        `}
                     </div>
                 </div>
             </article>
+        `;
+    },
+
+    renderArchivedEmpty() {
+        return `
+            <div class="empty-state products-empty-state">
+                <div class="empty-state-icon">📦</div>
+                <h3>No archived products</h3>
+                <p>When you no longer need active tracking for a product, you can archive it to keep your catalog clean without losing historical price data.</p>
+                <button class="btn btn-secondary btn-sm" onclick="App.navigateToTab('products')" style="margin-top: 14px;">← Go to Active Products</button>
+            </div>
         `;
     },
 

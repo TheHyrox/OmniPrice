@@ -62,7 +62,7 @@ router.get('/:id/history', async (req, res) => {
 // POST create product
 router.post('/', validate(createProductSchema), async (req, res) => {
     try {
-        const { title, description, referencePrice, tags, image, sources, active } = req.body;
+        const { title, description, referencePrice, tags, image, sources, active, archived } = req.body;
         
         let imagePath = null;
         if (image) {
@@ -76,7 +76,8 @@ router.post('/', validate(createProductSchema), async (req, res) => {
             tags: tags || [],
             image: imagePath,
             sources: sources || [],
-            active: active !== undefined ? Boolean(active) : true
+            active: active !== undefined ? Boolean(active) : true,
+            archived: Boolean(archived)
         });
         
         res.status(201).json(product);
@@ -88,7 +89,7 @@ router.post('/', validate(createProductSchema), async (req, res) => {
 // PUT update product
 router.put('/:id', validate(updateProductSchema), async (req, res) => {
     try {
-        const { title, description, referencePrice, tags, image, sources, active } = req.body;
+        const { title, description, referencePrice, tags, image, sources, active, archived } = req.body;
         const product = await db.getProductById(req.params.id);
         
         if (!product) {
@@ -121,6 +122,9 @@ router.put('/:id', validate(updateProductSchema), async (req, res) => {
         if (active !== undefined) {
             updatePayload.active = Boolean(active);
         }
+        if (archived !== undefined) {
+            updatePayload.archived = Boolean(archived);
+        }
 
         const updated = await db.updateProduct(req.params.id, updatePayload);
         
@@ -143,6 +147,25 @@ router.patch('/:id/toggle', async (req, res) => {
             : !product.active;
 
         const updated = await db.updateProduct(req.params.id, { active: newActive });
+        res.json(updated);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// PATCH toggle or set archived state of product
+router.patch('/:id/archive', async (req, res) => {
+    try {
+        const product = await db.getProductById(req.params.id);
+        if (!product) {
+            return res.status(404).json({ error: 'Product not found' });
+        }
+
+        const newArchived = req.body.archived !== undefined
+            ? Boolean(req.body.archived)
+            : !product.archived;
+
+        const updated = await db.updateProduct(req.params.id, { archived: newArchived });
         res.json(updated);
     } catch (error) {
         res.status(500).json({ error: error.message });

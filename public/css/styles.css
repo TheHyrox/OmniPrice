@@ -632,12 +632,29 @@ label {
     border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
+.card-badge.archived {
+    background: rgba(100, 116, 139, 0.9);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
 .product-card.is-paused {
     opacity: 0.82;
 }
 
 .product-card.is-paused:hover {
     opacity: 1;
+}
+
+.product-card.is-archived {
+    opacity: 0.82;
+    filter: grayscale(25%);
+    border-style: dashed;
+}
+
+.product-card.is-archived:hover {
+    opacity: 1;
+    filter: none;
 }
 
 .card-badge.delta.negative {
@@ -2321,6 +2338,88 @@ label {
     text-transform: uppercase;
     letter-spacing: 0.04em;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.detail-archived-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(100, 116, 139, 0.92);
+    backdrop-filter: blur(8px);
+    color: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.archived-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    background: rgba(100, 116, 139, 0.08);
+    border: 1px dashed var(--border-color);
+    border-radius: 12px;
+    padding: 14px 20px;
+    margin-bottom: 24px;
+}
+
+.archived-banner-body {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.archived-banner-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.archived-banner strong {
+    display: block;
+    font-size: 0.9375rem;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.archived-banner p {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+@media (max-width: 640px) {
+    .archived-banner {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+.nav-counter-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    border-radius: 9999px;
+    margin-left: 6px;
+    vertical-align: middle;
+    transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.nav-link.active .nav-counter-pill {
+    background: var(--primary);
+    color: #ffffff;
 }
 
 .detail-info {

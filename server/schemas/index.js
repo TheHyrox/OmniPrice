@@ -22,11 +22,13 @@ const createProductSchema = z.object({
     image: z.string().max(25 * 1024 * 1024, 'Image payload exceeds 25MB limit').nullable().optional(),
     sources: z.array(sourceSchema).min(1, 'At least one source is required').max(20),
     active: z.boolean().optional().default(true),
+    archived: z.boolean().optional().default(false),
 });
 
 const updateProductSchema = createProductSchema.partial().extend({
     sources: z.array(sourceSchema).min(1, 'At least one source is required').max(20).optional(),
     active: z.boolean().optional(),
+    archived: z.boolean().optional(),
 });
 
 // ─── Stores ───────────────────────────────────────────────────────────────────

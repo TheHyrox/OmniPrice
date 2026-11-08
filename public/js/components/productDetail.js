@@ -129,12 +129,17 @@ const ProductDetail = {
                     ← Back to ${App.previousTab === 'charts' ? 'Analytics' : 'Products'}
                 </button>
                 <div class="detail-top-actions">
-                    <button class="btn btn-secondary" onclick="App.toggleProductActive('${id}', ${product.active !== false})" title="${product.active === false ? 'Resume automatic scraping' : 'Pause automatic scraping'}">
-                        ${product.active === false ? '▶ Resume Tracking' : '⏸ Pause Tracking'}
+                    <button class="btn btn-secondary" onclick="App.toggleProductArchive('${id}', ${Boolean(product.archived)})" title="${product.archived ? 'Restore to active tracking' : 'Move product to archive'}">
+                        ${product.archived ? '📦 Restore' : '📦 Archive'}
                     </button>
-                    <button class="btn btn-secondary" id="scrapeAllProductBtn" onclick="App.scrapeProductAll('${id}', this)">
-                        Scrape All Stores
-                    </button>
+                    ${!product.archived ? `
+                        <button class="btn btn-secondary" onclick="App.toggleProductActive('${id}', ${product.active !== false})" title="${product.active === false ? 'Resume automatic scraping' : 'Pause automatic scraping'}">
+                            ${product.active === false ? '▶ Resume' : '⏸ Pause'}
+                        </button>
+                        <button class="btn btn-secondary" id="scrapeAllProductBtn" onclick="App.scrapeProductAll('${id}', this)">
+                            Scrape All Stores
+                        </button>
+                    ` : ''}
                     <button class="btn btn-secondary" onclick="App.editProduct('${id}')">
                         Edit
                     </button>
@@ -144,11 +149,24 @@ const ProductDetail = {
                 </div>
             </div>
 
+            ${product.archived ? `
+                <div class="archived-banner">
+                    <div class="archived-banner-body">
+                        <span class="archived-banner-icon">📦</span>
+                        <div>
+                            <strong>This product is currently archived.</strong>
+                            <p>Automated price tracking and notifications are suspended. You can restore this product at any time to resume tracking.</p>
+                        </div>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="App.toggleProductArchive('${id}', true)">Restore to Active</button>
+                </div>
+            ` : ''}
+
             <!-- Hero Section -->
             <div class="detail-hero">
                 <div class="detail-image-wrapper">
                     <img class="detail-image" src="${imageUrl}" alt="${title}" onerror="this.src='/images/placeholder.svg'">
-                    ${product.active === false ? `<span class="detail-paused-badge">Paused</span>` : ''}
+                    ${product.archived ? `<span class="detail-archived-badge">Archived</span>` : (product.active === false ? `<span class="detail-paused-badge">Paused</span>` : '')}
                     ${stats.isATL ? `<span class="detail-atl-badge">All-Time Low</span>` : ''}
                 </div>
 

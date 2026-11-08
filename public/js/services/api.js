@@ -62,6 +62,13 @@ const API = {
             });
         },
 
+        async toggleArchive(id, archived) {
+            return API.request(`/products/${id}/archive`, {
+                method: 'PATCH',
+                body: archived !== undefined ? { archived } : {}
+            });
+        },
+
         async getHistory(id) {
             return API.request(`/products/${id}/history`);
         },
@@ -226,6 +233,7 @@ API.getProduct = (id) => API.products.getById(id);
 API.createProduct = (data) => API.products.create(data);
 API.updateProduct = (id, data) => API.products.update(id, data);
 API.deleteProduct = (id) => API.products.delete(id);
+API.toggleProductArchive = (id, archived) => API.products.toggleArchive(id, archived);
 
 API.getStores = () => API.stores.getAll();
 API.createStore = (data) => API.stores.create(data);

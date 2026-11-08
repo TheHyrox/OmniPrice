@@ -173,9 +173,27 @@ const App = {
             }
         });
 
+        // Archived card click navigation
+        document.getElementById('archivedProductsGrid')?.addEventListener('click', (e) => {
+            const card = e.target.closest('.product-card');
+            if (card && !e.target.closest('a') && !e.target.closest('button')) {
+                this.showProductDetail(card.dataset.id);
+            }
+        });
+
+        // Back to active products button from archive
+        document.getElementById('backToActiveProductsBtn')?.addEventListener('click', () => {
+            this.navigateToTab('products');
+        });
+
+        // Quick filter Archive button navigation
+        document.getElementById('viewArchiveQuickBtn')?.addEventListener('click', () => {
+            this.navigateToTab('archive');
+        });
+
         // Product Detail back button navigation
         document.getElementById('backToProducts')?.addEventListener('click', () => {
-            this.navigateToTab('products');
+            this.backToPreviousTab();
         });
 
         // Close modals on backdrop click or Escape key
@@ -231,6 +249,8 @@ const App = {
             StoresController.loadStores();
         } else if (tabName === 'settings') {
             SettingsController.loadSettings();
+        } else if (tabName === 'archive') {
+            ProductsController.renderArchivedProducts();
         }
 
         if (updateRoute && window.Router) {
@@ -297,6 +317,8 @@ const App = {
     editProduct: (id) => ProductsController.editProduct(id),
     deleteProduct: (id) => ProductsController.deleteProduct(id),
     toggleProductActive: (id, currentActive) => ProductsController.toggleProductActive(id, currentActive),
+    toggleProductArchive: (id, currentArchived) => ProductsController.toggleProductArchive(id, currentArchived),
+    renderArchivedProducts: () => ProductsController.renderArchivedProducts(),
     scrapeAll: () => ProductsController.scrapeAll(),
 
     // Stores Controller delegations

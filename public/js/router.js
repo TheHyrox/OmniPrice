@@ -17,7 +17,7 @@ const Router = (() => {
             }
         },
         {
-            pattern: /^#(products|stores|charts|alerts|settings)$/,
+            pattern: /^#(products|stores|charts|alerts|settings|archive)$/,
             handler: (match) => {
                 const tabName = match[1];
                 if (window.App && typeof window.App.navigateToTab === 'function') {

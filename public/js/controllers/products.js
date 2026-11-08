@@ -26,8 +26,10 @@ const ProductsController = {
             if (window.App) window.App.products = this.products;
 
             this.updateTags();
+            this.updateArchiveBadge();
             this.renderProductsKpis();
             this.renderProducts();
+            this.renderArchivedProducts();
 
             // Refresh open detail view if active
             const detailSection = document.getElementById('product-detail');
@@ -48,19 +50,20 @@ const ProductsController = {
         const container = document.getElementById('productsKpiContainer');
         if (!container) return;
 
-        const total = this.products.length;
+        const activeCatalog = this.products.filter(p => !p.archived);
+        const total = activeCatalog.length;
         if (total === 0) {
             container.innerHTML = '';
             return;
         }
 
-        const activeCount = this.products.filter(p => p.active !== false).length;
-        const atlCount = this.products.filter(p => ProductCard.isAtAllTimeLow(p)).length;
+        const activeCount = activeCatalog.filter(p => p.active !== false).length;
+        const atlCount = activeCatalog.filter(p => ProductCard.isAtAllTimeLow(p)).length;
 
         let totalSavings = 0;
         let dealsCount = 0;
 
-        this.products.forEach(p => {
+        activeCatalog.forEach(p => {
             const cleanLowest = ProductCard.sanitizePrice(p.lowestPrice, p.referencePrice);
             if (p.referencePrice && cleanLowest != null && cleanLowest < p.referencePrice) {
                 totalSavings += (p.referencePrice - cleanLowest);
@@ -68,8 +71,8 @@ const ProductsController = {
             }
         });
 
-        const healthyFeeds = this.products.filter(p => p.healthStatus === 'ok').length;
-        const issueFeeds = this.products.filter(p => p.healthStatus === 'warning' || p.healthStatus === 'error').length;
+        const healthyFeeds = activeCatalog.filter(p => p.healthStatus === 'ok').length;
+        const issueFeeds = activeCatalog.filter(p => p.healthStatus === 'warning' || p.healthStatus === 'error').length;
 
         container.innerHTML = `
             <div class="kpi-card">
@@ -97,10 +100,13 @@ const ProductsController = {
 
     renderProducts() {
         this.renderProductsKpis();
+        this.updateArchiveBadge();
         const grid = document.getElementById('productsGrid');
         if (!grid) return;
 
-        let filtered = this.products.filter(p => {
+        const activeCatalog = this.products.filter(p => !p.archived);
+
+        let filtered = activeCatalog.filter(p => {
             if (this.filters.search) {
                 const searchMatch = (p.title || '').toLowerCase().includes(this.filters.search) ||
                     (p.description || '').toLowerCase().includes(this.filters.search) ||
@@ -1010,20 +1016,104 @@ const ProductsController = {
             await API.deleteProduct(id);
             Toast.success(`"${title}" deleted successfully`);
 
-            // Return to products view if detail is open
+            // Return to previous view if detail is open
             const detailSection = document.getElementById('product-detail');
-            if (detailSection) detailSection.classList.remove('active');
-            const productsTab = document.getElementById('products-tab');
-            if (productsTab) productsTab.classList.add('active');
+            if (detailSection && detailSection.classList.contains('active')) {
+                detailSection.classList.remove('active');
+                const targetTab = (window.App && window.App.previousTab === 'archive') ? 'archive' : 'products';
+                const tabEl = document.getElementById(`${targetTab}-tab`);
+                if (tabEl) tabEl.classList.add('active');
 
-            if (window.Router) {
-                Router.navigate('products', true);
+                if (window.Router) {
+                    Router.navigate(targetTab, true);
+                }
             }
 
             await this.loadProducts();
+            this.renderArchivedProducts();
         } catch (error) {
             Toast.error('Error deleting product: ' + error.message);
         }
+    },
+
+    async toggleProductArchive(id, currentArchived) {
+        try {
+            const targetArchived = !currentArchived;
+            await API.toggleProductArchive(id, targetArchived);
+
+            const prod = this.products.find(p => p._id === id);
+            if (prod) {
+                prod.archived = targetArchived;
+            }
+
+            Toast.success(targetArchived ? 'Product moved to Archive' : 'Product restored to active tracking');
+
+            this.updateArchiveBadge();
+            this.renderProducts();
+            this.renderArchivedProducts();
+
+            // Refresh open detail view if active
+            const detailSection = document.getElementById('product-detail');
+            if (detailSection && detailSection.classList.contains('active') && ProductDetail.currentProduct && ProductDetail.currentProduct._id === id) {
+                ProductDetail.currentProduct.archived = targetArchived;
+                const content = document.getElementById('productDetailContent');
+                if (content) content.innerHTML = ProductDetail.render(ProductDetail.currentProduct);
+            }
+        } catch (error) {
+            console.error('Failed to toggle archive status:', error);
+            Toast.error('Failed to update archive status: ' + (error.message || 'Unknown error'));
+        }
+    },
+
+    updateArchiveBadge() {
+        const archivedCount = this.products.filter(p => p.archived === true).length;
+        const navBadge = document.getElementById('navArchiveBadge');
+        if (navBadge) {
+            navBadge.textContent = archivedCount;
+            navBadge.style.display = archivedCount > 0 ? 'inline-flex' : 'none';
+        }
+        const quickCount = document.getElementById('quickArchiveCount');
+        if (quickCount) {
+            quickCount.textContent = archivedCount;
+        }
+    },
+
+    renderArchivedProducts() {
+        const grid = document.getElementById('archivedProductsGrid');
+        const kpiContainer = document.getElementById('archivedKpiContainer');
+        if (!grid) return;
+
+        const archived = this.products.filter(p => p.archived === true);
+
+        if (kpiContainer) {
+            const totalArchived = archived.length;
+            const totalSources = archived.reduce((acc, p) => acc + (p.sources || []).length, 0);
+            kpiContainer.innerHTML = `
+                <div class="kpi-card">
+                    <span class="kpi-label">Archived Items</span>
+                    <span class="kpi-value">${totalArchived}</span>
+                    <span class="kpi-sub">Products removed from active tracking</span>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-label">Suspended Feeds</span>
+                    <span class="kpi-value">${totalSources}</span>
+                    <span class="kpi-sub">Background scraping paused</span>
+                </div>
+                <div class="kpi-card">
+                    <span class="kpi-label">Price History</span>
+                    <span class="kpi-value" style="color: var(--primary);">Preserved</span>
+                    <span class="kpi-sub">Data kept for future restoration</span>
+                </div>
+            `;
+        }
+
+        if (archived.length === 0) {
+            grid.innerHTML = ProductCard.renderArchivedEmpty ? ProductCard.renderArchivedEmpty() : ProductCard.renderEmpty();
+            return;
+        }
+
+        grid.className = `products-grid ${this.currentView === 'list' ? 'list-view' : ''}`;
+        grid.innerHTML = archived.map(p => ProductCard.render(p, this.currentView)).join('');
     },
 
     async toggleProductActive(id, currentActive) {

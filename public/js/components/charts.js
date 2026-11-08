@@ -37,7 +37,7 @@ const Charts = {
     },
 
     init(products) {
-        this.products = products || [];
+        this.products = (products || []).filter(p => !p.archived);
 
         if (this.selectedProductIds.size === 0 && this.products.length > 0) {
             this.selectInitialProducts();

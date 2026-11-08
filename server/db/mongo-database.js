@@ -1,8 +1,36 @@
 const mongoose = require('mongoose');
 const { v4: uuidv4 } = require('uuid');
 
+function toIdQuery(id) {
+    if (!id) return { _id: id };
+    const idStr = String(id);
+    if (mongoose.Types.ObjectId.isValid(idStr) && String(new mongoose.Types.ObjectId(idStr)) === idStr) {
+        return {
+            $or: [
+                { _id: idStr },
+                { _id: new mongoose.Types.ObjectId(idStr) }
+            ]
+        };
+    }
+    return { _id: idStr };
+}
+
+function toProductIdQuery(productId) {
+    if (!productId) return { productId };
+    const idStr = String(productId);
+    if (mongoose.Types.ObjectId.isValid(idStr) && String(new mongoose.Types.ObjectId(idStr)) === idStr) {
+        return {
+            $or: [
+                { productId: idStr },
+                { productId: new mongoose.Types.ObjectId(idStr) }
+            ]
+        };
+    }
+    return { productId: idStr };
+}
+
 const productSchema = new mongoose.Schema({
-    _id: { type: String, default: uuidv4 },
+    _id: { type: mongoose.Schema.Types.Mixed, default: uuidv4 },
     title: { type: String, required: true },
     description: { type: String, default: '' },
     referencePrice: { type: Number, required: true },
@@ -25,15 +53,17 @@ const productSchema = new mongoose.Schema({
     priceDelta: { type: Number, default: null },
     minPriceEver: { type: Number, default: null },
     healthStatus: { type: String, default: 'unknown' },
-    active: { type: Boolean, default: true }
+    active: { type: Boolean, default: true },
+    archived: { type: Boolean, default: false }
 }, { versionKey: false, collection: 'products' });
 
 productSchema.index({ active: 1 });
+productSchema.index({ archived: 1 });
 productSchema.index({ tags: 1 });
 
 const priceRecordSchema = new mongoose.Schema({
-    _id: { type: String, default: uuidv4 },
-    productId: { type: String, required: true, index: true },
+    _id: { type: mongoose.Schema.Types.Mixed, default: uuidv4 },
+    productId: { type: mongoose.Schema.Types.Mixed, required: true, index: true },
     date: { type: String, required: true },
     prices: [{
         sourceIndex: { type: Number, required: true },
@@ -45,7 +75,7 @@ const priceRecordSchema = new mongoose.Schema({
 priceRecordSchema.index({ productId: 1, date: 1 });
 
 const storeSchema = new mongoose.Schema({
-    _id: { type: String, default: uuidv4 },
+    _id: { type: mongoose.Schema.Types.Mixed, default: uuidv4 },
     name: { type: String, required: true },
     cssSelector: { type: String, required: true },
     defaultUrl: { type: String, default: '' }
@@ -60,8 +90,8 @@ const settingsSchema = new mongoose.Schema({
 }, { versionKey: false, collection: 'settings', strict: false });
 
 const alertSchema = new mongoose.Schema({
-    _id: { type: String, default: uuidv4 },
-    productId: { type: String, required: true },
+    _id: { type: mongoose.Schema.Types.Mixed, default: uuidv4 },
+    productId: { type: mongoose.Schema.Types.Mixed, required: true },
     targetPrice: { type: Number, default: null },
     thresholdPercent: { type: Number, default: null },
     webhookUrl: { type: String, default: '' },
@@ -216,6 +246,7 @@ class MongoDatabase {
             return products.map(p => ({
                 ...p,
                 active: p.active !== false,
+                archived: Boolean(p.archived),
                 priceHistory: []
             }));
         }
@@ -227,33 +258,39 @@ class MongoDatabase {
 
         const historyByProduct = new Map();
         for (const rec of records) {
-            if (!historyByProduct.has(rec.productId)) {
-                historyByProduct.set(rec.productId, []);
+            const pidStr = String(rec.productId);
+            if (!historyByProduct.has(pidStr)) {
+                historyByProduct.set(pidStr, []);
             }
-            historyByProduct.get(rec.productId).push(rec);
+            historyByProduct.get(pidStr).push({ ...rec, _id: String(rec._id), productId: pidStr });
         }
 
         return products.map(p => ({
             ...p,
+            _id: String(p._id),
             active: p.active !== false,
-            priceHistory: historyByProduct.get(p._id) || []
+            archived: Boolean(p.archived),
+            priceHistory: historyByProduct.get(String(p._id)) || []
         }));
     }
 
     async getProductById(id) {
-        const product = await Product.findOne({ _id: id }).lean();
+        const product = await Product.findOne(toIdQuery(id)).lean();
         if (!product) return null;
 
-        const priceHistory = await PriceRecord.find({ productId: id }).sort({ date: 1 }).lean();
+        const priceHistory = await PriceRecord.find(toProductIdQuery(id)).sort({ date: 1 }).lean();
         return {
             ...product,
+            _id: String(product._id),
             active: product.active !== false,
-            priceHistory
+            archived: Boolean(product.archived),
+            priceHistory: priceHistory.map(h => ({ ...h, _id: String(h._id), productId: String(h.productId) }))
         };
     }
 
     async getPriceHistory(productId) {
-        return PriceRecord.find({ productId }).sort({ date: 1 }).lean();
+        const records = await PriceRecord.find(toProductIdQuery(productId)).sort({ date: 1 }).lean();
+        return records.map(h => ({ ...h, _id: String(h._id), productId: String(h.productId) }));
     }
 
     async createProduct(data) {
@@ -261,6 +298,7 @@ class MongoDatabase {
             _id: uuidv4(),
             ...data,
             active: data.active !== undefined ? Boolean(data.active) : true,
+            archived: Boolean(data.archived),
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             sources: data.sources || [],
@@ -271,12 +309,13 @@ class MongoDatabase {
         const product = new Product(productData);
         await product.save();
         const obj = product.toObject();
+        obj._id = String(obj._id);
         obj.priceHistory = [];
         return obj;
     }
 
     async updateProduct(id, data) {
-        const product = await Product.findOne({ _id: id });
+        const product = await Product.findOne(toIdQuery(id));
         if (!product) return null;
 
         if (Array.isArray(data.sources)) {
@@ -301,25 +340,30 @@ class MongoDatabase {
         if (data.active !== undefined) {
             product.active = Boolean(data.active);
         }
+        if (data.archived !== undefined) {
+            product.archived = Boolean(data.archived);
+        }
         product.updatedAt = new Date().toISOString();
         this._updateVirtuals(product);
         await product.save();
 
         const obj = product.toObject();
-        obj.priceHistory = await PriceRecord.find({ productId: id }).sort({ date: 1 }).lean();
+        obj._id = String(obj._id);
+        const priceHistory = await PriceRecord.find(toProductIdQuery(id)).sort({ date: 1 }).lean();
+        obj.priceHistory = priceHistory.map(h => ({ ...h, _id: String(h._id), productId: String(h.productId) }));
         return obj;
     }
 
     async deleteProduct(id) {
         const [res] = await Promise.all([
-            Product.deleteOne({ _id: id }),
-            PriceRecord.deleteMany({ productId: id })
+            Product.deleteOne(toIdQuery(id)),
+            PriceRecord.deleteMany(toProductIdQuery(id))
         ]);
         return res.deletedCount > 0;
     }
 
     async addPriceHistory(productId, sourceIndex, price, options = {}) {
-        const product = await Product.findOne({ _id: productId });
+        const product = await Product.findOne(toIdQuery(productId));
         if (!product) return null;
 
         const today = new Date();
@@ -371,7 +415,7 @@ class MongoDatabase {
     }
 
     async recordScrapeError(productId, sourceIndex, errorMsg) {
-        const product = await Product.findOne({ _id: productId });
+        const product = await Product.findOne(toIdQuery(productId));
         if (!product || !product.sources || !product.sources[sourceIndex]) return null;
 
         product.sources[sourceIndex].lastScraped = new Date().toISOString();
@@ -382,17 +426,21 @@ class MongoDatabase {
         await product.save();
 
         const productObj = product.toObject();
-        productObj.priceHistory = await PriceRecord.find({ productId }).sort({ date: 1 }).lean();
+        productObj._id = String(productObj._id);
+        const priceHistory = await PriceRecord.find(toProductIdQuery(productId)).sort({ date: 1 }).lean();
+        productObj.priceHistory = priceHistory.map(h => ({ ...h, _id: String(h._id), productId: String(h.productId) }));
         return productObj;
     }
 
     // Stores
     async getStores() {
-        return Store.find({}).lean();
+        const stores = await Store.find({}).lean();
+        return stores.map(s => ({ ...s, _id: String(s._id) }));
     }
 
     async getStoreById(id) {
-        return Store.findOne({ _id: id }).lean();
+        const store = await Store.findOne(toIdQuery(id)).lean();
+        return store ? { ...store, _id: String(store._id) } : null;
     }
 
     async createStore(data) {
@@ -403,11 +451,13 @@ class MongoDatabase {
             defaultUrl: data.defaultUrl ? data.defaultUrl.trim() : ''
         });
         await store.save();
-        return store.toObject();
+        const obj = store.toObject();
+        obj._id = String(obj._id);
+        return obj;
     }
 
     async updateStore(id, data) {
-        const store = await Store.findOne({ _id: id });
+        const store = await Store.findOne(toIdQuery(id));
         if (!store) return null;
 
         if (data.name !== undefined) store.name = data.name.trim();
@@ -415,11 +465,13 @@ class MongoDatabase {
         if (data.defaultUrl !== undefined) store.defaultUrl = data.defaultUrl.trim();
 
         await store.save();
-        return store.toObject();
+        const obj = store.toObject();
+        obj._id = String(obj._id);
+        return obj;
     }
 
     async deleteStore(id) {
-        const res = await Store.deleteOne({ _id: id });
+        const res = await Store.deleteOne(toIdQuery(id));
         return res.deletedCount > 0;
     }
 
@@ -507,21 +559,24 @@ class MongoDatabase {
 
     // Alerts
     async getAlerts() {
-        return Alert.find({}).lean();
+        const alerts = await Alert.find({}).lean();
+        return alerts.map(a => ({ ...a, _id: String(a._id), productId: String(a.productId) }));
     }
 
     async getAlertById(id) {
-        return Alert.findOne({ _id: id }).lean();
+        const alert = await Alert.findOne(toIdQuery(id)).lean();
+        return alert ? { ...alert, _id: String(alert._id), productId: String(alert.productId) } : null;
     }
 
     async getAlertsByProductId(productId) {
-        return Alert.find({ productId }).lean();
+        const alerts = await Alert.find(toProductIdQuery(productId)).lean();
+        return alerts.map(a => ({ ...a, _id: String(a._id), productId: String(a.productId) }));
     }
 
     async createAlert(data) {
         const alert = new Alert({
             _id: uuidv4(),
-            productId: data.productId,
+            productId: String(data.productId),
             targetPrice: data.targetPrice != null ? Number(data.targetPrice) : null,
             thresholdPercent: data.thresholdPercent != null ? Number(data.thresholdPercent) : null,
             webhookUrl: data.webhookUrl ? data.webhookUrl.trim() : '',
@@ -532,11 +587,15 @@ class MongoDatabase {
             updatedAt: new Date().toISOString()
         });
         await alert.save();
-        return alert.toObject();
+        const obj = alert.toObject();
+        obj._id = String(obj._id);
+        obj.productId = String(obj.productId);
+        return obj;
     }
 
     async updateAlert(id, data) {
         const updateData = { ...data, updatedAt: new Date().toISOString() };
+        if (updateData.productId) updateData.productId = String(updateData.productId);
         if (updateData.targetPrice !== undefined) {
             updateData.targetPrice = updateData.targetPrice != null ? Number(updateData.targetPrice) : null;
         }
@@ -544,15 +603,15 @@ class MongoDatabase {
             updateData.thresholdPercent = updateData.thresholdPercent != null ? Number(updateData.thresholdPercent) : null;
         }
         const alert = await Alert.findOneAndUpdate(
-            { _id: id },
+            toIdQuery(id),
             { $set: updateData },
             { new: true }
         ).lean();
-        return alert;
+        return alert ? { ...alert, _id: String(alert._id), productId: String(alert.productId) } : null;
     }
 
     async deleteAlert(id) {
-        const result = await Alert.deleteOne({ _id: id });
+        const result = await Alert.deleteOne(toIdQuery(id));
         return result.deletedCount > 0;
     }
 

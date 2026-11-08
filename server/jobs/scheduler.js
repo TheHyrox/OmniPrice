@@ -25,7 +25,7 @@ class Scheduler {
             const products = await db.getProducts();
             let latest = 0;
             for (const product of products) {
-                if (product.active === false) continue;
+                if (product.active === false || product.archived === true) continue;
                 for (const source of (product.sources || [])) {
                     if (source.lastScraped) {
                         const t = new Date(source.lastScraped).getTime();
@@ -48,7 +48,7 @@ class Scheduler {
             let skippedCount = 0;
             
             for (const product of products) {
-                if (product.active === false) {
+                if (product.active === false || product.archived === true) {
                     skippedCount++;
                     continue;
                 }
