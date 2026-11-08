@@ -1,7 +1,8 @@
-const CACHE_NAME = 'omniprice-v4';
+const CACHE_NAME = 'omniprice-v5';
 const SHELL_ASSETS = [
     '/',
     '/index.html',
+    '/manifest.json',
     '/css/styles.css',
     '/js/utils.js',
     '/js/services/api.js',
@@ -65,7 +66,7 @@ self.addEventListener('fetch', (event) => {
                     if (event.request.headers.get('accept')?.includes('text/html')) {
                         return caches.match('/index.html');
                     }
-                    return null;
+                    return new Response('', { status: 404, statusText: 'Not Found' });
                 });
             })
     );

@@ -78,7 +78,7 @@ const AlertsController = {
                     return `
                         <div class="alert-card ${!isActive ? 'is-paused' : ''}">
                             <div class="alert-card-header">
-                                <img src="${image}" alt="${title}" class="alert-product-thumb" onerror="this.src='/images/placeholder.svg'">
+                                <img src="${image}" alt="${title}" class="alert-product-thumb" width="60" height="60" loading="lazy" onerror="this.src='/images/placeholder.svg'">
                                 <div class="alert-product-info">
                                     <h4 class="alert-product-title" title="${title}">${title}</h4>
                                     <div class="alert-product-prices">
