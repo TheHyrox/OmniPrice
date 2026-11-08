@@ -8,7 +8,7 @@ class AlertChecker {
      * @param {Object} product - Product object with lowestPrice and sources.
      */
     async checkProduct(product) {
-        if (!product || !product._id || product.lowestPrice == null) {
+        if (!product || !product._id) {
             return;
         }
 
@@ -23,8 +23,8 @@ class AlertChecker {
             if (product.lowestPriceSource) {
                 storeName = product.lowestPriceSource.siteName || '';
                 sourceUrl = product.lowestPriceSource.url || '';
-            } else if (Array.isArray(product.sources)) {
-                const matchingSource = product.sources.find(s => s.lastPrice === product.lowestPrice);
+            } else if (Array.isArray(product.sources) && product.sources.length > 0) {
+                const matchingSource = product.sources.find(s => s.lastPrice === product.lowestPrice) || product.sources[0];
                 if (matchingSource) {
                     storeName = matchingSource.siteName;
                     sourceUrl = matchingSource.url;
@@ -33,6 +33,7 @@ class AlertChecker {
 
             for (const alert of alerts) {
                 if (!alert.active) continue;
+                if (product.lowestPrice == null) continue;
 
                 if (alert.alertType === 'rise') {
                     // Alert when price is at or above target

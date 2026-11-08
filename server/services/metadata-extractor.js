@@ -51,26 +51,6 @@ class MetadataExtractor {
     }
 
     /**
-     * Normalizes schema.org availability strings into standard keys.
-     */
-    normalizeAvailability(val) {
-        if (!val || typeof val !== 'string') return 'unknown';
-        const cleaned = val.toLowerCase().replace(/[\s_-]+/g, '');
-
-        if (cleaned.includes('instock') || cleaned.includes('available')) {
-            return 'in_stock';
-        }
-        if (cleaned.includes('outofstock') || cleaned.includes('soldout') || cleaned.includes('discontinued')) {
-            return 'out_of_stock';
-        }
-        if (cleaned.includes('preorder') || cleaned.includes('backorder')) {
-            return 'preorder';
-        }
-
-        return 'unknown';
-    }
-
-    /**
      * Sanitizes numerical price values.
      */
     parsePriceValue(val) {
@@ -156,7 +136,6 @@ class MetadataExtractor {
         // Offers & Price
         let price = null;
         let currency = null;
-        let availability = 'unknown';
 
         const offers = productNode.offers;
         if (offers) {
@@ -166,7 +145,6 @@ class MetadataExtractor {
                 const rawPrice = primaryOffer.price != null ? primaryOffer.price : (primaryOffer.lowPrice != null ? primaryOffer.lowPrice : primaryOffer.highPrice);
                 price = this.parsePriceValue(rawPrice);
                 currency = primaryOffer.priceCurrency || null;
-                availability = this.normalizeAvailability(primaryOffer.availability);
             }
         }
 
@@ -177,7 +155,6 @@ class MetadataExtractor {
             price,
             currency,
             image,
-            availability,
             description: description ? String(description).trim() : null,
             sourceType: 'json-ld',
             confidence: price != null && title ? 'high' : 'medium'
@@ -207,12 +184,7 @@ class MetadataExtractor {
                          $('meta[property="og:price:currency"]').attr('content') ||
                          null;
 
-        const rawAvailability = $('meta[property="product:availability"]').attr('content') ||
-                                $('meta[property="og:availability"]').attr('content') ||
-                                null;
-
         const price = this.parsePriceValue(rawPrice);
-        const availability = this.normalizeAvailability(rawAvailability);
         const description = $('meta[property="og:description"]').attr('content') ||
                             $('meta[name="description"]').attr('content') ||
                             null;
@@ -224,7 +196,6 @@ class MetadataExtractor {
             price,
             currency,
             image,
-            availability,
             description: description ? description.trim() : null,
             sourceType: 'opengraph',
             confidence: price != null ? 'medium' : 'low'
@@ -246,9 +217,6 @@ class MetadataExtractor {
         let image = imageEl.attr('src') || imageEl.attr('content') || imageEl.attr('href');
         if (image) image = this.resolveUrl(image, baseUrl);
 
-        const availEl = $('[itemprop="availability"]').first();
-        const rawAvail = availEl.attr('href') || availEl.attr('content') || availEl.text();
-
         if (!price && !title && !image) return null;
 
         return {
@@ -256,7 +224,6 @@ class MetadataExtractor {
             price,
             currency: $('[itemprop="priceCurrency"]').attr('content') || null,
             image,
-            availability: this.normalizeAvailability(rawAvail),
             description: $('[itemprop="description"]').text() || null,
             sourceType: 'microdata',
             confidence: price != null ? 'medium' : 'low'
@@ -273,7 +240,6 @@ class MetadataExtractor {
                 price: null,
                 currency: null,
                 image: null,
-                availability: 'unknown',
                 siteName: this.extractSiteName(null, url),
                 description: null,
                 confidence: 'none',
@@ -298,10 +264,6 @@ class MetadataExtractor {
         const price = jsonLdResult?.price ?? ogResult?.price ?? microdataResult?.price ?? null;
         const currency = jsonLdResult?.currency || ogResult?.currency || microdataResult?.currency || null;
         const image = jsonLdResult?.image || ogResult?.image || microdataResult?.image || null;
-        const availability = (jsonLdResult?.availability !== 'unknown' ? jsonLdResult?.availability : null) ||
-                             (ogResult?.availability !== 'unknown' ? ogResult?.availability : null) ||
-                             (microdataResult?.availability !== 'unknown' ? microdataResult?.availability : null) ||
-                             'unknown';
         const description = jsonLdResult?.description || ogResult?.description || microdataResult?.description || null;
 
         let confidence = 'none';
@@ -323,7 +285,6 @@ class MetadataExtractor {
             price,
             currency: currency ? currency.toUpperCase() : 'EUR',
             image,
-            availability,
             siteName,
             description,
             confidence,

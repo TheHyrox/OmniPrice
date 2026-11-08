@@ -20,8 +20,7 @@ test('MetadataExtractor - Auto-Discovery Proof of Concept', async (t) => {
                     "offers": {
                         "@type": "Offer",
                         "price": "499.95",
-                        "priceCurrency": "EUR",
-                        "availability": "https://schema.org/InStock"
+                        "priceCurrency": "EUR"
                     }
                 }
                 </script>
@@ -36,7 +35,6 @@ test('MetadataExtractor - Auto-Discovery Proof of Concept', async (t) => {
         assert.equal(result.price, 499.95);
         assert.equal(result.currency, 'EUR');
         assert.equal(result.image, 'https://cdn.louis.de/products/shoei-nxr2.jpg');
-        assert.equal(result.availability, 'in_stock');
         assert.equal(result.siteName, 'Louis Moto');
         assert.equal(result.confidence, 'high');
         assert.equal(result.sourceType, 'json-ld');
@@ -65,8 +63,7 @@ test('MetadataExtractor - Auto-Discovery Proof of Concept', async (t) => {
                                 "@type": "AggregateOffer",
                                 "lowPrice": "219.90",
                                 "highPrice": "249.90",
-                                "priceCurrency": "EUR",
-                                "availability": "https://schema.org/OutOfStock"
+                                "priceCurrency": "EUR"
                             }
                         }
                     ]
@@ -80,7 +77,6 @@ test('MetadataExtractor - Auto-Discovery Proof of Concept', async (t) => {
 
         assert.equal(result.title, 'Alpinestars SMX-6 v2 Boots');
         assert.equal(result.price, 219.90);
-        assert.equal(result.availability, 'out_of_stock');
         assert.equal(result.image, 'https://cdn.motoblouz.com/boots.png');
         assert.equal(result.confidence, 'high');
         assert.equal(result.sourceType, 'json-ld');
@@ -96,7 +92,6 @@ test('MetadataExtractor - Auto-Discovery Proof of Concept', async (t) => {
                 <meta property="og:image" content="/images/sony-xm5.jpg">
                 <meta property="product:price:amount" content="349.00">
                 <meta property="product:price:currency" content="EUR">
-                <meta property="product:availability" content="in stock">
             </head>
             </html>
         `;
@@ -107,7 +102,6 @@ test('MetadataExtractor - Auto-Discovery Proof of Concept', async (t) => {
         assert.equal(result.price, 349.00);
         assert.equal(result.currency, 'EUR');
         assert.equal(result.image, 'https://www.amazon.fr/images/sony-xm5.jpg'); // tests relative URL resolution
-        assert.equal(result.availability, 'in_stock');
         assert.equal(result.siteName, 'Amazon');
         assert.equal(result.confidence, 'medium');
         assert.equal(result.sourceType, 'opengraph');
@@ -126,7 +120,6 @@ test('MetadataExtractor - Auto-Discovery Proof of Concept', async (t) => {
                     <img itemprop="image" src="/media/laguna.jpg" />
                     <span itemprop="price" content="999.99">999,99 €</span>
                     <meta itemprop="priceCurrency" content="EUR" />
-                    <link itemprop="availability" href="http://schema.org/PreOrder" />
                 </div>
             </body>
             </html>
@@ -138,7 +131,6 @@ test('MetadataExtractor - Auto-Discovery Proof of Concept', async (t) => {
         assert.equal(result.price, 999.99);
         assert.equal(result.currency, 'EUR');
         assert.equal(result.image, 'https://www.dafy-moto.com/media/laguna.jpg');
-        assert.equal(result.availability, 'preorder');
         assert.equal(result.sourceType, 'microdata');
     });
 

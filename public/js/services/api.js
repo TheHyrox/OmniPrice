@@ -219,3 +219,40 @@ const API = {
         }
     }
 };
+
+// Aliases for convenient flat access
+API.getProducts = (options) => API.products.getAll(options);
+API.getProduct = (id) => API.products.getById(id);
+API.createProduct = (data) => API.products.create(data);
+API.updateProduct = (id, data) => API.products.update(id, data);
+API.deleteProduct = (id) => API.products.delete(id);
+
+API.getStores = () => API.stores.getAll();
+API.createStore = (data) => API.stores.create(data);
+API.updateStore = (id, data) => API.stores.update(id, data);
+API.deleteStore = (id) => API.stores.delete(id);
+API.syncAllProductsWithStores = () => API.stores.syncAll();
+
+API.getAlerts = () => API.alerts.getAll();
+API.getAlert = (id) => API.alerts.getById(id);
+API.createAlert = (data) => API.alerts.create(data);
+API.updateAlert = (id, data) => API.alerts.update(id, data);
+API.deleteAlert = (id) => API.alerts.delete(id);
+API.testDiscordWebhook = (url) => API.alerts.testWebhook(url);
+API.triggerTestAlert = (id) => API.alerts.triggerTest(id);
+
+API.getSettings = () => API.settings.get();
+API.updateSettings = (data) => API.settings.update(data);
+API.importBackup = (data, mode) => API.settings.restoreBackup(data, mode);
+
+API.scrapeSource = (pId, idx) => API.scraper.scrapeSource(pId, idx);
+API.scrapeProduct = (pId) => API.scraper.scrapeProduct(pId);
+API.scrapeAll = () => API.scraper.scrapeAll();
+API.testScrape = (opts) => API.scraper.testSelector(opts.url, opts.cssSelector, opts.usePuppeteer);
+API.autodiscoverMetadata = (url) => API.scraper.autodiscover(url);
+
+API.getVapidPublicKey = () => API.push.getVapidKey();
+API.subscribeWebPush = (sub) => API.push.subscribe(sub);
+API.sendTestWebPush = () => API.push.sendTestNotification();
+
+window.API = API;

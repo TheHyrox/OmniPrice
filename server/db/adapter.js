@@ -20,8 +20,11 @@ class DatabaseAdapter {
     async createProduct(data) { return this._execute('createProduct', data); }
     async updateProduct(id, data) { return this._execute('updateProduct', id, data); }
     async deleteProduct(id) { return this._execute('deleteProduct', id); }
-    async addPriceHistory(productId, sourceIndex, price) { 
-        return this._execute('addPriceHistory', productId, sourceIndex, price); 
+    async addPriceHistory(productId, sourceIndex, price, options = {}) { 
+        return this._execute('addPriceHistory', productId, sourceIndex, price, options); 
+    }
+    async recordScrapeError(productId, sourceIndex, errorMsg) {
+        return this._execute('recordScrapeError', productId, sourceIndex, errorMsg);
     }
     async getPriceHistory(productId) { 
         return this._execute('getPriceHistory', productId); 

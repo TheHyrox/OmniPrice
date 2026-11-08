@@ -154,6 +154,9 @@ const ProductDetail = {
 
                 <div class="detail-info">
                     <div class="detail-tags">
+                        ${product.healthStatus === 'ok' ? '<span class="health-badge ok">🟢 Feeds Healthy</span>' : ''}
+                        ${product.healthStatus === 'warning' ? '<span class="health-badge warning">🟡 Feeds Warning</span>' : ''}
+                        ${product.healthStatus === 'error' ? '<span class="health-badge error">🔴 Feeds Failing</span>' : ''}
                         ${(product.tags || []).map(tag => `<span class="tag">#${escapeHtml(tag)}</span>`).join('')}
                     </div>
                     <h1 class="detail-title">${title}</h1>
@@ -346,8 +349,9 @@ const ProductDetail = {
                         </div>
 
                         <div class="form-group selector-group">
-                            <label>CSS Price Selector *</label>
-                            <input type="text" id="newSourceSelector" placeholder="e.g., .price, span.heading1" required />
+                            <label>CSS Price Selector(s) *</label>
+                            <textarea id="newSourceSelector" rows="2" placeholder="e.g. span.price&#10;div.offer-price" required style="font-family: monospace; font-size: 0.85rem; width: 100%; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); padding: 8px 10px;"></textarea>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px; display: block;">Supports multiple fallback selectors (one per line or pipe-separated) in preference order</span>
                         </div>
                     </div>
 
@@ -378,12 +382,14 @@ const ProductDetail = {
                         const color = this.getSourceColor(index);
 
                         return `
-                            <div class="source-row-card ${isCheapest ? 'is-best-deal' : ''}">
+                            <div class="source-row-card ${isCheapest ? 'is-best-deal' : ''} ${source.lastStatus === 'error' ? 'has-error' : ''}">
                                 <div class="source-identity">
                                     <div class="source-name-row">
                                         <span class="source-color-dot" style="background-color: ${color}"></span>
                                         <strong class="source-name">${escapeHtml(source.siteName)}</strong>
                                         ${isCheapest ? `<span class="source-lowest-pill">Lowest Price</span>` : ''}
+                                        ${source.lastStatus === 'ok' ? `<span class="source-health-pill ok" title="Feed verified and active">🟢 OK</span>` : ''}
+                                        ${source.lastStatus === 'error' ? `<span class="source-health-pill error" title="${escapeHtml(source.lastError || 'Scrape failed')}">🔴 Error: ${escapeHtml(source.lastError || 'Scrape failed')}</span>` : ''}
                                         ${source.usePuppeteer ? `<span class="source-puppeteer-pill" title="Rendered with Puppeteer">JS</span>` : ''}
                                     </div>
                                     <a href="${escapeHtml(source.url)}" target="_blank" rel="noopener" class="source-url-link" title="${escapeHtml(source.url)}">
@@ -392,8 +398,8 @@ const ProductDetail = {
                                 </div>
 
                                 <div class="source-selector-info">
-                                    <span class="source-selector-label">CSS Selector:</span>
-                                    <code class="source-selector-code" title="Click to copy" onclick="navigator.clipboard.writeText('${escapeHtml(source.cssSelector)}'); alert('Selector copied to clipboard!');">
+                                    <span class="source-selector-label">CSS Selectors:</span>
+                                    <code class="source-selector-code" title="Click to copy" onclick="navigator.clipboard.writeText('${escapeHtml(source.cssSelector)}'); Toast.info('Selector copied to clipboard!');">
                                         ${escapeHtml(source.cssSelector)}
                                     </code>
                                     <span class="source-scrape-time">Last check: ${formatTimeAgo(source.lastScraped)}</span>

@@ -75,6 +75,9 @@ router.post('/product/:productId/source/:sourceIndex', scrapeProductLimiter, asy
             source: updated.sources[sourceIndex]
         });
     } catch (error) {
+        if (req.params.productId && req.params.sourceIndex !== undefined) {
+            await db.recordScrapeError(req.params.productId, parseInt(req.params.sourceIndex), error.message).catch(() => {});
+        }
         res.status(500).json({ error: error.message });
     }
 });
@@ -93,6 +96,8 @@ router.post('/product/:productId', scrapeProductLimiter, async (req, res) => {
         for (let i = 0; i < results.length; i++) {
             if (results[i].success) {
                 await db.addPriceHistory(req.params.productId, i, results[i].price);
+            } else {
+                await db.recordScrapeError(req.params.productId, i, results[i].error);
             }
         }
         
@@ -129,6 +134,8 @@ router.post('/all', scrapeAllLimiter, async (req, res) => {
             for (let i = 0; i < results.length; i++) {
                 if (results[i].success) {
                     await db.addPriceHistory(product._id, i, results[i].price);
+                } else {
+                    await db.recordScrapeError(product._id, i, results[i].error);
                 }
             }
             

@@ -232,6 +232,21 @@
                 </div>
                 <div class="settings-grid">
                     <div class="settings-card">
+                        <h3>Currency</h3>
+                        <div class="setting-row">
+                            <label for="currencySetting" style="padding-right: 10px">Default Currency</label>
+                            <select id="currencySetting">
+                                <option value="EUR">EUR (€) – Euro</option>
+                                <option value="USD">USD ($) – US Dollar</option>
+                                <option value="GBP">GBP (£) – British Pound</option>
+                                <option value="CAD">CAD (CA$) – Canadian Dollar</option>
+                                <option value="JPY">JPY (¥) – Japanese Yen</option>
+                                <option value="CHF">CHF (CHF) – Swiss Franc</option>
+                                <option value="AUD">AUD (A$) – Australian Dollar</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="settings-card">
                         <h3>Appearance</h3>
                         <div class="setting-row">
                             <label>Theme</label>
@@ -481,8 +496,9 @@
                         <input type="text" id="storeName" placeholder="e.g., Louis Moto" required />
                     </div>
                     <div class="form-group">
-                        <label for="storeCssSelector">CSS Selector *</label>
-                        <input type="text" id="storeCssSelector" placeholder="e.g., span.heading1" required />
+                        <label for="storeCssSelector">CSS Price Selector(s) *</label>
+                        <textarea id="storeCssSelector" rows="2" placeholder="e.g. span.price&#10;div.offer-price" required style="font-family: monospace; font-size: 0.85rem; width: 100%; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); padding: 8px 10px;"></textarea>
+                        <span class="form-help">Enter multiple selectors (one per line or pipe-separated) in preference order.</span>
                     </div>
                     <div class="form-group">
                         <label for="storeDefaultUrl">Default Base URL (optional)</label>
@@ -520,10 +536,10 @@
                     <div class="form-group">
                         <label for="alertTypeSelect">Alert Condition *</label>
                         <select id="alertTypeSelect" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 0.95rem;">
-                            <option value="drop">📉 Target Price Drop (Falls to or below €X)</option>
+                            <option value="drop">📉 Target Price Drop (Falls to or below target)</option>
                             <option value="percentage_drop">🏷️ % Discount Threshold (Drops by > X% from reference)</option>
                             <option value="atl">🔥 All-Time Low (Hits a new record low)</option>
-                            <option value="rise">📈 Price Rise (Price rises to or above €X)</option>
+                            <option value="rise">📈 Price Rise (Price rises to or above target)</option>
                         </select>
                     </div>
                     <div class="form-group" id="targetPriceGroup">
@@ -568,9 +584,16 @@
 
     <script src="/js/utils.js"></script>
     <script src="/js/services/api.js"></script>
+    <script src="/js/services/toast.js"></script>
+    <script src="/js/services/confirm.js"></script>
+    <script src="/js/router.js"></script>
     <script src="/js/components/productCard.js"></script>
     <script src="/js/components/productDetail.js"></script>
     <script src="/js/components/charts.js"></script>
+    <script src="/js/controllers/stores.js"></script>
+    <script src="/js/controllers/alerts.js"></script>
+    <script src="/js/controllers/settings.js"></script>
+    <script src="/js/controllers/products.js"></script>
     <script src="/js/app.js"></script>
 </body>
 

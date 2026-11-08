@@ -63,6 +63,7 @@ class Scheduler {
                         await db.addPriceHistory(product._id, i, results[i].price);
                         console.log(`    [OK] ${product.sources[i].siteName}: €${results[i].price}`);
                     } else {
+                        await db.recordScrapeError(product._id, i, results[i].error);
                         console.log(`    [FAILED] ${product.sources[i].siteName}: ${results[i].error}`);
                     }
                 }

@@ -14,7 +14,9 @@ const productSchema = new mongoose.Schema({
         siteName: { type: String, required: true },
         usePuppeteer: { type: Boolean, default: false },
         lastPrice: { type: Number, default: null },
-        lastScraped: { type: String, default: null }
+        lastScraped: { type: String, default: null },
+        lastStatus: { type: String, default: null },
+        lastError: { type: String, default: null }
     }],
     createdAt: { type: String, default: () => new Date().toISOString() },
     updatedAt: { type: String, default: () => new Date().toISOString() },
@@ -22,8 +24,12 @@ const productSchema = new mongoose.Schema({
     lowestPriceSource: { type: mongoose.Schema.Types.Mixed, default: null },
     priceDelta: { type: Number, default: null },
     minPriceEver: { type: Number, default: null },
+    healthStatus: { type: String, default: 'unknown' },
     active: { type: Boolean, default: true }
 }, { versionKey: false, collection: 'products' });
+
+productSchema.index({ active: 1 });
+productSchema.index({ tags: 1 });
 
 const priceRecordSchema = new mongoose.Schema({
     _id: { type: String, default: uuidv4 },
@@ -48,6 +54,7 @@ const storeSchema = new mongoose.Schema({
 const settingsSchema = new mongoose.Schema({
     _id: { type: String, default: 'default_settings' },
     theme: { type: String, default: 'light' },
+    currency: { type: String, default: 'EUR' },
     scrapeFrequency: { type: Number, default: 43200000 },
     discordWebhookUrl: { type: String, default: '' }
 }, { versionKey: false, collection: 'settings', strict: false });
@@ -67,6 +74,8 @@ const alertSchema = new mongoose.Schema({
     updatedAt: { type: String, default: () => new Date().toISOString() }
 }, { versionKey: false, collection: 'alerts' });
 
+alertSchema.index({ productId: 1, active: 1 });
+
 const Product = mongoose.model('Product', productSchema);
 const PriceRecord = mongoose.model('PriceRecord', priceRecordSchema);
 const Store = mongoose.model('Store', storeSchema);
@@ -84,6 +93,7 @@ const defaultStores = [
 const defaultSettings = {
     _id: 'default_settings',
     theme: 'light',
+    currency: 'EUR',
     scrapeFrequency: 43200000,
     discordWebhookUrl: ''
 };
@@ -179,6 +189,21 @@ class MongoDatabase {
         } else {
             product.lowestPriceSource = null;
             product.priceDelta = null;
+        }
+
+        if (Array.isArray(product.sources) && product.sources.length > 0) {
+            const statuses = product.sources.map(s => s.lastStatus).filter(Boolean);
+            if (statuses.length === 0) {
+                product.healthStatus = 'unknown';
+            } else if (statuses.every(s => s === 'ok')) {
+                product.healthStatus = 'ok';
+            } else if (statuses.every(s => s === 'error')) {
+                product.healthStatus = 'error';
+            } else {
+                product.healthStatus = 'warning';
+            }
+        } else {
+            product.healthStatus = 'unknown';
         }
     }
 
@@ -293,7 +318,7 @@ class MongoDatabase {
         return res.deletedCount > 0;
     }
 
-    async addPriceHistory(productId, sourceIndex, price) {
+    async addPriceHistory(productId, sourceIndex, price, options = {}) {
         const product = await Product.findOne({ _id: productId });
         if (!product) return null;
 
@@ -333,7 +358,25 @@ class MongoDatabase {
         if (product.sources[sourceIndex]) {
             product.sources[sourceIndex].lastPrice = price;
             product.sources[sourceIndex].lastScraped = new Date().toISOString();
+            product.sources[sourceIndex].lastStatus = 'ok';
+            product.sources[sourceIndex].lastError = null;
         }
+
+        this._updateVirtuals(product);
+        await product.save();
+
+        const productObj = product.toObject();
+        productObj.priceHistory = await PriceRecord.find({ productId }).sort({ date: 1 }).lean();
+        return productObj;
+    }
+
+    async recordScrapeError(productId, sourceIndex, errorMsg) {
+        const product = await Product.findOne({ _id: productId });
+        if (!product || !product.sources || !product.sources[sourceIndex]) return null;
+
+        product.sources[sourceIndex].lastScraped = new Date().toISOString();
+        product.sources[sourceIndex].lastStatus = 'error';
+        product.sources[sourceIndex].lastError = String(errorMsg || 'Scrape failed');
 
         this._updateVirtuals(product);
         await product.save();

@@ -6,7 +6,7 @@ const positiveNumber = z.number({ invalid_type_error: 'Must be a number' }).posi
 
 const sourceSchema = z.object({
     url: z.string().url('Source URL must be a valid URL'),
-    cssSelector: z.string().min(1, 'CSS selector is required').max(500),
+    cssSelector: z.string().min(1, 'CSS selector is required').max(1000),
     siteName: z.string().min(1, 'Store name is required').max(100),
     usePuppeteer: z.boolean().optional().default(false),
 });
@@ -33,7 +33,7 @@ const updateProductSchema = createProductSchema.partial().extend({
 
 const createStoreSchema = z.object({
     name: z.string().min(1, 'Store name is required').max(100),
-    cssSelector: z.string().min(1, 'CSS selector is required').max(500),
+    cssSelector: z.string().min(1, 'CSS selector is required').max(1000),
     defaultUrl: z.string().url('Default URL must be a valid URL').optional().or(z.literal('')).nullable(),
 });
 
@@ -94,6 +94,7 @@ const testWebhookSchema = z.object({
 
 const updateSettingsSchema = z.object({
     theme: z.enum(['light', 'dark']).optional(),
+    currency: z.enum(['EUR', 'USD', 'GBP', 'CAD', 'JPY', 'CHF', 'AUD']).optional(),
     scrapeFrequency: z.number().int().min(0).optional(),
     discordWebhookUrl: z
         .string()
@@ -107,7 +108,7 @@ const updateSettingsSchema = z.object({
 
 const testScrapeSchema = z.object({
     url: z.string().url('URL must be a valid URL'),
-    cssSelector: z.string().min(1, 'CSS selector is required').max(500),
+    cssSelector: z.string().min(1, 'CSS selector is required').max(1000),
     usePuppeteer: z.boolean().optional().default(false),
 });
 

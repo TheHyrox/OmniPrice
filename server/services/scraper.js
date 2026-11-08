@@ -87,6 +87,8 @@ class Scraper {
         // Permanent failures that must NOT be retried
         if (error.message && (
             error.message.includes('Selector "') ||
+            error.message.includes('None of the selectors') ||
+            error.message.includes('Could not parse price with selectors') ||
             error.message.includes('Could not parse price from') ||
             error.message.includes('not found')
         )) {
@@ -184,7 +186,28 @@ class Scraper {
         return isNaN(price) ? null : price;
     }
 
+    parseSelectorList(rawSelector) {
+        if (!rawSelector) return [];
+        if (Array.isArray(rawSelector)) {
+            return rawSelector.flatMap(s => this.parseSelectorList(s));
+        }
+        if (typeof rawSelector !== 'string') return [];
+
+        const lines = rawSelector.split(/\r?\n|\|/).map(s => s.trim()).filter(Boolean);
+        const result = [];
+        for (const line of lines) {
+            const tokens = line.split(/,(?![^(]*\))/).map(s => s.trim()).filter(Boolean);
+            result.push(...tokens);
+        }
+        return result.length > 0 ? result : [rawSelector.trim()];
+    }
+
     async scrapeWithCheerio(url, cssSelector) {
+        const selectors = this.parseSelectorList(cssSelector);
+        if (selectors.length === 0) {
+            throw new Error(`Selector "${cssSelector}" not found`);
+        }
+
         try {
             const response = await axios.get(url, {
                 headers: {
@@ -198,21 +221,24 @@ class Scraper {
             });
             
             const $ = cheerio.load(response.data);
-            const element = $(cssSelector).first().clone();
-            element.find('sup, script, style').remove();
-            
-            if (element.length === 0) {
-                throw new Error(`Selector "${cssSelector}" not found`);
+
+            for (const selector of selectors) {
+                const element = $(selector).first().clone();
+                if (element.length === 0) continue;
+
+                element.find('sup, script, style').remove();
+                const priceText = element.text().trim();
+                const price = this.parsePrice(priceText);
+                
+                if (price !== null) {
+                    return price;
+                }
             }
             
-            const priceText = element.text().trim();
-            const price = this.parsePrice(priceText);
-            
-            if (price === null) {
-                throw new Error(`Could not parse price from: "${priceText}"`);
+            if (selectors.length === 1) {
+                throw new Error(`Selector "${selectors[0]}" not found`);
             }
-            
-            return price;
+            throw new Error(`None of the selectors [${selectors.join(', ')}] matched or yielded a valid price`);
         } catch (error) {
             if (error.response?.status === 403 || error.response?.status === 429) {
                 throw new Error('Access blocked - try enabling Puppeteer');
@@ -222,6 +248,11 @@ class Scraper {
     }
 
     async scrapeWithPuppeteer(url, cssSelector) {
+        const selectors = this.parseSelectorList(cssSelector);
+        if (selectors.length === 0) {
+            throw new Error(`Selector "${cssSelector}" not found`);
+        }
+
         return this.puppeteerSemaphore.run(async () => {
             let browser;
             try {
@@ -242,20 +273,35 @@ class Scraper {
                     timeout: 30000 
                 });
 
-                await page.waitForSelector(cssSelector, { timeout: 10000 });
-                
-                const priceText = await page.$eval(cssSelector, el => {
-                    const clone = el.cloneNode(true);
-                    clone.querySelectorAll('sup, script, style').forEach(node => node.remove());
-                    return clone.textContent.trim();
-                });
-                const price = this.parsePrice(priceText);
-                
-                if (price === null) {
-                    throw new Error(`Could not parse price from: "${priceText}"`);
+                let parsedPrice = null;
+                const perSelectorTimeout = Math.max(2500, Math.floor(10000 / selectors.length));
+
+                for (const selector of selectors) {
+                    try {
+                        await page.waitForSelector(selector, { timeout: perSelectorTimeout });
+                        const priceText = await page.$eval(selector, el => {
+                            const clone = el.cloneNode(true);
+                            clone.querySelectorAll('sup, script, style').forEach(node => node.remove());
+                            return clone.textContent.trim();
+                        });
+                        const price = this.parsePrice(priceText);
+                        if (price !== null) {
+                            parsedPrice = price;
+                            break;
+                        }
+                    } catch (_) {
+                        // Fallback to next selector in preference order
+                    }
+                }
+
+                if (parsedPrice === null) {
+                    if (selectors.length === 1) {
+                        throw new Error(`Could not parse price from: "${selectors[0]}"`);
+                    }
+                    throw new Error(`Could not parse price with selectors: [${selectors.join(', ')}]`);
                 }
                 
-                return price;
+                return parsedPrice;
             } catch (error) {
                 const msg = (error.message || '').toLowerCase();
                 const isCrash =

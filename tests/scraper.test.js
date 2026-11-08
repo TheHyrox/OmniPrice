@@ -55,9 +55,39 @@ test('Scraper - parsePrice edge cases', async (t) => {
         assert.strictEqual(scraper.parsePrice('   \n\t  '), null);
     });
 
-    await t.test('Case 11: Non-numeric strings and out-of-stock indicators', () => {
-        assert.strictEqual(scraper.parsePrice('Out of stock'), null);
+    await t.test('Case 11: Non-numeric strings and text indicators', () => {
+        assert.strictEqual(scraper.parsePrice('Unavailable'), null);
         assert.strictEqual(scraper.parsePrice('Sold Out'), null);
         assert.strictEqual(scraper.parsePrice('FREE'), null);
+    });
+});
+
+test('Scraper - Multiple CSS Selector Parsing & Fallbacks', async (t) => {
+    await t.test('splits newline-separated selectors preserving order', () => {
+        const input = `
+            span.primary-price
+            div.deal-price
+            .fallback-price
+        `;
+        const result = scraper.parseSelectorList(input);
+        assert.deepStrictEqual(result, ['span.primary-price', 'div.deal-price', '.fallback-price']);
+    });
+
+    await t.test('splits pipe-separated selectors preserving order', () => {
+        const input = 'span.current-price | .main-price | #price';
+        const result = scraper.parseSelectorList(input);
+        assert.deepStrictEqual(result, ['span.current-price', '.main-price', '#price']);
+    });
+
+    await t.test('splits comma-separated selectors without breaking pseudo-classes', () => {
+        const input = 'span.price:not(.strike, .old), div.final-price';
+        const result = scraper.parseSelectorList(input);
+        assert.deepStrictEqual(result, ['span.price:not(.strike, .old)', 'div.final-price']);
+    });
+
+    await t.test('handles single selector string and empty inputs gracefully', () => {
+        assert.deepStrictEqual(scraper.parseSelectorList('span.single-price'), ['span.single-price']);
+        assert.deepStrictEqual(scraper.parseSelectorList(''), []);
+        assert.deepStrictEqual(scraper.parseSelectorList(null), []);
     });
 });
