@@ -7,6 +7,9 @@ const AlertsController = {
 
     async loadAlerts() {
         try {
+            if ((!window.App?.products || window.App.products.length === 0) && window.App?.loadProducts) {
+                await window.App.loadProducts();
+            }
             this.alerts = await API.getAlerts();
             if (window.App) window.App.alerts = this.alerts;
             this.renderAlerts();
@@ -37,7 +40,7 @@ const AlertsController = {
         container.innerHTML = `
             <div class="alerts-grid">
                 ${this.alerts.map(alert => {
-                    const product = products.find(p => p._id === alert.productId) || {
+                    const product = products.find(p => p._id === alert.productId) || alert.product || {
                         title: 'Unknown Product',
                         image: '/images/placeholder.svg',
                         lowestPrice: null,
@@ -134,7 +137,7 @@ const AlertsController = {
         targetPriceGroup.style.display = 'none';
         if (thresholdPercentGroup) thresholdPercentGroup.style.display = 'none';
         if (atlInfoGroup) atlInfoGroup.style.display = 'none';
-        if (notifyOnRiseGroup) notifyOnRiseGroup.style.display = 'block';
+        if (notifyOnRiseGroup) notifyOnRiseGroup.style.display = (type === 'rise') ? 'none' : 'block';
 
         if (targetPriceInput) targetPriceInput.required = false;
         if (thresholdPercentInput) thresholdPercentInput.required = false;
@@ -186,6 +189,12 @@ const AlertsController = {
 
         form.reset();
         document.getElementById('alertId').value = '';
+
+        // Dynamic currency in target price label
+        const targetLabel = document.getElementById('alertTargetPriceLabel') || document.querySelector('label[for="alertTargetPrice"]');
+        if (targetLabel && typeof Utils !== 'undefined' && Utils.getCurrencySymbol) {
+            targetLabel.textContent = `Target Price (${Utils.getCurrencySymbol()}) *`;
+        }
 
         // Populate products dropdown
         const products = (window.App && window.App.products) || [];
@@ -282,10 +291,10 @@ const AlertsController = {
         const data = {
             productId,
             alertType,
-            targetPrice,
-            thresholdPercent,
+            targetPrice: (alertType === 'drop' || alertType === 'rise') ? targetPrice : null,
+            thresholdPercent: (alertType === 'percentage_drop') ? thresholdPercent : null,
             webhookUrl: webhookUrl || null,
-            notifyOnRise
+            notifyOnRise: (alertType !== 'rise') ? notifyOnRise : false
         };
 
         try {

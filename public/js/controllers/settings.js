@@ -46,6 +46,9 @@ const SettingsController = {
                 if (window.ProductDetail?.currentProduct) {
                     window.ProductDetail.render(window.ProductDetail.currentProduct);
                 }
+                if (window.Charts && window.Charts.products && window.Charts.products.length > 0) {
+                    window.Charts.init(window.Charts.products);
+                }
             }
         } catch (error) {
             Toast.error('Failed to save currency setting: ' + error.message);

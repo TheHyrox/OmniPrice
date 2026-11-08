@@ -48,6 +48,11 @@ const Charts = {
             this.eventsBound = true;
         }
 
+        const absBtn = document.getElementById('scaleAbsoluteBtn');
+        if (absBtn && typeof Utils !== 'undefined' && Utils.getCurrencySymbol) {
+            absBtn.textContent = `${Utils.getCurrencySymbol()} Absolute`;
+        }
+
         this.renderKpis();
         this.renderTagFilters();
         this.renderChips();
@@ -676,10 +681,16 @@ const Charts = {
 
                                 if (isRelative) {
                                     const sign = val > 0 ? '+' : '';
-                                    const priceInfo = originalPrice != null ? ` (€${originalPrice.toFixed(2)})` : '';
+                                    const formattedOriginal = (typeof Utils !== 'undefined' && Utils.formatCurrency) 
+                                        ? Utils.formatCurrency(originalPrice) 
+                                        : `€${originalPrice?.toFixed(2)}`;
+                                    const priceInfo = originalPrice != null ? ` (${formattedOriginal})` : '';
                                     return `${ds.label}: ${sign}${val.toFixed(1)}%${priceInfo}`;
                                 }
-                                return `${ds.label}: €${val.toFixed(2)}`;
+                                const formattedVal = (typeof Utils !== 'undefined' && Utils.formatCurrency) 
+                                    ? Utils.formatCurrency(val) 
+                                    : `€${val.toFixed(2)}`;
+                                return `${ds.label}: ${formattedVal}`;
                             }
                         }
                     }
@@ -694,7 +705,13 @@ const Charts = {
                         ticks: {
                             color: textColor,
                             font: { size: 11 },
-                            callback: (val) => isRelative ? `${val > 0 ? '+' : ''}${val.toFixed(0)}%` : `€${val.toFixed(0)}`
+                            callback: (val) => {
+                                if (isRelative) {
+                                    return `${val > 0 ? '+' : ''}${val.toFixed(0)}%`;
+                                }
+                                const symbol = (typeof Utils !== 'undefined' && Utils.getCurrencySymbol) ? Utils.getCurrencySymbol() : '€';
+                                return `${symbol}${val.toFixed(0)}`;
+                            }
                         }
                     }
                 }
@@ -752,8 +769,8 @@ const Charts = {
             const image = escapeHtml(product.image || '/images/placeholder.svg');
             const isComparing = this.selectedProductIds.has(product._id);
             const isATL = this.isAtAllTimeLow(product);
-            const currentPrice = product.lowestPrice != null ? `€${product.lowestPrice.toFixed(2)}` : 'N/A';
-            const refPrice = product.referencePrice != null ? `€${product.referencePrice.toFixed(2)}` : '';
+            const currentPrice = product.lowestPrice != null ? ((typeof Utils !== 'undefined' && Utils.formatCurrency) ? Utils.formatCurrency(product.lowestPrice) : `€${product.lowestPrice.toFixed(2)}`) : 'N/A';
+            const refPrice = product.referencePrice != null ? ((typeof Utils !== 'undefined' && Utils.formatCurrency) ? Utils.formatCurrency(product.referencePrice) : `€${product.referencePrice.toFixed(2)}`) : '';
             const delta = product.priceDelta;
 
             return `
@@ -848,9 +865,11 @@ const Charts = {
         if (statsEl && prices.length > 0) {
             const minP = Math.min(...prices);
             const maxP = Math.max(...prices);
+            const fmtMin = (typeof Utils !== 'undefined' && Utils.formatCurrency) ? Utils.formatCurrency(minP) : `€${minP.toFixed(2)}`;
+            const fmtMax = (typeof Utils !== 'undefined' && Utils.formatCurrency) ? Utils.formatCurrency(maxP) : `€${maxP.toFixed(2)}`;
             statsEl.innerHTML = `
-                <span>Min: €${minP.toFixed(2)}</span>
-                <span>Max: €${maxP.toFixed(2)}</span>
+                <span>Min: ${fmtMin}</span>
+                <span>Max: ${fmtMax}</span>
             `;
         }
 
@@ -894,7 +913,7 @@ const Charts = {
                         displayColors: false,
                         callbacks: {
                             title: (items) => items[0]?.label || '',
-                            label: (ctx) => `€${ctx.raw.toFixed(2)}`
+                            label: (ctx) => (typeof Utils !== 'undefined' && Utils.formatCurrency) ? Utils.formatCurrency(ctx.raw) : `€${ctx.raw.toFixed(2)}`
                         }
                     }
                 },
@@ -936,3 +955,10 @@ const Charts = {
         }
     }
 };
+
+if (typeof window !== 'undefined') {
+    window.Charts = Charts;
+}
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = Charts;
+}

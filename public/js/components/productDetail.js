@@ -619,3 +619,10 @@ const ProductDetail = {
         }
     }
 };
+
+if (typeof window !== 'undefined') {
+    window.ProductDetail = ProductDetail;
+}
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = ProductDetail;
+}

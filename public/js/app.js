@@ -25,13 +25,14 @@ const App = {
     async init() {
         this.loadTheme();
         this.bindEvents();
-        this.setupChartTimeframes();
+
+        // Load settings first to establish active currency & preferences
+        await SettingsController.loadSettings();
 
         // Load initial core data
         await Promise.all([
             ProductsController.loadProducts(),
-            StoresController.loadStores(),
-            SettingsController.loadSettings()
+            StoresController.loadStores()
         ]);
 
         SettingsController.initServiceWorkerAndPush();
@@ -175,6 +176,19 @@ const App = {
         document.getElementById('backToProducts')?.addEventListener('click', () => {
             this.navigateToTab('products');
         });
+
+        // Close modals on backdrop click or Escape key
+        window.addEventListener('click', (e) => {
+            if (e.target.classList && e.target.classList.contains('modal')) {
+                e.target.classList.remove('active');
+            }
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal.active').forEach(m => m.classList.remove('active'));
+            }
+        });
     },
 
     navigateToTab(tabName, updateRoute = true) {
@@ -196,15 +210,19 @@ const App = {
         }
 
         if (tabName === 'charts' && window.Charts) {
-            if (!this.chartsProductsWithHistory) {
+            const prods = (ProductsController.products && ProductsController.products.length > 0)
+                ? ProductsController.products
+                : (this.products || []);
+
+            if (prods.length > 0) {
+                Charts.init(prods);
+            } else {
                 API.getProducts({ includeHistory: true }).then(productsWithHistory => {
                     this.chartsProductsWithHistory = productsWithHistory;
                     Charts.init(productsWithHistory);
                 }).catch(() => {
-                    Charts.init(ProductsController.products);
+                    Charts.init([]);
                 });
-            } else {
-                setTimeout(() => Charts.init(this.chartsProductsWithHistory), 100);
             }
         } else if (tabName === 'alerts') {
             AlertsController.loadAlerts();
@@ -245,13 +263,7 @@ const App = {
     },
 
     setupChartTimeframes() {
-        document.querySelectorAll('#charts-tab .tf-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                if (window.Charts) {
-                    Charts.updateTimeframe(parseInt(btn.dataset.range, 10));
-                }
-            });
-        });
+        // Timeframe button events are managed by Charts.bindEvents()
     },
 
     // ─── Facade Delegations for Controller Operations ──────────────────────
