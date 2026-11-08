@@ -130,6 +130,7 @@ const App = {
         document.getElementById('closeStoreModal')?.addEventListener('click', () => StoresController.closeStoreModal());
         document.getElementById('cancelStoreModal')?.addEventListener('click', () => StoresController.closeStoreModal());
         document.getElementById('storeForm')?.addEventListener('submit', (e) => StoresController.handleStoreFormSubmit(e));
+        document.getElementById('addStoreSelectorRowBtn')?.addEventListener('click', () => StoresController.addSelectorRow());
         document.getElementById('syncAllStoresBtn')?.addEventListener('click', () => StoresController.syncAllStores());
 
         // Alerts Modal Handlers

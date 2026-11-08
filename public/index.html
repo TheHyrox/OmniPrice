@@ -497,9 +497,14 @@
                         <input type="text" id="storeName" placeholder="e.g., Louis Moto" required />
                     </div>
                     <div class="form-group">
-                        <label for="storeCssSelector">CSS Price Selector(s) *</label>
-                        <textarea id="storeCssSelector" rows="2" placeholder="e.g. span.price&#10;div.offer-price" required style="font-family: monospace; font-size: 0.85rem; width: 100%; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); padding: 8px 10px;"></textarea>
-                        <span class="form-help">Enter multiple selectors (one per line or pipe-separated) in preference order.</span>
+                        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+                            <label style="margin-bottom: 0;">CSS Price Selectors *</label>
+                            <span style="font-size: 0.75rem; color: var(--text-tertiary);">Ordered by preference (top = primary)</span>
+                        </div>
+                        <ol id="storeSelectorsList" class="store-selectors-order-list"></ol>
+                        <button type="button" class="btn btn-secondary btn-sm" id="addStoreSelectorRowBtn" style="margin-top: 8px; width: 100%;">
+                            + Add Fallback Selector
+                        </button>
                     </div>
                     <div class="form-group">
                         <label for="storeDefaultUrl">Default Base URL (optional)</label>

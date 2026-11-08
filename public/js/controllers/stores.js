@@ -23,7 +23,14 @@ const StoresController = {
         if (!this.stores || this.stores.length === 0) {
             container.innerHTML = `
                 <div class="empty-state" style="grid-column: 1 / -1; padding: 48px;">
-                    <div class="empty-state-icon">🏬</div>
+                    <div class="empty-state-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-tertiary);">
+                            <path d="M3 3h18l-2 9H5L3 3z"></path>
+                            <path d="M5 12v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9"></path>
+                            <path d="M9 22V12"></path>
+                            <path d="M15 22V12"></path>
+                        </svg>
+                    </div>
                     <h3>No store presets configured</h3>
                     <p>Add preset templates to quickly auto-fill CSS selectors and recognize merchants when adding product URLs.</p>
                     <button class="btn btn-primary btn-sm" onclick="App.openStoreModal()" style="margin-top: 14px;">+ Create First Store</button>
@@ -35,7 +42,6 @@ const StoresController = {
         container.innerHTML = this.stores.map(store => {
             const id = Utils.escapeHtml(store._id);
             const name = Utils.escapeHtml(store.name);
-            const selector = Utils.escapeHtml(store.cssSelector);
             const defaultUrl = Utils.escapeHtml(store.defaultUrl || '');
             const selectorLines = (store.cssSelector || '').split(/\r?\n|\|/).map(s => s.trim()).filter(Boolean);
             const hasMultipleSelectors = selectorLines.length > 1;
@@ -43,25 +49,41 @@ const StoresController = {
             return `
                 <div class="store-card">
                     <div class="store-card-header">
-                        <div class="store-icon">🏬</div>
-                        <div>
+                        <div class="store-icon" title="Store Preset">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 3h18l-2 9H5L3 3z"></path>
+                                <path d="M5 12v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9"></path>
+                                <path d="M9 22V12"></path>
+                                <path d="M15 22V12"></path>
+                            </svg>
+                        </div>
+                        <div style="flex: 1; min-width: 0;">
                             <h3 class="store-name">${name}</h3>
                             ${defaultUrl ? `
                                 <a href="${defaultUrl}" target="_blank" rel="noopener" class="store-domain">
-                                    ${defaultUrl.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]} ↗
+                                    <span>${defaultUrl.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]}</span>
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
                                 </a>
                             ` : '<span class="store-domain" style="color: var(--text-tertiary);">No default domain</span>'}
                         </div>
                     </div>
                     <div class="store-body">
                         <div class="store-meta">
-                            <span class="store-meta-label">CSS Price Selector${hasMultipleSelectors ? ` (${selectorLines.length} fallbacks)` : ''}:</span>
-                            <code class="store-selector" title="Click to copy" onclick="navigator.clipboard.writeText('${selector}'); Toast.info('Selectors copied to clipboard!');">${selector}</code>
+                            <span class="store-meta-label">CSS Price Selectors (${selectorLines.length} in preference order):</span>
+                            <ol class="store-card-selector-list">
+                                ${selectorLines.map((sel, idx) => `
+                                    <li class="store-card-selector-item">
+                                        <span class="selector-step-number">${idx + 1}</span>
+                                        <code class="store-selector" title="Click to copy selector" onclick="navigator.clipboard.writeText('${Utils.escapeHtml(sel)}'); Toast.info('Selector copied to clipboard!');">${Utils.escapeHtml(sel)}</code>
+                                        <span class="selector-rank-badge ${idx === 0 ? 'primary' : 'fallback'}">${idx === 0 ? 'Primary' : 'Fallback'}</span>
+                                    </li>
+                                `).join('')}
+                            </ol>
                         </div>
                     </div>
                     <div class="store-footer">
                         <button class="btn btn-secondary btn-sm" onclick="App.openStoreModal('${id}')">Edit</button>
-                        <button class="btn btn-ghost btn-sm" onclick="App.deleteStore('${id}')" style="color: var(--danger);">Delete</button>
+                        <button class="btn btn-ghost btn-sm" onclick="App.deleteStore('${id}')" style="color: var(--danger); margin-left: auto;">Delete</button>
                     </div>
                 </div>
             `;
@@ -77,23 +99,99 @@ const StoresController = {
         form.reset();
         document.getElementById('storeId').value = '';
 
+        let selectors = [''];
+
         if (storeId) {
             const store = this.stores.find(s => s._id === storeId);
             if (store) {
                 title.textContent = 'Edit Store Preset';
                 document.getElementById('storeId').value = store._id;
                 document.getElementById('storeName').value = store.name;
-                document.getElementById('storeCssSelector').value = store.cssSelector;
                 document.getElementById('storeDefaultUrl').value = store.defaultUrl || '';
                 document.getElementById('storeSyncProducts').checked = true;
+
+                const parsed = (store.cssSelector || '').split(/\r?\n|\|/).map(s => s.trim()).filter(Boolean);
+                if (parsed.length > 0) {
+                    selectors = parsed;
+                }
             }
         } else {
             title.textContent = 'Add Store Preset';
             document.getElementById('storeSyncProducts').checked = false;
         }
 
+        this.renderSelectorList(selectors);
         modal.classList.add('active');
         document.getElementById('storeName').focus();
+    },
+
+    renderSelectorList(selectors = ['']) {
+        const container = document.getElementById('storeSelectorsList');
+        if (!container) return;
+
+        const list = selectors.length > 0 ? selectors : [''];
+
+        container.innerHTML = list.map((val, idx) => {
+            const isFirst = idx === 0;
+            const isLast = idx === list.length - 1;
+            const rankLabel = isFirst ? 'Primary' : 'Fallback';
+            const placeholder = isFirst ? 'e.g. span.price (Primary selector)' : `e.g. div.price (Fallback #${idx})`;
+
+            return `
+                <li class="store-selector-row" data-index="${idx}">
+                    <div class="selector-row-badge">${idx + 1}</div>
+                    <div class="selector-row-content">
+                        <input type="text" class="store-selector-row-input" placeholder="${placeholder}" value="${Utils.escapeHtml(val)}" />
+                        <span class="selector-row-tag ${isFirst ? 'primary' : 'fallback'}">${rankLabel}</span>
+                    </div>
+                    <div class="selector-row-actions">
+                        <button type="button" class="selector-btn-icon selector-move-up" title="Move up in preference" ${isFirst ? 'disabled' : ''} onclick="StoresController.moveSelectorRow(${idx}, -1)">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                        </button>
+                        <button type="button" class="selector-btn-icon selector-move-down" title="Move down in preference" ${isLast ? 'disabled' : ''} onclick="StoresController.moveSelectorRow(${idx}, 1)">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                        <button type="button" class="selector-btn-icon delete selector-remove" title="Remove fallback selector" ${list.length <= 1 ? 'disabled style="opacity: 0.2; pointer-events: none;"' : ''} onclick="StoresController.removeSelectorRow(${idx})">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                    </div>
+                </li>
+            `;
+        }).join('');
+    },
+
+    getSelectorsFromList() {
+        const inputs = document.querySelectorAll('#storeSelectorsList .store-selector-row-input');
+        return Array.from(inputs).map(inp => inp.value.trim()).filter(Boolean);
+    },
+
+    addSelectorRow(value = '') {
+        const current = Array.from(document.querySelectorAll('#storeSelectorsList .store-selector-row-input')).map(inp => inp.value);
+        current.push(value);
+        this.renderSelectorList(current);
+
+        // Focus the newly created row input
+        const allInputs = document.querySelectorAll('#storeSelectorsList .store-selector-row-input');
+        const lastInput = allInputs[allInputs.length - 1];
+        if (lastInput) lastInput.focus();
+    },
+
+    moveSelectorRow(index, direction) {
+        const current = Array.from(document.querySelectorAll('#storeSelectorsList .store-selector-row-input')).map(inp => inp.value);
+        const target = index + direction;
+        if (target < 0 || target >= current.length) return;
+
+        const temp = current[index];
+        current[index] = current[target];
+        current[target] = temp;
+
+        this.renderSelectorList(current);
+    },
+
+    removeSelectorRow(index) {
+        const current = Array.from(document.querySelectorAll('#storeSelectorsList .store-selector-row-input')).map(inp => inp.value);
+        current.splice(index, 1);
+        this.renderSelectorList(current.length > 0 ? current : ['']);
     },
 
     closeStoreModal() {
@@ -105,15 +203,23 @@ const StoresController = {
         e.preventDefault();
         const id = document.getElementById('storeId').value;
         const name = document.getElementById('storeName').value.trim();
-        const cssSelector = document.getElementById('storeCssSelector').value.trim();
         const defaultUrl = document.getElementById('storeDefaultUrl').value.trim();
         const syncProducts = document.getElementById('storeSyncProducts').checked;
 
-        if (!name || !cssSelector) {
-            Toast.warning('Store name and CSS selector are required.');
+        const selectors = this.getSelectorsFromList();
+        if (!name) {
+            Toast.warning('Store name is required.');
             return;
         }
 
+        if (selectors.length === 0) {
+            Toast.warning('Please enter at least one CSS price selector.');
+            const firstInput = document.querySelector('#storeSelectorsList .store-selector-row-input');
+            if (firstInput) firstInput.focus();
+            return;
+        }
+
+        const cssSelector = selectors.join('\n');
         const data = { name, cssSelector, defaultUrl, syncProducts };
 
         try {
