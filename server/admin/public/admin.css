@@ -513,6 +513,15 @@ body {
     flex-shrink: 0;
 }
 
+.issue-thumb-fallback {
+    width: 44px;
+    height: 44px;
+    border-radius: 4px;
+    background: var(--surface-deep);
+    border: 1px solid var(--border-hairline);
+    flex-shrink: 0;
+}
+
 .issue-main {
     flex: 1;
     min-width: 0;

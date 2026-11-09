@@ -16,6 +16,11 @@ const state = {
     eventSource: null
 };
 
+// Timestamps to prevent redundant GET spam
+let lastMetricsFetch = 0;
+let lastIssuesFetch = 0;
+let lastClientErrorsFetch = 0;
+
 // DOM Elements
 const el = {
     connectionStatus: document.getElementById('connectionStatus'),
@@ -103,7 +108,11 @@ document.addEventListener('DOMContentLoaded', () => {
     initConsoleControls();
     initDiagnosticForm();
 
-    setInterval(loadOverviewMetrics, 10000);
+    setInterval(() => {
+        if (!document.hidden) {
+            loadOverviewMetrics();
+        }
+    }, 30000);
 });
 
 // ==============================================================================
@@ -143,9 +152,19 @@ function switchTab(tabId) {
         pane.classList.toggle('active', pane.id === `tab-${tabId}`);
     });
 
-    if (tabId === 'issues') loadIssues();
-    if (tabId === 'client-errors') loadClientErrors();
-    if (tabId === 'overview') loadOverviewMetrics();
+    const now = Date.now();
+    if (tabId === 'issues' && now - lastIssuesFetch > 20000) {
+        lastIssuesFetch = now;
+        loadIssues();
+    }
+    if (tabId === 'client-errors' && now - lastClientErrorsFetch > 20000) {
+        lastClientErrorsFetch = now;
+        loadClientErrors();
+    }
+    if (tabId === 'overview' && now - lastMetricsFetch > 20000) {
+        lastMetricsFetch = now;
+        loadOverviewMetrics();
+    }
 }
 window.switchTab = switchTab;
 
@@ -202,8 +221,8 @@ function initSSE() {
             const clientErr = JSON.parse(e.data);
             state.clientErrors.unshift(clientErr);
             updateClientErrorsCount();
+            renderClientErrors();
             showToast(`Browser error: ${clientErr.message}`, 'error');
-            loadClientErrors();
         } catch (_) {}
     });
 
@@ -289,12 +308,15 @@ async function loadOverviewMetrics() {
         }
 
         // Scheduler
-        if (data.scheduler.isRunning) {
-            el.mSchedulerStatus.textContent = 'Running';
-            el.mSchedulerSub.textContent = `Every ${data.scheduler.frequencyHours}h`;
-        } else {
-            el.mSchedulerStatus.textContent = 'Idle';
-            el.mSchedulerSub.textContent = `Interval inactive (every ${data.scheduler.frequencyHours}h)`;
+        if (data.scheduler) {
+            if (el.mSchedulerStatus) {
+                el.mSchedulerStatus.textContent = data.scheduler.isRunning ? 'Running' : 'Idle';
+            }
+            if (el.mSchedulerSub) {
+                el.mSchedulerSub.textContent = data.scheduler.frequencyHours
+                    ? `Every ${data.scheduler.frequencyHours}h`
+                    : 'Interval inactive';
+            }
         }
 
         // Logs stats
@@ -358,6 +380,13 @@ async function loadIssues() {
     }
 }
 
+function renderThumb(imageUrl) {
+    if (!imageUrl) {
+        return '<div class="issue-thumb-fallback"></div>';
+    }
+    return `<img class="issue-thumb" src="${escapeHtml(imageUrl)}" onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='block';" alt=""><div class="issue-thumb-fallback" style="display:none;"></div>`;
+}
+
 function renderIssues() {
     let filtered = state.issues;
     if (state.activeFilter !== 'all') {
@@ -376,7 +405,7 @@ function renderIssues() {
 
     el.issuesListContainer.innerHTML = filtered.map(issue => `
         <div class="issue-item" id="issue-row-${issue.productId}-${issue.sourceIndex}">
-            <img class="issue-thumb" src="${issue.productImage || '/images/placeholder.png'}" onerror="this.src='/images/placeholder.png'" alt="">
+            ${renderThumb(issue.productImage)}
             <div class="issue-main">
                 <div class="issue-title-row">
                     <span class="issue-title">${escapeHtml(issue.productTitle)}</span>

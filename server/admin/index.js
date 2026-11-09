@@ -37,7 +37,18 @@ app.use('/api/admin/scraper', scraperDebugRouter);
 // Serve Admin UI static files
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Admin UI SPA Fallback
+// Serve product images from OmniPrice main image directory if local image exists
+app.use('/images', express.static(path.join(__dirname, '../../public/images')));
+
+// Explicit 404 for missing static assets (images, fonts, scripts, stylesheets)
+app.use((req, res, next) => {
+    if (/\.(png|jpe?g|gif|svg|ico|webp|css|js|map|woff2?|ttf)$/i.test(req.path) || req.path.startsWith('/images/')) {
+        return res.status(404).type('text/plain').send('Not found');
+    }
+    next();
+});
+
+// Admin UI SPA Fallback (only for HTML routes)
 app.get('*', (req, res) => {
     if (req.path.startsWith('/api/')) {
         return res.status(404).json({ error: `Admin API endpoint ${req.method} ${req.originalUrl} not found` });

@@ -42,6 +42,10 @@
     // Global JS Exception Handler
     window.addEventListener('error', function (event) {
         if (!event) return;
+        // Ignore resource loading errors (broken images, links, etc.)
+        if (event.target && (event.target.tagName === 'IMG' || event.target.tagName === 'LINK' || event.target.tagName === 'SCRIPT')) {
+            return;
+        }
         // Ignore cross-origin script error noise
         if (event.message === 'Script error.' && !event.filename) return;
 
