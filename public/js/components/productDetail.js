@@ -6,16 +6,16 @@ const ProductDetail = {
     showReferenceLine: true,
 
     palette: [
-        '#0071e3', // Electric Blue
-        '#34c759', // Apple Green
-        '#ff9500', // Amber Orange
-        '#ff3b30', // Crimson Red
-        '#af52de', // Purple
-        '#5856d6', // Indigo
-        '#00c7be', // Teal
-        '#ff2d55', // Pink
-        '#64d2ff', // Sky Blue
-        '#ffd60a'  // Yellow
+        '#2563eb', // Cobalt Blue
+        '#10b981', // Emerald
+        '#f59e0b', // Amber
+        '#8b5cf6', // Violet
+        '#06b6d4', // Cyan
+        '#ec4899', // Rose
+        '#64748b', // Slate
+        '#84cc16', // Lime
+        '#f97316', // Orange
+        '#14b8a6'  // Teal
     ],
 
     getSourceColor(index) {
@@ -402,7 +402,7 @@ const ProductDetail = {
                                         <span class="source-color-dot" style="background-color: ${color}"></span>
                                         <strong class="source-name">${escapeHtml(source.siteName)}</strong>
                                         ${isCheapest ? `<span class="source-lowest-pill">Lowest Price</span>` : ''}
-                                        ${source.lastStatus === 'error' ? `<span class="source-health-pill error" title="${escapeHtml(source.lastError || 'Scrape failed')}">🔴 Error: ${escapeHtml(source.lastError || 'Scrape failed')}</span>` : ''}
+                                        ${source.lastStatus === 'error' ? `<span class="source-health-pill error" title="${escapeHtml(source.lastError || 'Scrape failed')}"><span class="chip-dot"></span>Error: ${escapeHtml(source.lastError || 'Scrape failed')}</span>` : ''}
                                         ${source.usePuppeteer ? `<span class="source-puppeteer-pill" title="Rendered with Puppeteer">JS</span>` : ''}
                                     </div>
                                     <a href="${escapeHtml(source.url)}" target="_blank" rel="noopener" class="source-url-link" title="${escapeHtml(source.url)}">

@@ -14,18 +14,16 @@ const Charts = {
     activePreset: null,
 
     palette: [
-        '#0071e3',
-        '#34c759',
-        '#ff9500',
-        '#ff3b30',
-        '#af52de',
-        '#5856d6',
-        '#00c7be',
-        '#ff2d55',
-        '#64d2ff',
-        '#ffd60a',
-        '#30b0c7',
-        '#a2845e'
+        '#2563eb', // Cobalt Blue
+        '#10b981', // Emerald
+        '#f59e0b', // Amber
+        '#8b5cf6', // Violet
+        '#06b6d4', // Cyan
+        '#ec4899', // Rose
+        '#64748b', // Slate
+        '#84cc16', // Lime
+        '#f97316', // Orange
+        '#14b8a6'  // Teal
     ],
 
     getColor(index) {

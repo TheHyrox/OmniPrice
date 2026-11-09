@@ -26,7 +26,12 @@ const AlertsController = {
         if (!this.alerts || this.alerts.length === 0) {
             container.innerHTML = `
                 <div class="empty-state alerts-empty-state" style="padding: 48px;">
-                    <div class="empty-state-icon">🔔</div>
+                    <div class="empty-state-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                        </svg>
+                    </div>
                     <h3>No price alerts configured</h3>
                     <p>Create an alert to get notified via Discord or Web Push when prices drop or reach historical lows.</p>
                     <button class="btn btn-primary btn-sm" onclick="App.openAlertModal()" style="margin-top: 14px;">+ Create First Alert</button>
@@ -57,17 +62,17 @@ const AlertsController = {
                     let conditionDesc = '';
 
                     if (alertType === 'atl') {
-                        typeLabel = '<span class="alert-type-chip atl">🔥 All-Time Low</span>';
+                        typeLabel = '<span class="alert-type-chip atl"><span class="chip-dot"></span>All-Time Low</span>';
                         conditionDesc = 'Notifies whenever a new all-time low price is recorded.';
                     } else if (alertType === 'percentage_drop') {
                         const pct = alert.thresholdPercent || 15;
-                        typeLabel = `<span class="alert-type-chip percent">🏷️ ≥ ${pct}% Drop</span>`;
+                        typeLabel = `<span class="alert-type-chip percent"><span class="chip-dot"></span>≥ ${pct}% Drop</span>`;
                         conditionDesc = `Triggers when price is at least <strong>${pct}% off</strong> reference price (Target: ≤ ${Utils.formatCurrency(alert.targetPrice)}).`;
                     } else if (alertType === 'rise') {
-                        typeLabel = '<span class="alert-type-chip rise">📈 Price Rise</span>';
+                        typeLabel = '<span class="alert-type-chip rise"><span class="chip-dot"></span>Price Rise</span>';
                         conditionDesc = `Triggers if price rises to or above <strong>${Utils.formatCurrency(alert.targetPrice)}</strong>.`;
                     } else {
-                        typeLabel = '<span class="alert-type-chip drop">📉 Price Drop</span>';
+                        typeLabel = '<span class="alert-type-chip drop"><span class="chip-dot"></span>Price Drop</span>';
                         conditionDesc = `Triggers when lowest price drops to or below <strong>${Utils.formatCurrency(alert.targetPrice)}</strong>.`;
                     }
 
@@ -91,13 +96,13 @@ const AlertsController = {
                             <div class="alert-card-body">
                                 <div class="alert-type-row">
                                     ${typeLabel}
-                                    ${alert.notifyOnRise ? '<span class="alert-pill-rise-note" title="Also alerts when deal ends">Ends alert ✓</span>' : ''}
+                                    ${alert.notifyOnRise ? '<span class="alert-pill-rise-note" title="Also alerts when deal ends">Ends alert</span>' : ''}
                                     <span class="alert-status-pill ${isActive ? 'active' : 'paused'}">
                                         ${isActive ? 'Active' : 'Paused'}
                                     </span>
                                 </div>
                                 <p class="alert-condition-text">${conditionDesc}</p>
-                                ${alert.webhookUrl ? '<span class="alert-custom-webhook-badge" title="Custom Discord Webhook configured">🔗 Custom Webhook</span>' : ''}
+                                ${alert.webhookUrl ? '<span class="alert-custom-webhook-badge" title="Custom Discord Webhook configured">Custom Webhook</span>' : ''}
                                 <div class="alert-trigger-meta">
                                     ${lastTriggered}
                                 </div>

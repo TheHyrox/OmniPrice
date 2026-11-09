@@ -75,25 +75,25 @@ const ProductsController = {
         const issueFeeds = activeCatalog.filter(p => p.healthStatus === 'warning' || p.healthStatus === 'error').length;
 
         container.innerHTML = `
-            <div class="kpi-card">
+            <div class="product-kpi-card">
                 <span class="kpi-label">Tracked Items</span>
                 <span class="kpi-value">${total}</span>
                 <span class="kpi-sub">${activeCount} actively monitored</span>
             </div>
-            <div class="kpi-card highlight-atl">
-                <span class="kpi-label">All-Time Lows</span>
+            <div class="product-kpi-card highlight-atl">
+                <span class="kpi-label">Record Lows</span>
                 <span class="kpi-value">${atlCount}</span>
-                <span class="kpi-sub">Record best prices</span>
+                <span class="kpi-sub">Historic lowest prices</span>
             </div>
-            <div class="kpi-card highlight-savings">
+            <div class="product-kpi-card highlight-savings">
                 <span class="kpi-label">Total Savings</span>
                 <span class="kpi-value">${Utils.formatCurrency(totalSavings)}</span>
-                <span class="kpi-sub">Across ${dealsCount} discounted deals</span>
+                <span class="kpi-sub">${dealsCount} items below MSRP</span>
             </div>
-            <div class="kpi-card">
-                <span class="kpi-label">Scraper Feeds</span>
+            <div class="product-kpi-card">
+                <span class="kpi-label">Store Feeds</span>
                 <span class="kpi-value">${healthyFeeds}/${total}</span>
-                <span class="kpi-sub">${issueFeeds > 0 ? `<strong style="color:var(--danger);">${issueFeeds} issue(s)</strong>` : 'All feeds operational'}</span>
+                <span class="kpi-sub">${issueFeeds > 0 ? `<strong style="color:var(--danger);">${issueFeeds} issue(s)</strong>` : 'All operational'}</span>
             </div>
         `;
     },
@@ -458,7 +458,7 @@ const ProductsController = {
                         </label>
                         <div class="modal-source-actions">
                             <button type="button" class="btn btn-secondary btn-sm test-selector-btn" onclick="App.testSourceSelector(this)">
-                                ⚡ Test Selector
+                                Test Selector
                             </button>
                         </div>
                     </div>
@@ -706,7 +706,7 @@ const ProductsController = {
             }
         } finally {
             btn.disabled = false;
-            if (btnText) btnText.textContent = '✨ Auto-Fill';
+            if (btnText) btnText.textContent = 'Auto-Fill';
         }
     },
 
@@ -1093,19 +1093,19 @@ const ProductsController = {
             const totalArchived = archived.length;
             const totalSources = archived.reduce((acc, p) => acc + (p.sources || []).length, 0);
             kpiContainer.innerHTML = `
-                <div class="kpi-card">
+                <div class="product-kpi-card">
                     <span class="kpi-label">Archived Items</span>
                     <span class="kpi-value">${totalArchived}</span>
-                    <span class="kpi-sub">Products removed from active tracking</span>
+                    <span class="kpi-sub">Removed from active tracking</span>
                 </div>
-                <div class="kpi-card">
+                <div class="product-kpi-card">
                     <span class="kpi-label">Suspended Feeds</span>
                     <span class="kpi-value">${totalSources}</span>
                     <span class="kpi-sub">Background scraping paused</span>
                 </div>
-                <div class="kpi-card">
+                <div class="product-kpi-card">
                     <span class="kpi-label">Price History</span>
-                    <span class="kpi-value" style="color: var(--primary);">Preserved</span>
+                    <span class="kpi-value" style="color: var(--accent);">Preserved</span>
                     <span class="kpi-sub">Data kept for future restoration</span>
                 </div>
             `;

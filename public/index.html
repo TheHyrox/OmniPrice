@@ -78,8 +78,12 @@
 
                         <div class="products-controls-group">
                             <div class="view-toggle">
-                                <button class="view-btn active" data-view="card" aria-label="Grid view" title="Grid View">▦</button>
-                                <button class="view-btn" data-view="list" aria-label="List view" title="List View">☰</button>
+                                <button class="view-btn active" data-view="card" aria-label="Grid view" title="Grid View">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                                </button>
+                                <button class="view-btn" data-view="list" aria-label="List view" title="List View">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                                </button>
                             </div>
                             <select id="sortSelect" class="sort-select">
                                 <option value="delta">Sort: Best Discount</option>
@@ -138,7 +142,7 @@
                     <div class="chart-header-actions">
                         <div class="chart-view-toggle">
                             <button class="chart-view-btn active" id="chartViewComparisonBtn" data-view="comparison">Compare</button>
-                            <button class="chart-view-btn" id="chartViewGridBtn" data-view="grid">▦ Sparklines</button>
+                            <button class="chart-view-btn" id="chartViewGridBtn" data-view="grid">Sparklines</button>
                         </div>
                         <div class="timeframe-btns" id="chartTimeframeBtns">
                             <button class="tf-btn" data-range="1">1D</button>
@@ -329,7 +333,7 @@
                                     <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 2px;">Export Database</div>
                                     <div style="font-size: 0.8rem; color: var(--text-secondary);">Download entire database as a single .json file</div>
                                 </div>
-                                <button id="downloadBackupBtn" class="btn btn-primary">⬇️ Download Backup</button>
+                                <button id="downloadBackupBtn" class="btn btn-primary">Export JSON</button>
                             </div>
 
                             <!-- Restore Section -->
@@ -349,7 +353,7 @@
                                 </div>
 
                                 <input type="file" id="restoreFileInput" accept=".json" style="display: none;" />
-                                <button id="selectRestoreFileBtn" class="btn btn-secondary">📂 Select File & Restore</button>
+                                <button id="selectRestoreFileBtn" class="btn btn-secondary">Select File & Restore</button>
                             </div>
                         </div>
 
@@ -422,20 +426,20 @@
                     <input type="hidden" id="productId" />
 
                     <!-- Quick Auto-Fill Banner -->
-                    <div class="autodiscover-card" id="autodiscoverCard" style="margin-bottom: 20px; padding: 14px 16px; background: linear-gradient(135deg, rgba(37,99,235,0.06) 0%, rgba(59,130,246,0.12) 100%); border: 1px solid rgba(37,99,235,0.25); border-radius: 10px;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                            <span style="font-weight: 600; font-size: 0.9rem; color: var(--primary); display: flex; align-items: center; gap: 6px;">
-                                <span>✨</span> 1-Click Auto-Fill from Product URL
+                    <div class="autodiscover-card" id="autodiscoverCard">
+                        <div class="autodiscover-card-header">
+                            <span class="autodiscover-title">
+                                Auto-fill from product link
                             </span>
-                            <span class="badge" style="font-size: 0.7rem; font-weight: 600; background: rgba(37,99,235,0.15); color: var(--primary); padding: 2px 8px; border-radius: 4px;">Smart Onboarding</span>
+                            <span class="autodiscover-caption">Metadata extraction</span>
                         </div>
-                        <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 10px; line-height: 1.4;">
-                            Paste any store product link to automatically extract the title, retail price, product image, and merchant name.
+                        <p class="autodiscover-desc">
+                            Paste a store URL to extract title, reference price, image, and merchant name.
                         </p>
-                        <div style="display: flex; gap: 8px; align-items: center;">
-                            <input type="url" id="autodiscoverUrlInput" placeholder="https://www.amazon.fr/dp/... or store product link" style="flex: 1; padding: 9px 12px; font-size: 0.875rem; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary);" />
-                            <button type="button" id="autodiscoverBtn" class="btn btn-primary" style="white-space: nowrap; padding: 9px 16px;">
-                                <span id="autodiscoverBtnText">✨ Auto-Fill</span>
+                        <div class="autodiscover-input-row">
+                            <input type="url" id="autodiscoverUrlInput" placeholder="https://www.amazon.fr/dp/... or store product link" />
+                            <button type="button" id="autodiscoverBtn" class="btn btn-secondary">
+                                <span id="autodiscoverBtnText">Auto-Fill</span>
                             </button>
                         </div>
                         <div id="autodiscoverStatus" style="font-size: 0.8rem; margin-top: 8px; display: none;"></div>
@@ -586,10 +590,10 @@
                     <div class="form-group">
                         <label for="alertTypeSelect">Alert Condition *</label>
                         <select id="alertTypeSelect" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-secondary); color: var(--text-primary); font-size: 0.95rem;">
-                            <option value="drop">📉 Target Price Drop (Falls to or below target)</option>
-                            <option value="percentage_drop">🏷️ % Discount Threshold (Drops by > X% from reference)</option>
-                            <option value="atl">🔥 All-Time Low (Hits a new record low)</option>
-                            <option value="rise">📈 Price Rise (Price rises to or above target)</option>
+                            <option value="drop">Target Price Drop (Falls to or below target)</option>
+                            <option value="percentage_drop">Discount Threshold (Drops by > X% from reference)</option>
+                            <option value="atl">All-Time Low (Hits a new record low)</option>
+                            <option value="rise">Price Rise (Price rises to or above target)</option>
                         </select>
                     </div>
                     <div class="form-group" id="targetPriceGroup">
@@ -606,8 +610,8 @@
                         <span id="alertPercentCalculationHint" style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px; display: block;"></span>
                     </div>
                     <div class="form-group" id="atlInfoGroup" style="display: none;">
-                        <div style="padding: 12px 14px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; font-size: 0.875rem; color: var(--text-primary); line-height: 1.45;">
-                            🔥 <strong>All-Time Low Trigger:</strong> You will be notified whenever any merchant sets a new historical lowest price for this product.
+                        <div class="alert-info-callout">
+                            <strong>All-Time Low Trigger:</strong> You will be notified whenever any merchant sets a new historical lowest price for this product.
                         </div>
                     </div>
                     <div class="form-group" id="notifyOnRiseGroup" style="margin-top: 6px;">

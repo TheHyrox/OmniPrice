@@ -74,7 +74,7 @@ const ProductCard = {
                     <div class="list-card-media">
                         <img class="product-card-image" src="${imageUrl}" alt="${title}" onerror="this.src='/images/placeholder.svg'">
                         ${isArchived ? `<span class="card-badge archived">Archived</span>` : (!isActive ? `<span class="card-badge paused">Paused</span>` : '')}
-                        ${isATL && !isArchived ? `<span class="card-badge atl">ATL</span>` : ''}
+                        ${isATL && !isArchived ? `<span class="card-badge atl">Record low</span>` : ''}
                     </div>
 
                     <div class="product-card-body list-card-body">
@@ -136,7 +136,7 @@ const ProductCard = {
                     <img class="product-card-image" src="${imageUrl}" alt="${title}" onerror="this.src='/images/placeholder.svg'">
                     <div class="card-badges-overlay">
                         ${isArchived ? `<span class="card-badge archived">Archived</span>` : (!isActive ? `<span class="card-badge paused">Paused</span>` : '')}
-                        ${isATL && !isArchived ? `<span class="card-badge atl">ATL</span>` : ''}
+                        ${isATL && !isArchived ? `<span class="card-badge atl">Record low</span>` : ''}
                         ${delta != null && !isArchived ? `
                             <span class="card-badge delta ${deltaClass}">
                                 ${deltaSign}${delta.toFixed(1)}%
@@ -201,7 +201,13 @@ const ProductCard = {
     renderArchivedEmpty() {
         return `
             <div class="empty-state products-empty-state">
-                <div class="empty-state-icon">📦</div>
+                <div class="empty-state-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="21 8 21 21 3 21 3 8"></polyline>
+                        <rect x="1" y="3" width="22" height="5"></rect>
+                        <line x1="10" y1="12" x2="14" y2="12"></line>
+                    </svg>
+                </div>
                 <h3>No archived products</h3>
                 <p>When you no longer need active tracking for a product, you can archive it to keep your catalog clean without losing historical price data.</p>
                 <button class="btn btn-secondary btn-sm" onclick="App.navigateToTab('products')" style="margin-top: 14px;">← Go to Active Products</button>
@@ -212,7 +218,12 @@ const ProductCard = {
     renderEmpty() {
         return `
             <div class="empty-state products-empty-state">
-                <div class="empty-state-icon"></div>
+                <div class="empty-state-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                </div>
                 <h3>No products found</h3>
                 <p>Try modifying your search or filters, or add a new product to start tracking prices.</p>
                 <button class="btn btn-primary btn-sm" onclick="App.openModal()" style="margin-top: 14px;">+ Add Product</button>
