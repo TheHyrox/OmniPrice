@@ -126,4 +126,38 @@ test('Backup & Restore - Database Operations', async (t) => {
         assert.equal(upserted.length, 2);
         assert.equal(upserted[0].filter._id, 'p-merge-1');
     });
+
+    await t.test('importBackup correctly parses full snapshot with price_records and nested data', async () => {
+        let insertedPriceRecords = [];
+        db.Product.deleteMany = async () => {};
+        db.PriceRecord.deleteMany = async () => {};
+        db.Store.deleteMany = async () => {};
+        db.Alert.deleteMany = async () => {};
+        db.Bundle.deleteMany = async () => {};
+        db.Product.insertMany = async () => {};
+        db.PriceRecord.insertMany = async (items) => { insertedPriceRecords = items; };
+        db.Store.insertMany = async () => {};
+        db.Alert.insertMany = async () => {};
+        db.Bundle.insertMany = async () => {};
+
+        const fullSnapshot = {
+            app: 'omniprice',
+            version: '2.0.0',
+            exportedAt: '2026-11-09T00:00:00.000Z',
+            data: {
+                products: [{ _id: 'prod-legacy', title: 'Legacy Item' }],
+                price_records: [{ _id: 'rec-legacy', productId: 'prod-legacy', prices: [] }],
+                stores: [],
+                alerts: [],
+                bundles: []
+            }
+        };
+
+        const result = await db.importBackup(fullSnapshot, 'replace');
+        assert.equal(result.success, true);
+        assert.equal(result.restored.products, 1);
+        assert.equal(result.restored.priceRecords, 1);
+        assert.equal(insertedPriceRecords.length, 1);
+        assert.equal(insertedPriceRecords[0]._id, 'rec-legacy');
+    });
 });

@@ -127,12 +127,16 @@ const SettingsController = {
 
         try {
             Toast.info('Preparing database backup snapshot...');
-            const res = await fetch('/api/backup/export');
+            const res = await fetch('/api/settings/backup');
             if (!res.ok) throw new Error(`Backup export failed with status ${res.status}`);
 
             const blob = await res.blob();
-            const dateStr = new Date().toISOString().slice(0, 10);
-            const filename = `omniprice-backup-${dateStr}.json`;
+            const disposition = res.headers.get('content-disposition');
+            let filename = `omniprice-backup-${new Date().toISOString().slice(0, 10)}.json`;
+            if (disposition && disposition.includes('filename=')) {
+                const match = disposition.match(/filename="?([^";]+)"?/);
+                if (match && match[1]) filename = match[1];
+            }
 
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
@@ -164,23 +168,37 @@ const SettingsController = {
             text = await file.text();
             parsed = JSON.parse(text);
         } catch (e) {
-            Toast.error('Invalid JSON file. Please provide a valid OmniPrice backup.');
+            if (text && text.trim().startsWith('<')) {
+                Toast.error('Selected file contains HTML (webpage markup) instead of valid JSON data. It appears to have been saved from a webpage fallback. Please export a fresh backup from the server.');
+            } else {
+                Toast.error('Invalid JSON file. Please provide a valid OmniPrice backup.');
+            }
             return;
         }
 
+        const backupData = parsed.data || parsed;
         const counts = {
-            products: parsed.products?.length || 0,
-            stores: parsed.stores?.length || 0,
-            alerts: parsed.alerts?.length || 0,
-            priceRecords: parsed.price_records?.length || 0
+            products: backupData.products?.length || parsed.stats?.productsCount || 0,
+            stores: backupData.stores?.length || parsed.stats?.storesCount || 0,
+            alerts: backupData.alerts?.length || parsed.stats?.alertsCount || 0,
+            bundles: backupData.bundles?.length || parsed.stats?.bundlesCount || 0,
+            priceRecords: backupData.priceRecords?.length || backupData.price_records?.length || parsed.stats?.priceRecordsCount || 0
         };
+
+        const countParts = [];
+        if (counts.products) countParts.push(`${counts.products} product${counts.products > 1 ? 's' : ''}`);
+        if (counts.stores) countParts.push(`${counts.stores} store${counts.stores > 1 ? 's' : ''}`);
+        if (counts.alerts) countParts.push(`${counts.alerts} alert${counts.alerts > 1 ? 's' : ''}`);
+        if (counts.bundles) countParts.push(`${counts.bundles} bundle${counts.bundles > 1 ? 's' : ''}`);
+        if (counts.priceRecords) countParts.push(`${counts.priceRecords} price record${counts.priceRecords > 1 ? 's' : ''}`);
+        const summary = countParts.join(', ') || '0 items';
 
         const isReplace = mode === 'replace';
         const confirmed = await Confirm.ask({
             title: isReplace ? 'Replace Entire Database?' : 'Merge Backup Data?',
             message: isReplace
-                ? `WARNING: Replace mode will DELETE all current products, history, stores, and alerts, and replace them with the backup (${counts.products} products, ${counts.stores} stores, ${counts.alerts} alerts). Are you sure?`
-                : `Merge mode will upsert ${counts.products} products, ${counts.stores} stores, and ${counts.alerts} alerts without deleting existing data. Proceed?`,
+                ? `WARNING: Replace mode will DELETE all current products, history, stores, alerts, and bundles, and replace them with the backup (${summary}). Are you sure?`
+                : `Merge mode will upsert ${summary} without deleting existing data. Proceed?`,
             confirmText: isReplace ? 'Yes, Replace Everything' : 'Proceed with Merge',
             danger: isReplace
         });
@@ -197,13 +215,20 @@ const SettingsController = {
         try {
             Toast.info('Restoring backup data...');
             const res = await API.importBackup(parsed, mode);
-            Toast.success(res.message || 'Database restored successfully!');
+            const restoredStats = res.restored;
+            const successDetail = restoredStats
+                ? ` (${restoredStats.products} products, ${restoredStats.stores} stores, ${restoredStats.alerts} alerts, ${restoredStats.bundles || 0} bundles)`
+                : '';
+            Toast.success((res.message || 'Database restored successfully!') + successDetail);
 
             // Reload application data
             if (window.App) {
                 await window.App.loadProducts();
                 await window.StoresController?.loadStores();
                 await window.AlertsController?.loadAlerts();
+                if (window.BundlesController?.loadBundles) {
+                    await window.BundlesController.loadBundles();
+                }
                 await this.loadSettings();
             }
         } catch (error) {

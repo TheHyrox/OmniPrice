@@ -34,7 +34,7 @@ router.put('/', validate(updateSettingsSchema), async (req, res) => {
 });
 
 // GET backup database
-router.get('/backup', async (req, res) => {
+router.get(['/backup', '/backup/export'], async (req, res) => {
     try {
         const backup = await db.exportBackup();
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
@@ -48,7 +48,7 @@ router.get('/backup', async (req, res) => {
 });
 
 // POST restore database
-router.post('/restore', async (req, res) => {
+router.post(['/restore', '/restore/import'], async (req, res) => {
     try {
         const payload = req.body;
         if (!payload || typeof payload !== 'object') {

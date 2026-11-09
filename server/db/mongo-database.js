@@ -719,9 +719,12 @@ class MongoDatabase {
     }
 
     async importBackup(payload, mode = 'replace') {
-        const data = (payload && payload.data) ? payload.data : (payload || {});
+        let data = (payload && payload.data) ? payload.data : (payload || {});
+        if (data && data.data && (Array.isArray(data.data.products) || Array.isArray(data.data.stores) || Array.isArray(data.data.alerts))) {
+            data = data.data;
+        }
         const products = Array.isArray(data.products) ? data.products : [];
-        const priceRecords = Array.isArray(data.priceRecords) ? data.priceRecords : [];
+        const priceRecords = Array.isArray(data.priceRecords) ? data.priceRecords : (Array.isArray(data.price_records) ? data.price_records : []);
         const stores = Array.isArray(data.stores) ? data.stores : [];
         const alerts = Array.isArray(data.alerts) ? data.alerts : [];
         const bundles = Array.isArray(data.bundles) ? data.bundles : [];

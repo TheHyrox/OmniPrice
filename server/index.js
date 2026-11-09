@@ -35,6 +35,21 @@ app.use('/api/stores', storeRoutes);
 app.use('/api/alerts', alertRoutes);
 app.use('/api/bundles', bundleRoutes);
 
+// Backup & Restore aliases for direct /api/backup and /api/backup/export calls
+app.get(['/api/backup', '/api/backup/export'], (req, res, next) => {
+    req.url = '/backup';
+    settingsRoutes(req, res, next);
+});
+app.post(['/api/backup', '/api/backup/restore'], (req, res, next) => {
+    req.url = '/restore';
+    settingsRoutes(req, res, next);
+});
+
+// Explicit 404 handler for API routes to prevent falling back to index.html
+app.all('/api/*', (req, res) => {
+    res.status(404).json({ error: `API endpoint ${req.method} ${req.originalUrl} not found` });
+});
+
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/index.html'));
 });
