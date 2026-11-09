@@ -28,6 +28,11 @@ app.post(['/api/client-errors', '/api/admin/client-errors'], (req, res) => {
     }
 });
 
+// Favicon handler to avoid 404 console noise
+app.get('/favicon.ico', (req, res) => {
+    res.status(204).end();
+});
+
 // Admin API endpoints
 app.use('/api/admin/metrics', metricsRouter);
 app.use('/api/admin/issues', issuesRouter);

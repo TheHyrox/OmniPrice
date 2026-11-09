@@ -260,13 +260,17 @@ async function loadOverviewMetrics() {
         const data = await res.json();
 
         // System & Process
-        el.mHeapUsed.textContent = `${data.process.memory.heapUsedMB} MB`;
-        el.mHeapSub.textContent = `RSS: ${data.process.memory.rssMB} MB (${data.system.usedPercent}% system used)`;
-        el.mUptime.textContent = data.process.uptimeFormatted;
-        el.mNodeVersion.textContent = data.process.nodeVersion;
-        el.mPlatform.textContent = `${data.process.platform} (${data.process.arch})`;
-        el.mPid.textContent = data.process.pid;
-        el.mConcurrency.textContent = `${data.scraper.puppeteerConcurrency} tab`;
+        if (el.mHeapUsed && data.process && data.process.memory) {
+            el.mHeapUsed.textContent = `${data.process.memory.heapUsedMB} MB`;
+        }
+        if (el.mHeapSub && data.process && data.process.memory) {
+            el.mHeapSub.textContent = `RSS: ${data.process.memory.rssMB} MB (${data.system ? data.system.usedPercent : 0}% system used)`;
+        }
+        if (el.mUptime && data.process) el.mUptime.textContent = data.process.uptimeFormatted;
+        if (el.mNodeVersion && data.process) el.mNodeVersion.textContent = data.process.nodeVersion;
+        if (el.mPlatform && data.process) el.mPlatform.textContent = `${data.process.platform} (${data.process.arch})`;
+        if (el.mPid && data.process) el.mPid.textContent = data.process.pid;
+        if (el.mConcurrency && data.scraper) el.mConcurrency.textContent = `${data.scraper.puppeteerConcurrency} tab`;
 
         if (data.ports && el.mPorts) {
             el.mPorts.textContent = `:${data.ports.admin} (Admin) / :${data.ports.main} (App)`;
@@ -284,27 +288,40 @@ async function loadOverviewMetrics() {
         }
 
         // Database
-        if (data.database.status === 'connected') {
-            el.mDbStatus.textContent = 'Connected';
-            el.mDbStatus.className = 'metric-value text-success';
-            el.mDbSub.textContent = `${data.database.totalProducts} products (${data.database.totalSources} sources)`;
-        } else {
-            el.mDbStatus.textContent = 'Disconnected';
-            el.mDbStatus.className = 'metric-value text-danger';
-            el.mDbSub.textContent = data.database.error || 'Connection failed';
+        if (data.database) {
+            if (el.mDbStatus) {
+                if (data.database.status === 'connected') {
+                    el.mDbStatus.textContent = 'Connected';
+                    el.mDbStatus.className = 'metric-value text-success';
+                } else {
+                    el.mDbStatus.textContent = 'Disconnected';
+                    el.mDbStatus.className = 'metric-value text-danger';
+                }
+            }
+            if (el.mDbSub) {
+                el.mDbSub.textContent = data.database.status === 'connected'
+                    ? `${data.database.totalProducts} products (${data.database.totalSources} sources)`
+                    : (data.database.error || 'Connection failed');
+            }
         }
 
         // Issues
-        const failing = data.database.failingSources || 0;
-        el.mIssuesCount.textContent = failing;
-        el.mIssuesCount.className = failing > 0 ? 'metric-value text-danger' : 'metric-value';
-        el.mIssuesSub.textContent = failing > 0 ? `${failing} source(s) failing` : 'All sources healthy';
+        const failing = (data.database && data.database.failingSources) || 0;
+        if (el.mIssuesCount) {
+            el.mIssuesCount.textContent = failing;
+            el.mIssuesCount.className = failing > 0 ? 'metric-value text-danger' : 'metric-value';
+        }
+        if (el.mIssuesSub) {
+            el.mIssuesSub.textContent = failing > 0 ? `${failing} source(s) failing` : 'All sources healthy';
+        }
 
-        if (failing > 0) {
-            el.issuesCountBadge.style.display = 'inline-block';
-            el.issuesCountBadge.textContent = failing;
-        } else {
-            el.issuesCountBadge.style.display = 'none';
+        if (el.issuesCountBadge) {
+            if (failing > 0) {
+                el.issuesCountBadge.style.display = 'inline-block';
+                el.issuesCountBadge.textContent = failing;
+            } else {
+                el.issuesCountBadge.style.display = 'none';
+            }
         }
 
         // Scheduler
@@ -320,20 +337,25 @@ async function loadOverviewMetrics() {
         }
 
         // Logs stats
-        const errs = data.logs.errorCount || 0;
-        const warns = data.logs.warnCount || 0;
-        el.mErrorsCount.textContent = errs;
-        el.mErrorsSub.textContent = `${warns} warnings, ${data.logs.totalLogs} total logs`;
-        el.logsCountBadge.textContent = errs + warns;
+        const errs = (data.logs && data.logs.errorCount) || 0;
+        const warns = (data.logs && data.logs.warnCount) || 0;
+        const totalLogs = (data.logs && data.logs.totalLogs) || 0;
+        if (el.mErrorsCount) el.mErrorsCount.textContent = errs;
+        if (el.mErrorsSub) el.mErrorsSub.textContent = `${warns} warnings, ${totalLogs} total logs`;
+        if (el.logsCountBadge) el.logsCountBadge.textContent = errs + warns;
 
         // Client errors
-        const clientErrs = data.logs.clientErrorCount || 0;
-        el.mClientErrors.textContent = clientErrs;
-        if (clientErrs > 0) {
-            el.clientErrorsCountBadge.style.display = 'inline-block';
-            el.clientErrorsCountBadge.textContent = clientErrs;
-        } else {
-            el.clientErrorsCountBadge.style.display = 'none';
+        const clientErrs = (data.logs && data.logs.clientErrorCount) || 0;
+        if (el.mClientErrors) {
+            el.mClientErrors.textContent = clientErrs;
+        }
+        if (el.clientErrorsCountBadge) {
+            if (clientErrs > 0) {
+                el.clientErrorsCountBadge.style.display = 'inline-block';
+                el.clientErrorsCountBadge.textContent = clientErrs;
+            } else {
+                el.clientErrorsCountBadge.style.display = 'none';
+            }
         }
 
         updateQuickErrors();
