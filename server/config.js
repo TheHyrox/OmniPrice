@@ -2,6 +2,8 @@ const { z } = require('zod');
 
 const configSchema = z.object({
     PORT: z.coerce.number().int().positive().default(3005),
+    ADMIN_PORT: z.coerce.number().int().positive().default(3006),
+    ADMIN_ENABLED: z.string().optional().transform(v => v !== 'false').default('true'),
     MONGO_URI: z.string().default('mongodb://localhost:27017/omniprice'),
     DISCORD_WEBHOOK_URL: z.string().optional().default(''),
     VAPID_PUBLIC_KEY: z.string().optional().default(''),

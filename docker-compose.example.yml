@@ -18,8 +18,10 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3005:3005"
+      - "3006:3006"
     environment:
       - PORT=3005
+      - ADMIN_PORT=3006
       - MONGO_URI=mongodb://omniprice-db:27017/omniprice
       - DB_TYPE=mongodb
     volumes:

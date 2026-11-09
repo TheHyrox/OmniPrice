@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniPrice Telemetry</title>
+    <link rel="stylesheet" href="/admin.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <!-- Top Navigation Bar -->
+    <header class="admin-header">
+        <div class="header-left">
+            <div class="brand">
+                <span class="brand-name">OmniPrice</span>
+                <span class="brand-divider">/</span>
+                <span class="brand-view">Telemetry</span>
+            </div>
+            <div class="connection-status" id="connectionStatus" title="Server-Sent Events connection">
+                <span class="status-dot"></span>
+                <span class="status-text">Connecting</span>
+            </div>
+        </div>
+
+        <nav class="nav-tabs" aria-label="Dashboard navigation">
+            <button class="nav-tab active" data-tab="overview">Overview</button>
+            <button class="nav-tab" data-tab="issues">
+                Issues
+                <span class="tab-badge" id="issuesCountBadge" style="display:none;">0</span>
+            </button>
+            <button class="nav-tab" data-tab="logs">
+                Console
+                <span class="tab-badge" id="logsCountBadge">0</span>
+            </button>
+            <button class="nav-tab" data-tab="client-errors">
+                Browser errors
+                <span class="tab-badge" id="clientErrorsCountBadge" style="display:none;">0</span>
+            </button>
+            <button class="nav-tab" data-tab="diagnostic">Diagnostic</button>
+        </nav>
+
+        <div class="header-right">
+            <div class="host-pill" title="Current host">
+                <span class="host-label">Host</span>
+                <span class="host-val" id="hostVal">—</span>
+            </div>
+            <a href="#" id="mainAppLink" target="_blank" class="btn-link" title="Open main application">
+                Main app ↗
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="admin-container">
+        <!-- Toast Notification Container -->
+        <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+        <!-- TAB 1: OVERVIEW -->
+        <section id="tab-overview" class="tab-pane active">
+            <div class="page-title-row">
+                <div>
+                    <h1>System overview</h1>
+                    <p class="text-secondary">Process runtime, scheduler state, database health, and error activity</p>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn btn-secondary" id="btnRefreshOverview">Refresh</button>
+                    <button class="btn btn-secondary" id="btnTriggerTestError">Test error</button>
+                </div>
+            </div>
+
+            <!-- Primary Metric Cards (4 compact stats) -->
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-label">Scraper issues</span>
+                    </div>
+                    <div class="metric-value" id="mIssuesCount">—</div>
+                    <div class="metric-sub" id="mIssuesSub">Checking sources...</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-label">Logged errors</span>
+                    </div>
+                    <div class="metric-value" id="mErrorsCount">—</div>
+                    <div class="metric-sub" id="mErrorsSub">0 warnings recorded</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-label">Process memory</span>
+                    </div>
+                    <div class="metric-value" id="mHeapUsed">— MB</div>
+                    <div class="metric-sub" id="mHeapSub">RSS: — MB</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-label">Database</span>
+                    </div>
+                    <div class="metric-value text-success" id="mDbStatus">Connected</div>
+                    <div class="metric-sub" id="mDbSub">— products tracked</div>
+                </div>
+            </div>
+
+            <!-- Overview Two-Column Grid -->
+            <div class="overview-split">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Runtime details</h2>
+                    </div>
+                    <div class="card-body">
+                        <table class="data-table">
+                            <tbody>
+                                <tr>
+                                    <td>Uptime</td>
+                                    <td id="mUptime">—</td>
+                                </tr>
+                                <tr>
+                                    <td>Node version</td>
+                                    <td id="mNodeVersion">—</td>
+                                </tr>
+                                <tr>
+                                    <td>Platform</td>
+                                    <td id="mPlatform">—</td>
+                                </tr>
+                                <tr>
+                                    <td>Process ID</td>
+                                    <td id="mPid">—</td>
+                                </tr>
+                                <tr>
+                                    <td>Puppeteer concurrency</td>
+                                    <td id="mConcurrency">—</td>
+                                </tr>
+                                <tr>
+                                    <td>Scheduler frequency</td>
+                                    <td id="mSchedulerSub">—</td>
+                                </tr>
+                                <tr>
+                                    <td>Internal ports</td>
+                                    <td id="mPorts">—</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Recent errors</h2>
+                        <button class="btn-ghost" onclick="switchTab('logs')">Open console →</button>
+                    </div>
+                    <div class="card-body" id="quickErrorsList">
+                        <div class="empty-state">No recent errors detected</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 2: SCRAPER ISSUES -->
+        <section id="tab-issues" class="tab-pane">
+            <div class="page-title-row">
+                <div>
+                    <h1>Scraper issues</h1>
+                    <p class="text-secondary">Products where the most recent price scrape returned an error</p>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn btn-secondary" id="btnRefreshIssues">Refresh</button>
+                    <button class="btn btn-primary" id="btnRetryAllIssues">Retry all</button>
+                </div>
+            </div>
+
+            <!-- Filter Chips -->
+            <div class="chips-row" id="issueFilterChips">
+                <button class="chip active" data-filter="all">All issues (<span id="chipAllCount">0</span>)</button>
+                <button class="chip" data-filter="Timeout">Timeout</button>
+                <button class="chip" data-filter="Anti-Bot / Blocked">Blocked (403)</button>
+                <button class="chip" data-filter="Selector Miss">Selector miss</button>
+                <button class="chip" data-filter="Network / SSRF">Network</button>
+            </div>
+
+            <!-- Issues List -->
+            <div class="card">
+                <div class="card-body-flush" id="issuesListContainer">
+                    <div class="loading-state">Loading scraper issues...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 3: LIVE CONSOLE -->
+        <section id="tab-logs" class="tab-pane">
+            <div class="page-title-row">
+                <div>
+                    <h1>Server console</h1>
+                    <p class="text-secondary">Live stream of process logs, scraper activity, and alert checks</p>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn btn-secondary" id="btnPauseScroll">Pause scroll</button>
+                    <button class="btn btn-secondary" id="btnClearLogs">Clear</button>
+                    <button class="btn btn-secondary" id="btnExportLogs">Export</button>
+                </div>
+            </div>
+
+            <!-- Terminal Window -->
+            <div class="terminal-container">
+                <div class="terminal-toolbar">
+                    <div class="toolbar-group">
+                        <label for="logLevelSelect">Level</label>
+                        <select id="logLevelSelect" class="form-select">
+                            <option value="all">All levels</option>
+                            <option value="error">Error</option>
+                            <option value="warn">Warn & error</option>
+                            <option value="info">Info</option>
+                        </select>
+                    </div>
+
+                    <div class="toolbar-group">
+                        <label for="logComponentSelect">Component</label>
+                        <select id="logComponentSelect" class="form-select">
+                            <option value="all">All components</option>
+                            <option value="scraper">Scraper</option>
+                            <option value="scheduler">Scheduler</option>
+                            <option value="database">Database</option>
+                            <option value="alert">Alerts</option>
+                            <option value="client">Client</option>
+                            <option value="system">System</option>
+                        </select>
+                    </div>
+
+                    <div class="toolbar-group toolbar-search">
+                        <input type="text" id="logSearchInput" class="form-input" placeholder="Filter log text...">
+                    </div>
+
+                    <div class="toolbar-meta">
+                        <span id="logCounterText">0 lines</span>
+                    </div>
+                </div>
+
+                <div class="terminal-body" id="terminalBody">
+                    <!-- Log rows rendered dynamically -->
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 4: CLIENT ERRORS -->
+        <section id="tab-client-errors" class="tab-pane">
+            <div class="page-title-row">
+                <div>
+                    <h1>Browser errors</h1>
+                    <p class="text-secondary">Uncaught frontend exceptions and promise rejections reported by client
+                        sessions</p>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn btn-secondary" id="btnRefreshClientErrors">Refresh</button>
+                    <button class="btn btn-secondary" id="btnClearClientErrors">Clear</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body-flush" id="clientErrorsList">
+                    <div class="loading-state">Loading client errors...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TAB 5: SCRAPER DIAGNOSTIC -->
+        <section id="tab-diagnostic" class="tab-pane">
+            <div class="page-title-row">
+                <div>
+                    <h1>Scraper diagnostic</h1>
+                    <p class="text-secondary">Test extraction selectors on any store URL with timing and engine
+                        diagnostics</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <form id="diagnosticForm" class="diagnostic-form">
+                        <div class="form-group">
+                            <label for="diagUrl" class="form-label">Target URL</label>
+                            <input type="url" id="diagUrl" class="form-input"
+                                placeholder="https://store.example.com/item" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="diagSelector" class="form-label">CSS selector (optional if testing
+                                auto-discovery)</label>
+                            <input type="text" id="diagSelector" class="form-input"
+                                placeholder=".price, span[itemprop='price']">
+                        </div>
+
+                        <div class="form-checks">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="diagUsePuppeteer">
+                                Force Puppeteer (headless browser)
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="diagAutoDiscover" checked>
+                                Run auto-discovery (JSON-LD / OpenGraph)
+                            </label>
+                        </div>
+
+                        <div>
+                            <button type="submit" class="btn btn-primary" id="btnRunDiagnostic">
+                                Run test scrape
+                            </button>
+                        </div>
+                    </form>
+
+                    <div id="diagnosticResults" class="diagnostic-results" style="display:none;">
+                        <div class="results-header">
+                            <h2>Diagnostic output</h2>
+                            <div class="results-meta">
+                                <span class="badge" id="diagStatusBadge">Success</span>
+                                <span>Duration: <strong id="diagDuration" class="mono">0ms</strong></span>
+                                <span>Engine: <strong id="diagEngine" class="mono">—</strong></span>
+                                <span>Parsed price: <strong id="diagPrice" class="mono">—</strong></span>
+                            </div>
+                        </div>
+                        <pre class="code-block" id="diagJsonOutput"></pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="admin-footer">
+        <span>OmniPrice Telemetry</span>
+    </footer>
+
+    <script src="/admin.js"></script>
+</body>
+
+</html>

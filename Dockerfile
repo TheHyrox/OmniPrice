@@ -16,6 +16,6 @@ COPY . .
 
 VOLUME ["/app/data", "/app/public/images"]
 
-EXPOSE 3005
+EXPOSE 3005 3006
 
 CMD ["npm", "start"]
