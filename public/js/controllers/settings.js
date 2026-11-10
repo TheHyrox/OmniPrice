@@ -102,11 +102,11 @@ const SettingsController = {
         }
     },
 
-    async saveKpiVisibility() {
+    async saveKpiVisibility({ quiet = false } = {}) {
         const btn = document.getElementById('saveKpiVisibilityBtn');
         const originalText = btn ? btn.textContent : '';
 
-        if (btn) {
+        if (btn && !quiet) {
             btn.disabled = true;
             btn.textContent = 'Saving...';
         }
@@ -130,7 +130,7 @@ const SettingsController = {
             const updated = await API.updateSettings({ kpiVisibility });
             this.settings.kpiVisibility = updated.kpiVisibility || kpiVisibility;
             if (window.App) window.App.settings = this.settings;
-            Toast.success('Analytics & KPI visibility saved!');
+            if (!quiet) Toast.success('Analytics & KPI visibility saved!');
 
             // Re-render affected views immediately
             if (window.ProductsController) {
@@ -145,9 +145,9 @@ const SettingsController = {
                 if (content) content.innerHTML = ProductDetail.render(ProductDetail.currentProduct);
             }
         } catch (error) {
-            Toast.error('Failed to save KPI visibility preferences: ' + error.message);
+            if (!quiet) Toast.error('Failed to save KPI visibility preferences: ' + error.message);
         } finally {
-            if (btn) {
+            if (btn && !quiet) {
                 btn.disabled = false;
                 btn.textContent = originalText;
             }

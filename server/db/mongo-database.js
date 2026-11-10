@@ -86,7 +86,8 @@ const settingsSchema = new mongoose.Schema({
     theme: { type: String, default: 'light' },
     currency: { type: String, default: 'EUR' },
     scrapeFrequency: { type: Number, default: 43200000 },
-    discordWebhookUrl: { type: String, default: '' }
+    discordWebhookUrl: { type: String, default: '' },
+    kpiVisibility: { type: mongoose.Schema.Types.Mixed, default: () => ({}) }
 }, { versionKey: false, collection: 'settings', strict: false });
 
 const alertSchema = new mongoose.Schema({
@@ -580,9 +581,14 @@ class MongoDatabase {
             settings = new Setting({ _id: 'default_settings', ...data });
         } else {
             if (data.kpiVisibility) {
-                const existingKpi = settings.kpiVisibility || { ...defaultSettings.kpiVisibility };
-                data.kpiVisibility = { ...existingKpi, ...data.kpiVisibility };
+                const currentKpi = settings.toObject().kpiVisibility || settings.kpiVisibility || {};
+                settings.kpiVisibility = {
+                    ...defaultSettings.kpiVisibility,
+                    ...currentKpi,
+                    ...data.kpiVisibility
+                };
                 settings.markModified('kpiVisibility');
+                delete data.kpiVisibility;
             }
             Object.assign(settings, data);
         }

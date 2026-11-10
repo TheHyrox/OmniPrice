@@ -172,6 +172,9 @@ const App = {
         document.getElementById('saveDiscordBtn')?.addEventListener('click', () => SettingsController.saveDiscordSettings());
         document.getElementById('testDiscordBtn')?.addEventListener('click', () => SettingsController.testDiscordWebhook());
         document.getElementById('saveKpiVisibilityBtn')?.addEventListener('click', () => SettingsController.saveKpiVisibility());
+        document.querySelectorAll('.kpi-visibility-group input[type="checkbox"]').forEach(input => {
+            input.addEventListener('change', () => SettingsController.saveKpiVisibility());
+        });
         document.getElementById('enablePushBtn')?.addEventListener('click', () => SettingsController.subscribeToPush());
         document.getElementById('testPushBtn')?.addEventListener('click', () => SettingsController.sendTestPush());
 
