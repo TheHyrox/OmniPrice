@@ -109,15 +109,51 @@ const SettingsController = {
         }
     },
 
-    async handleTimeChange(val) {
+    _scrapeTimeTimeout: null,
+
+    handleTimeChange(val, delayMs = 800) {
         if (!val) return;
-        try {
-            await API.updateSettings({ scrapeTime: val });
-            this.settings.scrapeTime = val;
-            if (window.App) window.App.settings = this.settings;
-            Toast.success(`Scheduled scraping hour set to ${val}`);
-        } catch (error) {
-            Toast.error('Failed to update scraping time: ' + error.message);
+
+        // Clear any existing timer so scrolling doesn't spam toasts or API calls
+        if (this._scrapeTimeTimeout) {
+            clearTimeout(this._scrapeTimeTimeout);
+            this._scrapeTimeTimeout = null;
+        }
+
+        // If the value matches the already active setting, skip
+        if (this.settings && this.settings.scrapeTime === val) {
+            return;
+        }
+
+        const executeUpdate = async () => {
+            this._scrapeTimeTimeout = null;
+            if (this.settings && this.settings.scrapeTime === val) return;
+
+            try {
+                await API.updateSettings({ scrapeTime: val });
+                this.settings.scrapeTime = val;
+                if (window.App) window.App.settings = this.settings;
+                Toast.success(`Scheduled scraping hour set to ${val}`);
+            } catch (error) {
+                Toast.error('Failed to update scraping time: ' + error.message);
+            }
+        };
+
+        if (delayMs <= 0) {
+            executeUpdate();
+        } else {
+            this._scrapeTimeTimeout = setTimeout(executeUpdate, delayMs);
+        }
+    },
+
+    flushTimeChange() {
+        if (this._scrapeTimeTimeout) {
+            clearTimeout(this._scrapeTimeTimeout);
+            this._scrapeTimeTimeout = null;
+            const el = document.getElementById('scrapeTime');
+            if (el && el.value && (!this.settings || this.settings.scrapeTime !== el.value)) {
+                this.handleTimeChange(el.value, 0);
+            }
         }
     },
 
