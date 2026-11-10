@@ -175,6 +175,47 @@ const App = {
         document.querySelectorAll('.kpi-visibility-group input[type="checkbox"]').forEach(input => {
             input.addEventListener('change', () => SettingsController.saveKpiVisibility());
         });
+
+        // Analytics & KPI Guide Modal Handlers
+        const openKpiGuide = () => {
+            const modal = document.getElementById('kpiGuideModal');
+            if (modal) {
+                modal.classList.add('active');
+                const search = document.getElementById('kpiGuideSearch');
+                if (search) {
+                    search.value = '';
+                    search.focus();
+                }
+                document.querySelectorAll('.kpi-guide-item').forEach(el => el.style.display = 'flex');
+                document.querySelectorAll('.kpi-guide-section').forEach(el => el.style.display = 'flex');
+            }
+        };
+        const closeKpiGuide = () => {
+            const modal = document.getElementById('kpiGuideModal');
+            if (modal) modal.classList.remove('active');
+        };
+
+        document.getElementById('openKpiGuideBtn')?.addEventListener('click', openKpiGuide);
+        document.getElementById('openKpiGuideBottomBtn')?.addEventListener('click', openKpiGuide);
+        document.getElementById('closeKpiGuideModal')?.addEventListener('click', closeKpiGuide);
+        document.getElementById('dismissKpiGuideBtn')?.addEventListener('click', closeKpiGuide);
+
+        // Guide Search Filter
+        const guideSearch = document.getElementById('kpiGuideSearch');
+        if (guideSearch) {
+            guideSearch.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase().trim();
+                document.querySelectorAll('.kpi-guide-item').forEach(item => {
+                    const text = item.textContent.toLowerCase();
+                    const matches = text.includes(query);
+                    item.style.display = matches ? 'flex' : 'none';
+                });
+                document.querySelectorAll('.kpi-guide-section').forEach(sec => {
+                    const visibleItems = sec.querySelectorAll('.kpi-guide-item:not([style*="display: none"])');
+                    sec.style.display = visibleItems.length > 0 ? 'flex' : 'none';
+                });
+            });
+        }
         document.getElementById('enablePushBtn')?.addEventListener('click', () => SettingsController.subscribeToPush());
         document.getElementById('testPushBtn')?.addEventListener('click', () => SettingsController.sendTestPush());
 

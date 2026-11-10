@@ -320,12 +320,15 @@
 
                     <!-- Analytics & KPI Display Visibility Card -->
                     <div class="settings-card" style="grid-column: 1 / -1; max-width: 680px;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
                             <h3 style="margin-bottom: 0; padding-bottom: 0; border-bottom: none;">Analytics & KPI Visibility</h3>
-                            <span class="badge" style="padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; background: rgba(16, 185, 129, 0.12); color: #10b981;">Customizable Displays</span>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <button type="button" id="openKpiGuideBtn" class="btn btn-secondary btn-sm" style="padding: 4px 10px; font-size: 0.75rem;">KPI Guide</button>
+                                <span class="badge" style="padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; background: rgba(16, 185, 129, 0.12); color: #10b981;">Customizable Displays</span>
+                            </div>
                         </div>
                         <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 16px; line-height: 1.5;">
-                            Choose which KPI cards, deal meters, buy advice, and store volatility indicators are visible across OmniPrice.
+                            Choose which KPI cards, deal meters, buy advice, and store volatility indicators are visible across OmniPrice. Click "KPI Guide" for full documentation of each metric.
                         </p>
 
                         <div class="kpi-visibility-options" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
@@ -438,7 +441,8 @@
                             </div>
                         </div>
 
-                        <div style="margin-top: 14px; display: flex; justify-content: flex-end;">
+                        <div style="margin-top: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                            <button type="button" id="openKpiGuideBottomBtn" class="btn btn-secondary btn-sm">Metric Explanations & Guide</button>
                             <button id="saveKpiVisibilityBtn" class="btn btn-primary btn-sm">Save Visibility Preferences</button>
                         </div>
                     </div>
@@ -808,6 +812,319 @@
                         <button type="submit" class="btn btn-primary" id="saveBundleBtn">Save Bundle</button>
                     </div>
                 </form>
+            </div>
+        </div>
+        <!-- Analytics & KPI Documentation Modal -->
+        <div id="kpiGuideModal" class="modal">
+            <div class="modal-content kpi-guide-modal-content">
+                <div class="modal-header">
+                    <div class="modal-title-wrap">
+                        <div>
+                            <h2>Analytics & KPI Guide</h2>
+                            <p class="modal-subtitle">Comprehensive guide to metrics, calculations, and display locations across OmniPrice</p>
+                        </div>
+                    </div>
+                    <button class="modal-close" id="closeKpiGuideModal" aria-label="Close modal">×</button>
+                </div>
+
+                <div class="modal-body kpi-guide-body">
+                    <!-- Quick Search Filter -->
+                    <div class="kpi-guide-search-wrap">
+                        <input type="text" id="kpiGuideSearch" class="kpi-guide-search-input" placeholder="Search metric name, key, or calculation (e.g., trend, spread, ATL, sweet spot)..." />
+                    </div>
+
+                    <!-- Group 1: Home Page Overview KPIs -->
+                    <div class="kpi-guide-section">
+                        <div class="kpi-guide-section-header">
+                            <h3 class="kpi-guide-section-title">Home Page Overview KPIs</h3>
+                            <span class="kpi-guide-section-count">6 Metrics · Products Tab</span>
+                        </div>
+                        <div class="kpi-guide-grid">
+                            <!-- 1. Tracked Items -->
+                            <div class="kpi-guide-item">
+                                <div class="kpi-guide-item-top">
+                                    <span class="kpi-guide-item-title">Tracked Items Counter</span>
+                                    <span class="kpi-guide-item-badge">showTrackedKpi</span>
+                                </div>
+                                <p class="kpi-guide-item-desc">
+                                    Displays the total scale of your monitored catalog on the home page overview banner, including how many products are currently active and how many are paused.
+                                </p>
+                                <div class="kpi-guide-item-calc">
+                                    <strong>Calculation:</strong> Total count of unarchived products in database, partitioned into active vs. paused states.
+                                </div>
+                            </div>
+
+                            <!-- 2. Record Lows -->
+                            <div class="kpi-guide-item">
+                                <div class="kpi-guide-item-top">
+                                    <span class="kpi-guide-item-title">Record Lows (All-Time Lows) Counter</span>
+                                    <span class="kpi-guide-item-badge">showRecordLowsKpi</span>
+                                </div>
+                                <p class="kpi-guide-item-desc">
+                                    Identifies how many products in your catalog are currently priced at or below their all-time lowest recorded price since tracking started.
+                                </p>
+                                <div class="kpi-guide-item-calc">
+                                    <strong>Calculation:</strong> Evaluates current lowest store price against historical minimum (lowestPrice &le; minPriceEver).
+                                </div>
+                            </div>
+
+                            <!-- 3. Total Savings -->
+                            <div class="kpi-guide-item">
+                                <div class="kpi-guide-item-top">
+                                    <span class="kpi-guide-item-title">Total Savings Counter</span>
+                                    <span class="kpi-guide-item-badge">showTotalSavingsKpi</span>
+                                </div>
+                                <p class="kpi-guide-item-desc">
+                                    Quantifies the cumulative financial discount across all tracked products that are currently discounted below manufacturer MSRP / reference price.
+                                </p>
+                                <div class="kpi-guide-item-calc">
+                                    <strong>Calculation:</strong> Sum of (referencePrice - lowestPrice) across all discounted products, paired with the active deals count.
+                                </div>
+                            </div>
+
+                            <!-- 4. Store Feeds Health -->
+                            <div class="kpi-guide-item">
+                                <div class="kpi-guide-item-top">
+                                    <span class="kpi-guide-item-title">Store Feeds Health Counter</span>
+                                    <span class="kpi-guide-item-badge">showStoreFeedsKpi</span>
+                                </div>
+                                <p class="kpi-guide-item-desc">
+                                    Monitors scraper infrastructure reliability. Shows what percentage of configured merchant store sources are actively returning valid price extractions.
+                                </p>
+                                <div class="kpi-guide-item-calc">
+                                    <strong>Calculation:</strong> (Healthy price-bearing sources / Total active sources) &times; 100%. Displays warning state if feeds drop below 90%.
+                                </div>
+                            </div>
+
+                            <!-- 5. Average Catalog Discount -->
+                            <div class="kpi-guide-item">
+                                <div class="kpi-guide-item-top">
+                                    <span class="kpi-guide-item-title">Average Catalog Discount Counter</span>
+                                    <span class="kpi-guide-item-badge">showAvgDiscountKpi</span>
+                                </div>
+                                <p class="kpi-guide-item-desc">
+                                    Measures promotional depth across your entire catalog. Shows whether merchants are offering aggressive markdowns or holding prices close to MSRP.
+                                </p>
+                                <div class="kpi-guide-item-calc">
+                                    <strong>Calculation:</strong> Mean percentage discount &Sigma;((MSRP - Current) / MSRP &times; 100) / N for all products with reference prices.
+                                </div>
+                            </div>
+
+                            <!-- 6. Market Trend Direction -->
+                            <div class="kpi-guide-item">
+                                <div class="kpi-guide-item-top">
+                                    <span class="kpi-guide-item-title">Market Trend Direction Counter</span>
+                                    <span class="kpi-guide-item-badge">showMarketTrendKpi</span>
+                                </div>
+                                <p class="kpi-guide-item-desc">
+                                    Tracks broader price momentum. Compares the average catalog price index over the past 7 days against a 30-day baseline to reveal macro inflation or deflation.
+                                </p>
+                                <div class="kpi-guide-item-calc">
+                                    <strong>Calculation:</strong> ((7-day average index - 30-day baseline index) / 30-day index) &times; 100%. Negative values indicate falling/deflationary prices.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Group 2: Product Cards -->
+                    <div class="kpi-guide-section">
+                        <div class="kpi-guide-section-header">
+                            <h3 class="kpi-guide-section-title">Product Cards (Grid & List)</h3>
+                            <span class="kpi-guide-section-count">4 Metrics · Catalog Browse Views</span>
+                        </div>
+                        <div class="kpi-guide-grid">
+                            <!-- 7. Deal Score Badge -->
+                            <div class="kpi-guide-item">
+                                <div class="kpi-guide-item-top">
+                                    <span class="kpi-guide-item-title">Deal Score Badge</span>
+                                    <span class="kpi-guide-item-badge">showDealScoreBadge</span>
+                                </div>
+                                <p class="kpi-guide-item-desc">
+                                    A normalized rating from 0 to 100 displayed on product cards in both grid and list views. Allows rapid scanning and sorting of top-tier deals.
+                                </p>
+                                <div class="kpi-guide-item-calc">
+                                    <strong>Calculation:</strong> 40% weight on reference price discount depth + 60% weight on historical percentile position (90-day / 365-day range). Scores &ge;75 indicate superior deals.
+                                </div>
+                            </div>
+
+                            <!-- 8. Price Freshness & Stability Text -->
+                            <div class="kpi-guide-item">
+                                <div class="kpi-guide-item-top">
+                                    <span class="kpi-guide-item-title">Price Freshness & Stability Text</span>
+                                    <span class="kpi-guide-item-badge">showPriceFreshness</span>
+                                </div>
+                                <p class="kpi-guide-item-desc">
+                                    Clean textual indicator on product cards showing elapsed time since the merchant last changed the price (e.g., "Changed 2d ago" or "Stable for 33d").
+                                </p>
+                                <div class="kpi-guide-item-calc">
+                                    <strong>Calculation:</strong> Analyzes timestamps of historical price records. Formatted with clean typography without pill or badge containers.
+                                </div>
+                            </div>
+
+                            <!-- 9. Store Price Spread Text -->
+                            <div class="kpi-guide-item">
+                                <div class="kpi-guide-item-top">
+                                    <span class="kpi-guide-item-title">Store Price Spread Text</span>
+                                    <span class="kpi-guide-item-badge">showStoreSpread</span>
+                                </div>
+                                <p class="kpi-guide-item-desc">
+                                    Highlights the exact price arbitrage between the cheapest and the most expensive retailer for products with multiple monitored merchant sources.
+                                </p>
+                                <div class="kpi-guide-item-calc">
+                                    <strong>Calculation:</strong> (highestStorePrice - lowestStorePrice). Displayed as clean comparative text (e.g., "Spread: save 32 vs Maxxess").
+                                </div>
+                            </div>
+
+                            <!-- 10. All-Time Low Proximity Text -->
+                            <div class="kpi-guide-item">
+                                <div class="kpi-guide-item-top">
+                                    <span class="kpi-guide-item-title">All-Time Low Proximity Text</span>
+                                    <span class="kpi-guide-item-badge">showAtlProximity</span>
+                                </div>
+                                <p class="kpi-guide-item-desc">
+                                    When an item is not currently at its record low, this text reveals how close the current price sits above the all-time low.
+                                </p>
+                                <div class="kpi-guide-item-calc">
+                                    <strong>Calculation:</strong> (currentPrice - minPriceEver) and percentage distance ((current - min) / min &times; 100). Formatted as "+5.20 from ATL (+3.2%)".
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Group 3: Product Detail Page -->
+                    <div class="kpi-guide-section">
+                        <div class="kpi-guide-section-header">
+                            <h3 class="kpi-guide-section-title">Product Detail Page</h3>
+                            <span class="kpi-guide-section-count">5 Metrics · Detailed Product Inspection</span>
+                        </div>
+                        <div class="kpi-guide-grid">
+                            <!-- 11. Buy Advice & Deal Score Meter -->
+                            <div class="kpi-guide-item">
+                                <div class="kpi-guide-item-top">
+                                    <span class="kpi-guide-item-title">Buy Advice & Deal Score Meter</span>
+                                    <span class="kpi-guide-item-badge">showBuyAdvice</span>
+                                </div>
+                                <p class="kpi-guide-item-desc">
+                                    The primary intelligence banner on the product detail page. Features an interactive score meter, historical percentile breakdown, and actionable recommendation (Strong Buy, Buy, Fair Price, or Wait).
+                                </p>
+                                <div class="kpi-guide-item-calc">
+                                    <strong>Calculation:</strong> Multi-factor percentile calculation comparing current price against full historical price range, discount depth, and proximity to all-time low.
+                                </div>
+                            </div>
+
+                            <!-- 12. Best Day to Buy -->
+                            <div class="kpi-guide-item">
+                                <div class="kpi-guide-item-top">
+                                    <span class="kpi-guide-item-title">Best Day to Buy (Day-of-Week Sweet Spot)</span>
+                                    <span class="kpi-guide-item-badge">showDayOfWeekSweetSpot</span>
+                                </div>
+                                <p class="kpi-guide-item-desc">
+                                    Discovers retailer pricing routines by analyzing which day of the week historically delivers the lowest prices or the most frequent price drops.
+                                </p>
+                                <div class="kpi-guide-item-calc">
+                                    <strong>Calculation:</strong> Groups historical price points and drop timestamps by day of week (Monday through Sunday) to find the weekday with the lowest mean price.
+                                </div>
+                            </div>
+
+                            <!-- 13. Drop Frequency & Cycle Length -->
+                            <div class="kpi-guide-item">
+                                <div class="kpi-guide-item-top">
+                                    <span class="kpi-guide-item-title">Drop Frequency & Cycle Length</span>
+                                    <span class="kpi-guide-item-badge">showDropCycleMetrics</span>
+                                </div>
+                                <p class="kpi-guide-item-desc">
+                                    Calculates how frequently the merchant discounts the item and reports how many days have elapsed since the last price drop.
+                                </p>
+                                <div class="kpi-guide-item-calc">
+                                    <strong>Calculation:</strong> Mean elapsed days between consecutive price drop events. Helps predict when the next cyclical clearance or promotional drop is expected.
+                                </div>
+                            </div>
+
+                            <!-- 14. Moving Average Benchmark -->
+                            <div class="kpi-guide-item">
+                                <div class="kpi-guide-item-top">
+                                    <span class="kpi-guide-item-title">Moving Average Benchmark (SMA-30 / SMA-90)</span>
+                                    <span class="kpi-guide-item-badge">showMovingAverageBenchmark</span>
+                                </div>
+                                <p class="kpi-guide-item-desc">
+                                    Filters out day-to-day pricing volatility by benchmarking current pricing against 30-day and 90-day Simple Moving Averages.
+                                </p>
+                                <div class="kpi-guide-item-calc">
+                                    <strong>Calculation:</strong> SMA = (&Sigma; daily closing prices) / N days. Displays current price deviation percentage relative to SMA-30 and SMA-90 baselines.
+                                </div>
+                            </div>
+
+                            <!-- 15. Store Source Volatility Badge -->
+                            <div class="kpi-guide-item">
+                                <div class="kpi-guide-item-top">
+                                    <span class="kpi-guide-item-title">Store Source Volatility Badge</span>
+                                    <span class="kpi-guide-item-badge">showStoreVolatility</span>
+                                </div>
+                                <p class="kpi-guide-item-desc">
+                                    Tags each individual merchant row in the product's store list with its pricing behavior pattern (Dynamic Pricing, Regular Cycles, or Static Price).
+                                </p>
+                                <div class="kpi-guide-item-calc">
+                                    <strong>Calculation:</strong> Evaluates total price change frequency and fluctuation amplitude observed for that merchant on this specific product.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Group 4: Stores & Alerts -->
+                    <div class="kpi-guide-section">
+                        <div class="kpi-guide-section-header">
+                            <h3 class="kpi-guide-section-title">Stores & Alerts Pages</h3>
+                            <span class="kpi-guide-section-count">3 Metrics · Stores & Alerts Tabs</span>
+                        </div>
+                        <div class="kpi-guide-grid">
+                            <!-- 16. Retailer Volatility & Win-Rate Index -->
+                            <div class="kpi-guide-item">
+                                <div class="kpi-guide-item-top">
+                                    <span class="kpi-guide-item-title">Retailer Volatility & Win-Rate Index</span>
+                                    <span class="kpi-guide-item-badge">showStoreVolatilityTable</span>
+                                </div>
+                                <p class="kpi-guide-item-desc">
+                                    Market intelligence table on the Stores page ranking all active retailers by catalog coverage, lowest-price win rate, pricing volatility tier, and total price adjustments.
+                                </p>
+                                <div class="kpi-guide-item-calc">
+                                    <strong>Calculation:</strong> Win rate = (catalog products where store offers lowest price / total products tracked by store) &times; 100%, paired with volatility classification.
+                                </div>
+                            </div>
+
+                            <!-- 17. Scraper Latency & Health Stats -->
+                            <div class="kpi-guide-item">
+                                <div class="kpi-guide-item-top">
+                                    <span class="kpi-guide-item-title">Scraper Latency & Health Stats</span>
+                                    <span class="kpi-guide-item-badge">showStoreLatencyHealth</span>
+                                </div>
+                                <p class="kpi-guide-item-desc">
+                                    Diagnostic metric column in the Retailer Volatility table displaying scraper performance, HTTP response speed, and request success rate per merchant.
+                                </p>
+                                <div class="kpi-guide-item-calc">
+                                    <strong>Calculation:</strong> Mean scraper HTTP fetch time in milliseconds and percentage of successful price extractions (e.g., "780ms · 99.2% ok").
+                                </div>
+                            </div>
+
+                            <!-- 18. Alert Target Realism Score -->
+                            <div class="kpi-guide-item">
+                                <div class="kpi-guide-item-top">
+                                    <span class="kpi-guide-item-title">Alert Target Realism Score</span>
+                                    <span class="kpi-guide-item-badge">showAlertRealismScore</span>
+                                </div>
+                                <p class="kpi-guide-item-desc">
+                                    Feasibility assessment on the dedicated Alert Detail view (#alert/:id). Assesses whether a user's price alert threshold is achievable or overly ambitious based on historical price history.
+                                </p>
+                                <div class="kpi-guide-item-calc">
+                                    <strong>Calculation:</strong> Compares target price against record low (ATL) and daily price distribution to assign feasibility (High, Moderate, or Optimistic), historical hit rate (days target was met / total days tracked), and distance to target.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-actions-sticky" style="display: flex; justify-content: flex-end; padding: 14px 28px;">
+                    <button type="button" class="btn btn-primary" id="dismissKpiGuideBtn">Close Guide</button>
+                </div>
             </div>
         </div>
     </div>
