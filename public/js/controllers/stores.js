@@ -42,7 +42,7 @@ const StoresController = {
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                     <div>
                         <h3 style="margin: 0; font-size: 1.0625rem; font-weight: 600; display: flex; align-items: center; gap: 8px;">
-                            <span>⚡</span> Retailer Volatility & Win-Rate Index
+                            Retailer Volatility & Win-Rate Index
                         </h3>
                         <p style="margin: 3px 0 0 0; font-size: 0.8125rem; color: var(--text-secondary);">
                             Behavioral pricing analysis, discount depths, and lowest-price win rates across all tracked products
@@ -84,7 +84,7 @@ const StoresController = {
                                     </td>
                                     <td>
                                         <span class="volatility-badge ${item.volatilityBadgeClass}">
-                                            ${item.volatilityEmoji} ${Utils.escapeHtml(item.volatilityLabel)}
+                                            ${Utils.escapeHtml(item.volatilityLabel)}
                                         </span>
                                     </td>
                                     <td>

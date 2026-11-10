@@ -288,7 +288,6 @@ const ProductDetail = {
                         <div class="buy-advice-header">
                             <div class="buy-advice-title-group">
                                 <h3>
-                                    <span>${rating.emoji}</span>
                                     <span>Deal Score: <strong>${deal.dealScore}/100</strong></span>
                                 </h3>
                                 <span class="buy-advice-subtitle">${escapeHtml(rating.badgeText)} — ${escapeHtml(rating.adviceText)}</span>
@@ -474,7 +473,7 @@ const ProductDetail = {
                             const storeIntel = window.Analytics.calculateStoreVolatility(window.App?.products || [product]);
                             const match = storeIntel.find(s => s.name.toLowerCase() === (source.siteName || '').trim().toLowerCase());
                             if (match) {
-                                volatilityBadge = `<span class="volatility-badge ${match.volatilityBadgeClass}" title="${match.volatilityDesc} (${match.changesPerProduct} changes/prod)">${match.volatilityEmoji} ${match.volatilityLabel}</span>`;
+                                volatilityBadge = `<span class="volatility-badge ${match.volatilityBadgeClass}" title="${match.volatilityDesc} (${match.changesPerProduct} changes/prod)">${match.volatilityLabel}</span>`;
                             }
                         }
 

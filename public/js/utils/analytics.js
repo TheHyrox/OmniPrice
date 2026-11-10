@@ -193,7 +193,6 @@
                     badgeClass: 'deal-exceptional',
                     actionText: 'Buy Now',
                     adviceText: 'Price is near historical low. Rare discount — strong buy opportunity.',
-                    emoji: '🔥',
                     color: '#10b981'
                 };
             }
@@ -204,7 +203,6 @@
                     badgeClass: 'deal-great',
                     actionText: 'Good Price',
                     adviceText: 'Cheaper than most recorded days. Solid time to buy.',
-                    emoji: '✨',
                     color: '#2563eb'
                 };
             }
@@ -215,7 +213,6 @@
                     badgeClass: 'deal-fair',
                     actionText: 'Fair Price',
                     adviceText: 'Standard market rate. Buy if you need it now.',
-                    emoji: '⚖️',
                     color: '#f59e0b'
                 };
             }
@@ -226,7 +223,6 @@
                     badgeClass: 'deal-mediocre',
                     actionText: 'Consider Waiting',
                     adviceText: 'Price is above historical average. Likely to drop in upcoming cycles.',
-                    emoji: '⏳',
                     color: '#ea580c'
                 };
             }
@@ -236,7 +232,6 @@
                 badgeClass: 'deal-poor',
                 actionText: 'Wait',
                 adviceText: 'Near recorded peak. We recommend holding off for a sale.',
-                emoji: '🛑',
                 color: '#ef4444'
             };
         },
@@ -333,20 +328,17 @@
                 let volatilityLevel = 'stable';
                 let volatilityLabel = 'Stable Pricing';
                 let volatilityBadgeClass = 'volatility-stable';
-                let volatilityEmoji = '🛡️';
                 let volatilityDesc = 'Prices rarely change between seasonal sales';
 
                 if (changesPerProduct >= 2.0 || store.priceChangeEvents >= 5) {
                     volatilityLevel = 'dynamic';
                     volatilityLabel = 'Dynamic Pricing';
                     volatilityBadgeClass = 'volatility-dynamic';
-                    volatilityEmoji = '⚡';
                     volatilityDesc = 'Algorithmic or frequent adjustments';
                 } else if (changesPerProduct >= 0.5 || store.priceChangeEvents >= 2) {
                     volatilityLevel = 'moderate';
                     volatilityLabel = 'Moderate Volatility';
                     volatilityBadgeClass = 'volatility-moderate';
-                    volatilityEmoji = '🔄';
                     volatilityDesc = 'Occasional price drops or sales';
                 }
 
@@ -361,7 +353,6 @@
                     volatilityLevel,
                     volatilityLabel,
                     volatilityBadgeClass,
-                    volatilityEmoji,
                     volatilityDesc
                 });
             });

@@ -73,7 +73,7 @@ const ProductCard = {
         if (showDealScore && typeof window !== 'undefined' && window.Analytics && !isArchived && cleanLowest != null) {
             const scoreData = window.Analytics.calculateDealScore(product, 90);
             if (scoreData && scoreData.available) {
-                dealScoreBadge = `<span class="card-badge deal-badge ${scoreData.rating.badgeClass}" title="${scoreData.rating.badgeText} (${scoreData.dealScore}/100) — ${scoreData.rating.adviceText}">${scoreData.rating.emoji} ${scoreData.dealScore}</span>`;
+                dealScoreBadge = `<span class="card-badge deal-badge ${scoreData.rating.badgeClass}" title="${scoreData.rating.badgeText} (${scoreData.dealScore}/100) — ${scoreData.rating.adviceText}">Score ${scoreData.dealScore}</span>`;
             }
         }
 
