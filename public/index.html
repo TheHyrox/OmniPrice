@@ -237,262 +237,374 @@
 
             <!-- Settings Tab -->
             <section id="settings-tab" class="tab-content">
-                <div class="tab-header">
-                    <h1>Settings</h1>
+                <!-- Dashboard Header -->
+                <div class="settings-header">
+                    <div>
+                        <h1>Settings</h1>
+                        <p class="tab-subtitle">Manage preferences, scraper schedules, notification channels, and data snapshots</p>
+                    </div>
                 </div>
-                <div class="settings-grid">
-                    <div class="settings-card">
-                        <h3>Currency</h3>
-                        <div class="setting-row">
-                            <label for="currencySetting" style="padding-right: 10px">Default Currency</label>
-                            <select id="currencySetting">
-                                <option value="EUR">EUR (€) – Euro</option>
-                                <option value="USD">USD ($) – US Dollar</option>
-                                <option value="GBP">GBP (£) – British Pound</option>
-                                <option value="CAD">CAD (CA$) – Canadian Dollar</option>
-                                <option value="JPY">JPY (¥) – Japanese Yen</option>
-                                <option value="CHF">CHF (CHF) – Swiss Franc</option>
-                                <option value="AUD">AUD (A$) – Australian Dollar</option>
-                            </select>
-                        </div>
+
+                <!-- System Status Ribbon -->
+                <div class="settings-status-bar">
+                    <div class="status-bar-item">
+                        <span class="status-bar-label">Currency</span>
+                        <span class="status-bar-val" id="dashStatCurrency">EUR (€)</span>
                     </div>
-                    <div class="settings-card">
-                        <h3>Appearance</h3>
-                        <div class="setting-row">
-                            <label>Theme</label>
-                            <div class="theme-options">
-                                <button class="theme-opt active" data-theme="light">Light</button>
-                                <button class="theme-opt" data-theme="dark">Dark</button>
+                    <div class="status-bar-divider"></div>
+                    <div class="status-bar-item">
+                        <span class="status-bar-label">Scraper Schedule</span>
+                        <span class="status-bar-val" id="dashStatSchedule">Every 6 hours</span>
+                    </div>
+                    <div class="status-bar-divider"></div>
+                    <div class="status-bar-item">
+                        <span class="status-bar-label">Discord Channel</span>
+                        <span class="status-bar-val" id="dashStatDiscord">Checking...</span>
+                    </div>
+                    <div class="status-bar-divider"></div>
+                    <div class="status-bar-item">
+                        <span class="status-bar-label">Web Push</span>
+                        <span class="status-bar-val" id="dashStatPush">Checking...</span>
+                    </div>
+                </div>
+
+                <!-- Category Navigation -->
+                <div class="settings-category-nav">
+                    <button class="settings-category-btn active" data-category="all">All Settings</button>
+                    <button class="settings-category-btn" data-category="general">General</button>
+                    <button class="settings-category-btn" data-category="notifications">Notifications</button>
+                    <button class="settings-category-btn" data-category="kpis">Analytics & KPIs</button>
+                    <button class="settings-category-btn" data-category="backup">Data & Backup</button>
+                </div>
+
+                <!-- Settings Dashboard Grid -->
+                <div class="settings-dashboard-grid">
+                    <!-- General Preferences Card -->
+                    <div class="settings-card" data-section="general">
+                        <div class="settings-card-header">
+                            <div>
+                                <h3>General Preferences</h3>
+                                <p class="settings-card-sub">Application currency and theme display</p>
                             </div>
                         </div>
-                    </div>
-                    <div class="settings-card">
-                        <h3>Scraping</h3>
-                        <div class="setting-row">
-                            <label for="scrapeFrequency" style="padding-right: 10px">Frequency</label>
-                            <select id="scrapeFrequency">
-                                <option value="900000">Every 15 minutes</option>
-                                <option value="1800000">Every 30 minutes</option>
-                                <option value="3600000">Every 1 hour</option>
-                                <option value="7200000">Every 2 hours</option>
-                                <option value="21600000">Every 6 hours</option>
-                                <option value="43200000">Every 12 hours</option>
-                                <option value="86400000">Every 24 hours (Daily)</option>
-                                <option value="0">Only at startup / Manual</option>
-                            </select>
-                        </div>
-                        <div class="setting-row" id="scrapeTimeRow">
-                            <label for="scrapeTime" style="padding-right: 10px">Scheduled Hour (hh:mm)</label>
-                            <input type="time" id="scrapeTime" value="00:00" step="60" />
-                        </div>
-                        <div class="setting-row">
-                            <button id="scrapeAllBtn" class="btn btn-secondary">Scrape All Now</button>
-                        </div>
-                    </div>
-                    <div class="settings-card" style="grid-column: 1 / -1; max-width: 680px;">
-                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
-                            <h3 style="margin-bottom: 0; padding-bottom: 0; border-bottom: none;">Discord Notifications (Webhook)</h3>
-                        </div>
-                        <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 16px; line-height: 1.5;">
-                            Send rich price drop alerts directly to a Discord channel. To create a webhook in Discord:
-                            <strong>Channel Settings → Integrations → Webhooks → New Webhook → Copy Webhook URL</strong>.
-                        </p>
-                        <div class="form-group" style="margin-bottom: 16px;">
-                            <label for="discordWebhookUrl">Default Discord Webhook URL</label>
-                            <input type="url" id="discordWebhookUrl" placeholder="https://discord.com/api/webhooks/..." style="font-family: monospace; font-size: 0.875rem;" />
-                        </div>
-                        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-                            <button id="saveDiscordBtn" class="btn btn-primary">Save Webhook</button>
-                            <button id="testDiscordBtn" class="btn btn-secondary">Send Test Notification</button>
-                        </div>
-                        <div id="discordStatusMsg" style="margin-top: 12px; font-size: 0.875rem; display: none;"></div>
-                    </div>
-                    <div class="settings-card" style="grid-column: 1 / -1; max-width: 680px;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-                            <h3 style="margin-bottom: 0; padding-bottom: 0; border-bottom: none;">Web Push & Browser Notifications</h3>
-                            <span id="pushStatusBadge" class="badge" style="padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; background: var(--bg-tertiary); color: var(--text-secondary);">Checking...</span>
-                        </div>
-                        <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 16px; line-height: 1.5;">
-                            Receive native OS notifications directly in your browser or installed PWA when a price drops below your target or a deal ends.
-                        </p>
-                        <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-                            <button id="enablePushBtn" class="btn btn-primary">Enable Web Push Notifications</button>
-                            <button id="testPushBtn" class="btn btn-secondary" style="display: none;">Send Test Push</button>
-                        </div>
-                        <div id="pushStatusMsg" style="margin-top: 12px; font-size: 0.875rem; display: none;"></div>
-                    </div>
 
-                    <!-- Analytics & KPI Display Visibility Card -->
-                    <div class="settings-card" style="grid-column: 1 / -1; max-width: 680px;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
-                            <h3 style="margin-bottom: 0; padding-bottom: 0; border-bottom: none;">Analytics & KPI Visibility</h3>
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <button type="button" id="openKpiGuideBtn" class="btn btn-secondary btn-sm" style="padding: 4px 10px; font-size: 0.75rem;">KPI Guide</button>
-                                <span class="badge" style="padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; background: rgba(16, 185, 129, 0.12); color: #10b981;">Customizable Displays</span>
-                            </div>
-                        </div>
-                        <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 16px; line-height: 1.5;">
-                            Choose which KPI cards, deal meters, buy advice, and store volatility indicators are visible across OmniPrice. Click "KPI Guide" for full documentation of each metric.
-                        </p>
-
-                        <div class="kpi-visibility-options" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
-                            <!-- Group 1: Home Page Overview KPIs -->
-                            <div class="kpi-visibility-group" style="padding: 14px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px;">
-                                <h4 style="font-size: 0.875rem; font-weight: 600; margin-bottom: 10px; color: var(--text-primary);">
-                                    Home Page Overview KPIs
-                                </h4>
-                                <div style="display: flex; flex-direction: column; gap: 8px;">
-                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
-                                        <input type="checkbox" id="kpiShowTracked" checked>
-                                        <span>Tracked Items counter</span>
-                                    </label>
-                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
-                                        <input type="checkbox" id="kpiShowRecordLows" checked>
-                                        <span>Record Lows (ATL) counter</span>
-                                    </label>
-                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
-                                        <input type="checkbox" id="kpiShowTotalSavings" checked>
-                                        <span>Total Savings counter</span>
-                                    </label>
-                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
-                                        <input type="checkbox" id="kpiShowStoreFeeds" checked>
-                                        <span>Store Feeds health counter</span>
-                                    </label>
-                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
-                                        <input type="checkbox" id="kpiShowAvgDiscount" checked>
-                                        <span>Average Catalog Discount counter</span>
-                                    </label>
-                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
-                                        <input type="checkbox" id="kpiShowMarketTrend" checked>
-                                        <span>Market Trend Direction counter</span>
-                                    </label>
+                        <div class="settings-card-body">
+                            <div class="settings-item-row">
+                                <div class="settings-item-text">
+                                    <label for="currencySetting" class="settings-item-title">Default Currency</label>
+                                    <p class="settings-item-desc">Price formatting throughout product cards, charts, and alerts</p>
+                                </div>
+                                <div class="settings-item-control">
+                                    <select id="currencySetting" class="settings-select">
+                                        <option value="EUR">EUR (€) – Euro</option>
+                                        <option value="USD">USD ($) – US Dollar</option>
+                                        <option value="GBP">GBP (£) – British Pound</option>
+                                        <option value="CAD">CAD (CA$) – Canadian Dollar</option>
+                                        <option value="JPY">JPY (¥) – Japanese Yen</option>
+                                        <option value="CHF">CHF (CHF) – Swiss Franc</option>
+                                        <option value="AUD">AUD (A$) – Australian Dollar</option>
+                                    </select>
                                 </div>
                             </div>
 
-                            <!-- Group 2: Product Cards -->
-                            <div class="kpi-visibility-group" style="padding: 14px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px;">
-                                <h4 style="font-size: 0.875rem; font-weight: 600; margin-bottom: 10px; color: var(--text-primary);">
-                                    Product Cards (Grid & List)
-                                </h4>
-                                <div style="display: flex; flex-direction: column; gap: 8px;">
-                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
-                                        <input type="checkbox" id="kpiShowDealScoreBadge" checked>
-                                        <span>Deal Score badge</span>
-                                    </label>
-                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
-                                        <input type="checkbox" id="kpiShowPriceFreshness" checked>
-                                        <span>Price Freshness & Stability text</span>
-                                    </label>
-                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
-                                        <input type="checkbox" id="kpiShowStoreSpread" checked>
-                                        <span>Store Price Spread text</span>
-                                    </label>
-                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
-                                        <input type="checkbox" id="kpiShowAtlProximity" checked>
-                                        <span>All-Time Low Proximity text</span>
-                                    </label>
+                            <div class="settings-item-row">
+                                <div class="settings-item-text">
+                                    <span class="settings-item-title">Appearance</span>
+                                    <p class="settings-item-desc">Switch between light and dark interface themes</p>
+                                </div>
+                                <div class="settings-item-control">
+                                    <div class="theme-options">
+                                        <button class="theme-opt active" data-theme="light">Light</button>
+                                        <button class="theme-opt" data-theme="dark">Dark</button>
+                                    </div>
                                 </div>
                             </div>
-
-                            <!-- Group 3: Product Detail Page -->
-                            <div class="kpi-visibility-group" style="padding: 14px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px;">
-                                <h4 style="font-size: 0.875rem; font-weight: 600; margin-bottom: 10px; color: var(--text-primary);">
-                                    Product Detail Page
-                                </h4>
-                                <div style="display: flex; flex-direction: column; gap: 8px;">
-                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
-                                        <input type="checkbox" id="kpiShowBuyAdvice" checked>
-                                        <span>Buy Advice & Deal Score meter</span>
-                                    </label>
-                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
-                                        <input type="checkbox" id="kpiShowDayOfWeekSweetSpot" checked>
-                                        <span>Best Day to Buy (Day-of-Week sweet spot)</span>
-                                    </label>
-                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
-                                        <input type="checkbox" id="kpiShowDropCycleMetrics" checked>
-                                        <span>Drop Frequency & Cycle length</span>
-                                    </label>
-                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
-                                        <input type="checkbox" id="kpiShowMovingAverageBenchmark" checked>
-                                        <span>Moving Average Benchmark (SMA-30 / SMA-90)</span>
-                                    </label>
-                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
-                                        <input type="checkbox" id="kpiShowStoreVolatility" checked>
-                                        <span>Store Source Volatility badge</span>
-                                    </label>
-                                </div>
-                            </div>
-
-                            <!-- Group 4: Stores & Alerts -->
-                            <div class="kpi-visibility-group" style="padding: 14px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px;">
-                                <h4 style="font-size: 0.875rem; font-weight: 600; margin-bottom: 10px; color: var(--text-primary);">
-                                    Stores & Alerts Pages
-                                </h4>
-                                <div style="display: flex; flex-direction: column; gap: 8px;">
-                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
-                                        <input type="checkbox" id="kpiShowStoreVolatilityTable" checked>
-                                        <span>Retailer Volatility & Win-Rate Index</span>
-                                    </label>
-                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
-                                        <input type="checkbox" id="kpiShowStoreLatencyHealth" checked>
-                                        <span>Scraper Latency & Health stats</span>
-                                    </label>
-                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
-                                        <input type="checkbox" id="kpiShowAlertRealismScore" checked>
-                                        <span>Alert Target Realism Score on Alert Detail</span>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style="margin-top: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-                            <button type="button" id="openKpiGuideBottomBtn" class="btn btn-secondary btn-sm">Metric Explanations & Guide</button>
-                            <button id="saveKpiVisibilityBtn" class="btn btn-primary btn-sm">Save Visibility Preferences</button>
                         </div>
                     </div>
 
-                    <!-- Database Backup & Restore Card -->
-                    <div class="settings-card" style="grid-column: 1 / -1; max-width: 680px;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
-                            <h3 style="margin-bottom: 0; padding-bottom: 0; border-bottom: none;">Database Backup & Restore</h3>
-                            <span class="badge" style="padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; background: rgba(59, 130, 246, 0.12); color: #2563eb;">JSON Snapshot</span>
-                        </div>
-                        <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 18px; line-height: 1.5;">
-                            Export a complete backup of all tracked products, price history graphs, store presets, alerts, and settings. You can restore this file at any time or migrate it to another server.
-                        </p>
-                        
-                        <div style="display: flex; flex-direction: column; gap: 16px;">
-                            <!-- Download Section -->
-                            <div style="padding: 14px 16px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
-                                <div>
-                                    <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 2px;">Export Database</div>
-                                    <div style="font-size: 0.8rem; color: var(--text-secondary);">Download entire database as a single .json file</div>
-                                </div>
-                                <button id="downloadBackupBtn" class="btn btn-primary">Export JSON</button>
+                    <!-- Scraping Automation Card -->
+                    <div class="settings-card" data-section="general">
+                        <div class="settings-card-header">
+                            <div>
+                                <h3>Scraper Automation</h3>
+                                <p class="settings-card-sub">Periodic price crawling cycles and background jobs</p>
                             </div>
-
-                            <!-- Restore Section -->
-                            <div style="padding: 14px 16px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px;">
-                                <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 2px;">Restore from Backup</div>
-                                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 14px;">Upload an OmniPrice backup file (.json) to restore data</div>
-                                
-                                <div style="display: flex; gap: 18px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; font-size: 0.875rem;">
-                                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                                        <input type="radio" name="restoreMode" value="replace" checked style="cursor: pointer;" />
-                                        <span>Replace all data (Clean restore)</span>
-                                    </label>
-                                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-                                        <input type="radio" name="restoreMode" value="merge" style="cursor: pointer;" />
-                                        <span>Merge with existing data</span>
-                                    </label>
-                                </div>
-
-                                <input type="file" id="restoreFileInput" accept=".json" style="display: none;" />
-                                <button id="selectRestoreFileBtn" class="btn btn-secondary">Select File & Restore</button>
-                            </div>
+                            <span class="badge" id="scrapeActiveBadge">Automated</span>
                         </div>
 
-                        <div id="backupStatusMsg" style="margin-top: 14px; font-size: 0.875rem; display: none;"></div>
+                        <div class="settings-card-body">
+                            <div class="settings-item-row">
+                                <div class="settings-item-text">
+                                    <label for="scrapeFrequency" class="settings-item-title">Check Frequency</label>
+                                    <p class="settings-item-desc">Interval between automated background price scrapes</p>
+                                </div>
+                                <div class="settings-item-control">
+                                    <select id="scrapeFrequency" class="settings-select">
+                                        <option value="900000">Every 15 minutes</option>
+                                        <option value="1800000">Every 30 minutes</option>
+                                        <option value="3600000">Every 1 hour</option>
+                                        <option value="7200000">Every 2 hours</option>
+                                        <option value="21600000">Every 6 hours</option>
+                                        <option value="43200000">Every 12 hours</option>
+                                        <option value="86400000">Every 24 hours (Daily)</option>
+                                        <option value="0">Only at startup / Manual</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="settings-item-row" id="scrapeTimeRow">
+                                <div class="settings-item-text">
+                                    <label for="scrapeTime" class="settings-item-title">Scheduled Hour</label>
+                                    <p class="settings-item-desc">Fixed daily anchor time (hh:mm)</p>
+                                </div>
+                                <div class="settings-item-control">
+                                    <input type="time" id="scrapeTime" value="00:00" step="60" class="settings-input settings-time-input" />
+                                </div>
+                            </div>
+
+                            <div class="settings-action-banner">
+                                <div class="settings-banner-text">
+                                    <strong>Instant Scrape</strong>
+                                    <span>Trigger immediate price refresh for all tracked items</span>
+                                </div>
+                                <button id="scrapeAllBtn" class="btn btn-secondary">Scrape All Now</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Discord Notifications Card -->
+                    <div class="settings-card" data-section="notifications">
+                        <div class="settings-card-header">
+                            <div>
+                                <h3>Discord Notifications</h3>
+                                <p class="settings-card-sub">Rich price drop and all-time low webhook alerts</p>
+                            </div>
+                        </div>
+
+                        <div class="settings-card-body">
+                            <p class="settings-tip-text">
+                                Send price alerts directly to Discord. In Discord: <strong>Channel Settings → Integrations → Webhooks → Copy Webhook URL</strong>.
+                            </p>
+
+                            <div class="form-group" style="margin-bottom: 16px;">
+                                <label for="discordWebhookUrl" class="settings-item-title">Webhook URL</label>
+                                <input type="url" id="discordWebhookUrl" placeholder="https://discord.com/api/webhooks/..." class="settings-input settings-mono-input" />
+                            </div>
+
+                            <div class="settings-btn-cluster">
+                                <button id="saveDiscordBtn" class="btn btn-primary">Save Webhook</button>
+                                <button id="testDiscordBtn" class="btn btn-secondary">Send Test Notification</button>
+                            </div>
+                            <div id="discordStatusMsg" class="settings-status-box" style="display: none;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Web Push Notifications Card -->
+                    <div class="settings-card" data-section="notifications">
+                        <div class="settings-card-header">
+                            <div>
+                                <h3>Browser & Web Push</h3>
+                                <p class="settings-card-sub">Native desktop and mobile OS notifications</p>
+                            </div>
+                            <span id="pushStatusBadge" class="badge">Checking...</span>
+                        </div>
+
+                        <div class="settings-card-body">
+                            <p class="settings-text-muted">
+                                Receive instant alerts directly through your browser or installed PWA when an item reaches your target price.
+                            </p>
+
+                            <div class="settings-btn-cluster">
+                                <button id="enablePushBtn" class="btn btn-primary">Enable Web Push Notifications</button>
+                                <button id="testPushBtn" class="btn btn-secondary" style="display: none;">Send Test Push</button>
+                            </div>
+                            <div id="pushStatusMsg" class="settings-status-box" style="display: none;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Analytics & KPI Display Visibility Card (Full Width) -->
+                    <div class="settings-card settings-card-full" data-section="kpis">
+                        <div class="settings-card-header">
+                            <div>
+                                <h3>Analytics & KPI Visibility</h3>
+                                <p class="settings-card-sub">Customize which metric cards, deal meters, and indicators appear across the UI</p>
+                            </div>
+                        </div>
+
+                        <div class="settings-card-body">
+                            <div class="kpi-visibility-dashboard-grid">
+                                <!-- Group 1: Home Page Overview KPIs -->
+                                <div class="kpi-visibility-tile">
+                                    <div class="kpi-tile-header">
+                                        <h4>Home Page Overview</h4>
+                                    </div>
+                                    <div class="kpi-checkbox-list">
+                                        <label class="kpi-checkbox-row">
+                                            <input type="checkbox" id="kpiShowTracked" checked>
+                                            <span class="kpi-check-label">Tracked Items counter</span>
+                                        </label>
+                                        <label class="kpi-checkbox-row">
+                                            <input type="checkbox" id="kpiShowRecordLows" checked>
+                                            <span class="kpi-check-label">Record Lows (ATL) counter</span>
+                                        </label>
+                                        <label class="kpi-checkbox-row">
+                                            <input type="checkbox" id="kpiShowTotalSavings" checked>
+                                            <span class="kpi-check-label">Total Savings counter</span>
+                                        </label>
+                                        <label class="kpi-checkbox-row">
+                                            <input type="checkbox" id="kpiShowStoreFeeds" checked>
+                                            <span class="kpi-check-label">Store Feeds health counter</span>
+                                        </label>
+                                        <label class="kpi-checkbox-row">
+                                            <input type="checkbox" id="kpiShowAvgDiscount" checked>
+                                            <span class="kpi-check-label">Average Catalog Discount</span>
+                                        </label>
+                                        <label class="kpi-checkbox-row">
+                                            <input type="checkbox" id="kpiShowMarketTrend" checked>
+                                            <span class="kpi-check-label">Market Trend Direction</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Group 2: Product Cards -->
+                                <div class="kpi-visibility-tile">
+                                    <div class="kpi-tile-header">
+                                        <h4>Product Cards</h4>
+                                    </div>
+                                    <div class="kpi-checkbox-list">
+                                        <label class="kpi-checkbox-row">
+                                            <input type="checkbox" id="kpiShowDealScoreBadge" checked>
+                                            <span class="kpi-check-label">Deal Score badge</span>
+                                        </label>
+                                        <label class="kpi-checkbox-row">
+                                            <input type="checkbox" id="kpiShowPriceFreshness" checked>
+                                            <span class="kpi-check-label">Price Freshness & Stability</span>
+                                        </label>
+                                        <label class="kpi-checkbox-row">
+                                            <input type="checkbox" id="kpiShowStoreSpread" checked>
+                                            <span class="kpi-check-label">Store Price Spread</span>
+                                        </label>
+                                        <label class="kpi-checkbox-row">
+                                            <input type="checkbox" id="kpiShowAtlProximity" checked>
+                                            <span class="kpi-check-label">All-Time Low Proximity</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Group 3: Product Detail Page -->
+                                <div class="kpi-visibility-tile">
+                                    <div class="kpi-tile-header">
+                                        <h4>Product Detail Page</h4>
+                                    </div>
+                                    <div class="kpi-checkbox-list">
+                                        <label class="kpi-checkbox-row">
+                                            <input type="checkbox" id="kpiShowBuyAdvice" checked>
+                                            <span class="kpi-check-label">Buy Advice & Deal Score</span>
+                                        </label>
+                                        <label class="kpi-checkbox-row">
+                                            <input type="checkbox" id="kpiShowDayOfWeekSweetSpot" checked>
+                                            <span class="kpi-check-label">Best Day to Buy sweet spot</span>
+                                        </label>
+                                        <label class="kpi-checkbox-row">
+                                            <input type="checkbox" id="kpiShowDropCycleMetrics" checked>
+                                            <span class="kpi-check-label">Drop Frequency & Cycle</span>
+                                        </label>
+                                        <label class="kpi-checkbox-row">
+                                            <input type="checkbox" id="kpiShowMovingAverageBenchmark" checked>
+                                            <span class="kpi-check-label">Moving Average (SMA-30 / 90)</span>
+                                        </label>
+                                        <label class="kpi-checkbox-row">
+                                            <input type="checkbox" id="kpiShowStoreVolatility" checked>
+                                            <span class="kpi-check-label">Store Volatility badge</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Group 4: Stores & Alerts -->
+                                <div class="kpi-visibility-tile">
+                                    <div class="kpi-tile-header">
+                                        <h4>Stores & Alerts</h4>
+                                    </div>
+                                    <div class="kpi-checkbox-list">
+                                        <label class="kpi-checkbox-row">
+                                            <input type="checkbox" id="kpiShowStoreVolatilityTable" checked>
+                                            <span class="kpi-check-label">Retailer Volatility & Win-Rate</span>
+                                        </label>
+                                        <label class="kpi-checkbox-row">
+                                            <input type="checkbox" id="kpiShowStoreLatencyHealth" checked>
+                                            <span class="kpi-check-label">Scraper Latency & Health</span>
+                                        </label>
+                                        <label class="kpi-checkbox-row">
+                                            <input type="checkbox" id="kpiShowAlertRealismScore" checked>
+                                            <span class="kpi-check-label">Alert Realism Score</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="settings-footer-actions">
+                                <button type="button" id="openKpiGuideBottomBtn" class="btn btn-secondary btn-sm">Metric Explanations & Guide</button>
+                                <button id="saveKpiVisibilityBtn" class="btn btn-primary btn-sm">Save Preferences</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Database Backup & Restore Card (Full Width) -->
+                    <div class="settings-card settings-card-full" data-section="backup">
+                        <div class="settings-card-header">
+                            <div>
+                                <h3>Database Backup & Recovery</h3>
+                                <p class="settings-card-sub">Export or restore full JSON snapshots across OmniPrice instances</p>
+                            </div>
+                            <span class="badge">JSON Snapshot</span>
+                        </div>
+
+                        <div class="settings-card-body">
+                            <div class="backup-restore-dashboard-layout">
+                                <!-- Export Section -->
+                                <div class="backup-action-card">
+                                    <div>
+                                        <h4 class="backup-card-title">Export Database</h4>
+                                        <p class="backup-card-desc">Download all tracked products, price history points, stores, and alerts as a portable JSON file.</p>
+                                    </div>
+                                    <div class="backup-card-action">
+                                        <button id="downloadBackupBtn" class="btn btn-primary">Export JSON Snapshot</button>
+                                    </div>
+                                </div>
+
+                                <!-- Restore Section -->
+                                <div class="backup-action-card">
+                                    <div>
+                                        <h4 class="backup-card-title">Restore from Backup</h4>
+                                        <p class="backup-card-desc">Import an OmniPrice JSON snapshot to replace or merge data into your database.</p>
+                                    </div>
+
+                                    <div class="restore-mode-segmented">
+                                        <label class="restore-mode-option">
+                                            <input type="radio" name="restoreMode" value="replace" checked>
+                                            <span class="mode-label-text">
+                                                <strong>Clean Restore</strong>
+                                                <span>Replace all existing data</span>
+                                            </span>
+                                        </label>
+                                        <label class="restore-mode-option">
+                                            <input type="radio" name="restoreMode" value="merge">
+                                            <span class="mode-label-text">
+                                                <strong>Merge Data</strong>
+                                                <span>Combine with current catalog</span>
+                                            </span>
+                                        </label>
+                                    </div>
+
+                                    <div class="backup-card-action">
+                                        <input type="file" id="restoreFileInput" accept=".json" style="display: none;" />
+                                        <button id="selectRestoreFileBtn" class="btn btn-secondary">Select File & Restore</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="backupStatusMsg" class="settings-status-box" style="display: none;"></div>
+                        </div>
                     </div>
                 </div>
             </section>

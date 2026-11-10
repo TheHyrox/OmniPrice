@@ -63,8 +63,84 @@ const SettingsController = {
             setCheck('kpiShowStoreVolatilityTable', kpi.showStoreVolatilityTable);
             setCheck('kpiShowStoreLatencyHealth', kpi.showStoreLatencyHealth);
             setCheck('kpiShowAlertRealismScore', kpi.showAlertRealismScore);
+
+            this.updateDashboardOverview();
+            this.initCategoryNav();
         } catch (error) {
             console.error('Failed to load settings:', error);
+        }
+    },
+
+    _categoryNavInitialized: false,
+
+    initCategoryNav() {
+        if (this._categoryNavInitialized) return;
+        const buttons = document.querySelectorAll('.settings-category-btn');
+        if (!buttons.length) return;
+        this._categoryNavInitialized = true;
+
+        buttons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const cat = btn.dataset.category;
+                buttons.forEach(b => b.classList.toggle('active', b === btn));
+                const cards = document.querySelectorAll('.settings-dashboard-grid .settings-card');
+                cards.forEach(card => {
+                    if (cat === 'all' || card.dataset.section === cat) {
+                        card.classList.remove('is-hidden');
+                    } else {
+                        card.classList.add('is-hidden');
+                    }
+                });
+            });
+        });
+    },
+
+    updateDashboardOverview() {
+        const curEl = document.getElementById('dashStatCurrency');
+        if (curEl && this.settings.currency) {
+            const sym = typeof Utils !== 'undefined' && Utils.getCurrencySymbol ? Utils.getCurrencySymbol() : '';
+            curEl.textContent = `${this.settings.currency} (${sym})`;
+        }
+
+        const schedEl = document.getElementById('dashStatSchedule');
+        const badgeEl = document.getElementById('scrapeActiveBadge');
+        if (schedEl) {
+            const freq = parseInt(this.settings.scrapeFrequency !== undefined ? this.settings.scrapeFrequency : 21600000, 10);
+            const time = this.settings.scrapeTime || '00:00';
+            if (freq === 0) {
+                schedEl.textContent = 'Manual Only';
+                if (badgeEl) {
+                    badgeEl.textContent = 'Manual';
+                    badgeEl.className = 'badge';
+                }
+            } else {
+                const freqMap = {
+                    900000: 'Every 15m',
+                    1800000: 'Every 30m',
+                    3600000: 'Every 1h',
+                    7200000: 'Every 2h',
+                    21600000: 'Every 6h',
+                    43200000: 'Every 12h',
+                    86400000: 'Daily (24h)'
+                };
+                const label = freqMap[freq] || 'Scheduled';
+                schedEl.textContent = `${label} (${time})`;
+                if (badgeEl) {
+                    badgeEl.textContent = 'Automated';
+                    badgeEl.className = 'badge badge-accent';
+                }
+            }
+        }
+
+        const discEl = document.getElementById('dashStatDiscord');
+        if (discEl) {
+            if (this.settings.discordWebhookUrl && this.settings.discordWebhookUrl.trim()) {
+                discEl.textContent = 'Connected';
+                discEl.style.color = 'var(--success)';
+            } else {
+                discEl.textContent = 'Not Configured';
+                discEl.style.color = 'var(--text-tertiary)';
+            }
         }
     },
 
@@ -73,6 +149,8 @@ const SettingsController = {
         try {
             Utils.setAppCurrency(currencyCode);
             await API.updateSettings({ currency: currencyCode });
+            this.settings.currency = currencyCode;
+            this.updateDashboardOverview();
             Toast.success(`Currency changed to ${currencyCode} (${Utils.getCurrencySymbol()})`);
 
             // Re-render UI views to reflect currency change
@@ -103,6 +181,7 @@ const SettingsController = {
         try {
             await API.updateSettings({ scrapeFrequency: freq });
             this.settings.scrapeFrequency = freq;
+            this.updateDashboardOverview();
             Toast.success('Scraping frequency updated');
         } catch (error) {
             Toast.error('Failed to update scraping frequency: ' + error.message);
@@ -132,6 +211,7 @@ const SettingsController = {
             try {
                 await API.updateSettings({ scrapeTime: val });
                 this.settings.scrapeTime = val;
+                this.updateDashboardOverview();
                 if (window.App) window.App.settings = this.settings;
                 Toast.success(`Scheduled scraping hour set to ${val}`);
             } catch (error) {
@@ -169,6 +249,8 @@ const SettingsController = {
 
         try {
             await API.updateSettings({ discordWebhookUrl: webhookUrl });
+            this.settings.discordWebhookUrl = webhookUrl;
+            this.updateDashboardOverview();
             Toast.success('Discord webhook saved successfully!');
         } catch (error) {
             Toast.error('Failed to save Discord settings: ' + error.message);
@@ -433,6 +515,23 @@ const SettingsController = {
         const badge = document.getElementById('pushStatusBadge');
         const enableBtn = document.getElementById('enablePushBtn');
         const testBtn = document.getElementById('testPushBtn');
+        const dashPush = document.getElementById('dashStatPush');
+
+        if (dashPush) {
+            if (state === 'subscribed') {
+                dashPush.textContent = 'Active';
+                dashPush.style.color = 'var(--success)';
+            } else if (state === 'blocked') {
+                dashPush.textContent = 'Blocked';
+                dashPush.style.color = 'var(--danger)';
+            } else if (state === 'unsupported') {
+                dashPush.textContent = 'Not Supported';
+                dashPush.style.color = 'var(--text-tertiary)';
+            } else {
+                dashPush.textContent = 'Disabled';
+                dashPush.style.color = 'var(--text-secondary)';
+            }
+        }
 
         if (!badge || !enableBtn) return;
 
