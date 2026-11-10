@@ -104,6 +104,15 @@ const updateSettingsSchema = z.object({
         .optional()
         .or(z.literal(''))
         .nullable(),
+    kpiVisibility: z.object({
+        showTrackedKpi: z.boolean().optional(),
+        showRecordLowsKpi: z.boolean().optional(),
+        showTotalSavingsKpi: z.boolean().optional(),
+        showStoreFeedsKpi: z.boolean().optional(),
+        showDealScoreBadge: z.boolean().optional(),
+        showBuyAdvice: z.boolean().optional(),
+        showStoreVolatility: z.boolean().optional(),
+    }).strict().optional(),
 }).strict();
 
 // ─── Bundles ──────────────────────────────────────────────────────────────────

@@ -129,6 +129,8 @@
                 <div class="stores-intro">
                     <p>Manage preset stores and CSS selectors. When a website structure changes, updating the selector here updates or syncs across your products.</p>
                 </div>
+                <!-- Store Market Intelligence Container -->
+                <div id="storesIntelligenceContainer"></div>
                 <div id="storesGrid" class="stores-grid"></div>
             </section>
 
@@ -314,6 +316,69 @@
                             <button id="testPushBtn" class="btn btn-secondary" style="display: none;">Send Test Push</button>
                         </div>
                         <div id="pushStatusMsg" style="margin-top: 12px; font-size: 0.875rem; display: none;"></div>
+                    </div>
+
+                    <!-- Analytics & KPI Display Visibility Card -->
+                    <div class="settings-card" style="grid-column: 1 / -1; max-width: 680px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                            <h3 style="margin-bottom: 0; padding-bottom: 0; border-bottom: none;">Analytics & KPI Visibility</h3>
+                            <span class="badge" style="padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; background: rgba(16, 185, 129, 0.12); color: #10b981;">Customizable Displays</span>
+                        </div>
+                        <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 16px; line-height: 1.5;">
+                            Choose which KPI cards, deal meters, buy advice, and store volatility indicators are visible across OmniPrice.
+                        </p>
+
+                        <div class="kpi-visibility-options" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
+                            <!-- Products Page Overview KPIs -->
+                            <div class="kpi-visibility-group" style="padding: 14px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px;">
+                                <h4 style="font-size: 0.875rem; font-weight: 600; margin-bottom: 10px; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                                    <span>📊</span> Home Page Overview KPIs
+                                </h4>
+                                <div style="display: flex; flex-direction: column; gap: 8px;">
+                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
+                                        <input type="checkbox" id="kpiShowTracked" checked>
+                                        <span>Tracked Items counter</span>
+                                    </label>
+                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
+                                        <input type="checkbox" id="kpiShowRecordLows" checked>
+                                        <span>Record Lows (ATL) counter</span>
+                                    </label>
+                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
+                                        <input type="checkbox" id="kpiShowTotalSavings" checked>
+                                        <span>Total Savings counter</span>
+                                    </label>
+                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
+                                        <input type="checkbox" id="kpiShowStoreFeeds" checked>
+                                        <span>Store Feeds health counter</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Product Cards & Details -->
+                            <div class="kpi-visibility-group" style="padding: 14px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px;">
+                                <h4 style="font-size: 0.875rem; font-weight: 600; margin-bottom: 10px; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                                    <span>🎯</span> Product Cards & Detail Page
+                                </h4>
+                                <div style="display: flex; flex-direction: column; gap: 8px;">
+                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
+                                        <input type="checkbox" id="kpiShowDealScoreBadge" checked>
+                                        <span>Deal Score badge on product cards</span>
+                                    </label>
+                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
+                                        <input type="checkbox" id="kpiShowBuyAdvice" checked>
+                                        <span>Buy Advice & Deal Score meter in product detail</span>
+                                    </label>
+                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
+                                        <input type="checkbox" id="kpiShowStoreVolatility" checked>
+                                        <span>Retailer Volatility & Win-Rate index</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 14px; display: flex; justify-content: flex-end;">
+                            <button id="saveKpiVisibilityBtn" class="btn btn-primary btn-sm">Save Visibility Preferences</button>
+                        </div>
                     </div>
 
                     <!-- Database Backup & Restore Card -->
@@ -681,6 +746,7 @@
 
     <script src="/js/client-reporter.js"></script>
     <script src="/js/utils.js"></script>
+    <script src="/js/utils/analytics.js"></script>
     <script src="/js/services/api.js"></script>
     <script src="/js/services/toast.js"></script>
     <script src="/js/services/confirm.js"></script>

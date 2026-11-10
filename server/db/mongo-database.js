@@ -137,7 +137,16 @@ const defaultSettings = {
     theme: 'light',
     currency: 'EUR',
     scrapeFrequency: 43200000,
-    discordWebhookUrl: ''
+    discordWebhookUrl: '',
+    kpiVisibility: {
+        showTrackedKpi: true,
+        showRecordLowsKpi: true,
+        showTotalSavingsKpi: true,
+        showStoreFeedsKpi: true,
+        showDealScoreBadge: true,
+        showBuyAdvice: true,
+        showStoreVolatility: true
+    }
 };
 
 class MongoDatabase {
@@ -555,6 +564,12 @@ class MongoDatabase {
             const newSettings = new Setting(defaultSettings);
             await newSettings.save();
             settings = newSettings.toObject();
+        } else {
+            // Ensure default kpiVisibility fields exist even for legacy documents
+            settings.kpiVisibility = {
+                ...defaultSettings.kpiVisibility,
+                ...(settings.kpiVisibility || {})
+            };
         }
         return settings;
     }
@@ -564,10 +579,20 @@ class MongoDatabase {
         if (!settings) {
             settings = new Setting({ _id: 'default_settings', ...data });
         } else {
+            if (data.kpiVisibility) {
+                const existingKpi = settings.kpiVisibility || { ...defaultSettings.kpiVisibility };
+                data.kpiVisibility = { ...existingKpi, ...data.kpiVisibility };
+                settings.markModified('kpiVisibility');
+            }
             Object.assign(settings, data);
         }
         await settings.save();
-        return settings.toObject();
+        const obj = settings.toObject();
+        obj.kpiVisibility = {
+            ...defaultSettings.kpiVisibility,
+            ...(obj.kpiVisibility || {})
+        };
+        return obj;
     }
 
     // Alerts

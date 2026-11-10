@@ -4738,4 +4738,246 @@ label {
     color: var(--text-secondary);
 }
 
+/* ==========================================================================
+   Analytics, Deal Score, Buy Advice & Store Intelligence
+   ========================================================================== */
+
+/* Deal Score Badges */
+.card-badge.deal-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-weight: 600;
+}
+.card-badge.deal-exceptional {
+    background: var(--bg-primary);
+    color: #10b981;
+    border-color: rgba(16, 185, 129, 0.45);
+}
+.card-badge.deal-great {
+    background: var(--bg-primary);
+    color: #2563eb;
+    border-color: rgba(37, 99, 235, 0.45);
+}
+.card-badge.deal-fair {
+    background: var(--bg-primary);
+    color: #d97706;
+    border-color: rgba(217, 119, 6, 0.45);
+}
+.card-badge.deal-mediocre {
+    background: var(--bg-primary);
+    color: #ea580c;
+    border-color: rgba(234, 88, 12, 0.45);
+}
+.card-badge.deal-poor {
+    background: var(--bg-primary);
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.45);
+}
+
+/* Buy Advice Card (Product Detail) */
+.buy-advice-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+    box-shadow: var(--card-shadow);
+}
+.buy-advice-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+.buy-advice-title-group h3 {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    margin: 0 0 2px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.buy-advice-subtitle {
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+}
+.buy-advice-pill {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.buy-advice-pill.deal-exceptional {
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+.buy-advice-pill.deal-great {
+    background: rgba(37, 99, 235, 0.12);
+    color: #2563eb;
+    border: 1px solid rgba(37, 99, 235, 0.3);
+}
+.buy-advice-pill.deal-fair {
+    background: rgba(245, 158, 11, 0.12);
+    color: #d97706;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+.buy-advice-pill.deal-mediocre {
+    background: rgba(234, 88, 12, 0.12);
+    color: #ea580c;
+    border: 1px solid rgba(234, 88, 12, 0.3);
+}
+.buy-advice-pill.deal-poor {
+    background: rgba(239, 68, 68, 0.12);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.buy-advice-body {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    gap: 20px;
+    align-items: center;
+}
+@media (max-width: 768px) {
+    .buy-advice-body {
+        grid-template-columns: 1fr;
+    }
+}
+.deal-meter-box {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.deal-meter-bar {
+    height: 10px;
+    border-radius: 5px;
+    background: var(--bg-tertiary);
+    overflow: hidden;
+    position: relative;
+}
+.deal-meter-fill {
+    height: 100%;
+    border-radius: 5px;
+    transition: width 0.4s ease;
+}
+.deal-meter-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+}
+.deal-insights-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+}
+.deal-insight-item {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.deal-insight-label {
+    font-size: 0.6875rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-weight: 500;
+}
+.deal-insight-value {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* Store Volatility Badges */
+.volatility-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 12px;
+}
+.volatility-badge.volatility-dynamic {
+    background: rgba(234, 88, 12, 0.12);
+    color: #ea580c;
+    border: 1px solid rgba(234, 88, 12, 0.3);
+}
+.volatility-badge.volatility-moderate {
+    background: rgba(37, 99, 235, 0.12);
+    color: #2563eb;
+    border: 1px solid rgba(37, 99, 235, 0.3);
+}
+.volatility-badge.volatility-stable {
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+/* Store Intelligence Table in Stores Tab */
+.store-intel-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: var(--card-shadow);
+    margin-bottom: 24px;
+}
+.store-intel-table-wrap {
+    overflow-x: auto;
+    margin-top: 14px;
+}
+.store-intel-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+    text-align: left;
+}
+.store-intel-table th {
+    padding: 10px 12px;
+    border-bottom: 2px solid var(--border-color);
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+}
+.store-intel-table td {
+    padding: 12px 12px;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
+}
+.store-intel-table tr:last-child td {
+    border-bottom: none;
+}
+.winrate-bar-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.winrate-bar {
+    width: 60px;
+    height: 6px;
+    background: var(--bg-tertiary);
+    border-radius: 3px;
+    overflow: hidden;
+}
+.winrate-bar-fill {
+    height: 100%;
+    background: #2563eb;
+    border-radius: 3px;
+}
+
 

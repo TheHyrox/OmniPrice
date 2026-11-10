@@ -26,6 +26,20 @@ const SettingsController = {
             if (webhookInput && this.settings.discordWebhookUrl) {
                 webhookInput.value = this.settings.discordWebhookUrl;
             }
+
+            // Populate KPI visibility checkboxes
+            const kpi = this.settings.kpiVisibility || {};
+            const setCheck = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) el.checked = (val !== false);
+            };
+            setCheck('kpiShowTracked', kpi.showTrackedKpi);
+            setCheck('kpiShowRecordLows', kpi.showRecordLowsKpi);
+            setCheck('kpiShowTotalSavings', kpi.showTotalSavingsKpi);
+            setCheck('kpiShowStoreFeeds', kpi.showStoreFeedsKpi);
+            setCheck('kpiShowDealScoreBadge', kpi.showDealScoreBadge);
+            setCheck('kpiShowBuyAdvice', kpi.showBuyAdvice);
+            setCheck('kpiShowStoreVolatility', kpi.showStoreVolatility);
         } catch (error) {
             console.error('Failed to load settings:', error);
         }
@@ -80,6 +94,58 @@ const SettingsController = {
             Toast.success('Discord webhook saved successfully!');
         } catch (error) {
             Toast.error('Failed to save Discord settings: ' + error.message);
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+    },
+
+    async saveKpiVisibility() {
+        const btn = document.getElementById('saveKpiVisibilityBtn');
+        const originalText = btn ? btn.textContent : '';
+
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+        }
+
+        const getCheck = (id) => {
+            const el = document.getElementById(id);
+            return el ? el.checked : true;
+        };
+
+        const kpiVisibility = {
+            showTrackedKpi: getCheck('kpiShowTracked'),
+            showRecordLowsKpi: getCheck('kpiShowRecordLows'),
+            showTotalSavingsKpi: getCheck('kpiShowTotalSavings'),
+            showStoreFeedsKpi: getCheck('kpiShowStoreFeeds'),
+            showDealScoreBadge: getCheck('kpiShowDealScoreBadge'),
+            showBuyAdvice: getCheck('kpiShowBuyAdvice'),
+            showStoreVolatility: getCheck('kpiShowStoreVolatility')
+        };
+
+        try {
+            const updated = await API.updateSettings({ kpiVisibility });
+            this.settings.kpiVisibility = updated.kpiVisibility || kpiVisibility;
+            if (window.App) window.App.settings = this.settings;
+            Toast.success('Analytics & KPI visibility saved!');
+
+            // Re-render affected views immediately
+            if (window.ProductsController) {
+                ProductsController.renderProductsKpis();
+                ProductsController.renderProducts();
+            }
+            if (window.StoresController) {
+                StoresController.renderStores();
+            }
+            if (window.ProductDetail?.currentProduct) {
+                const content = document.getElementById('productDetailContent');
+                if (content) content.innerHTML = ProductDetail.render(ProductDetail.currentProduct);
+            }
+        } catch (error) {
+            Toast.error('Failed to save KPI visibility preferences: ' + error.message);
         } finally {
             if (btn) {
                 btn.disabled = false;

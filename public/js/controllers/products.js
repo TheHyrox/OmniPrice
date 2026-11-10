@@ -50,12 +50,28 @@ const ProductsController = {
         const container = document.getElementById('productsKpiContainer');
         if (!container) return;
 
+        const kpi = window.App?.settings?.kpiVisibility || {};
+        const showTracked = kpi.showTrackedKpi !== false;
+        const showRecordLows = kpi.showRecordLowsKpi !== false;
+        const showTotalSavings = kpi.showTotalSavingsKpi !== false;
+        const showStoreFeeds = kpi.showStoreFeedsKpi !== false;
+
+        const anyKpiVisible = showTracked || showRecordLows || showTotalSavings || showStoreFeeds;
+        if (!anyKpiVisible) {
+            container.innerHTML = '';
+            container.style.display = 'none';
+            return;
+        }
+
         const activeCatalog = this.products.filter(p => !p.archived);
         const total = activeCatalog.length;
         if (total === 0) {
             container.innerHTML = '';
+            container.style.display = 'none';
             return;
         }
+
+        container.style.display = 'grid';
 
         const activeCount = activeCatalog.filter(p => p.active !== false).length;
         const atlCount = activeCatalog.filter(p => ProductCard.isAtAllTimeLow(p)).length;
@@ -74,28 +90,49 @@ const ProductsController = {
         const healthyFeeds = activeCatalog.filter(p => p.healthStatus === 'ok').length;
         const issueFeeds = activeCatalog.filter(p => p.healthStatus === 'warning' || p.healthStatus === 'error').length;
 
-        container.innerHTML = `
-            <div class="product-kpi-card">
-                <span class="kpi-label">Tracked Items</span>
-                <span class="kpi-value">${total}</span>
-                <span class="kpi-sub">${activeCount} actively monitored</span>
-            </div>
-            <div class="product-kpi-card highlight-atl">
-                <span class="kpi-label">Record Lows</span>
-                <span class="kpi-value">${atlCount}</span>
-                <span class="kpi-sub">Historic lowest prices</span>
-            </div>
-            <div class="product-kpi-card highlight-savings">
-                <span class="kpi-label">Total Savings</span>
-                <span class="kpi-value">${Utils.formatCurrency(totalSavings)}</span>
-                <span class="kpi-sub">${dealsCount} items below MSRP</span>
-            </div>
-            <div class="product-kpi-card">
-                <span class="kpi-label">Store Feeds</span>
-                <span class="kpi-value">${healthyFeeds}/${total}</span>
-                <span class="kpi-sub">${issueFeeds > 0 ? `<strong style="color:var(--danger);">${issueFeeds} issue(s)</strong>` : 'All operational'}</span>
-            </div>
-        `;
+        const cards = [];
+
+        if (showTracked) {
+            cards.push(`
+                <div class="product-kpi-card">
+                    <span class="kpi-label">Tracked Items</span>
+                    <span class="kpi-value">${total}</span>
+                    <span class="kpi-sub">${activeCount} actively monitored</span>
+                </div>
+            `);
+        }
+
+        if (showRecordLows) {
+            cards.push(`
+                <div class="product-kpi-card highlight-atl">
+                    <span class="kpi-label">Record Lows</span>
+                    <span class="kpi-value">${atlCount}</span>
+                    <span class="kpi-sub">Historic lowest prices</span>
+                </div>
+            `);
+        }
+
+        if (showTotalSavings) {
+            cards.push(`
+                <div class="product-kpi-card highlight-savings">
+                    <span class="kpi-label">Total Savings</span>
+                    <span class="kpi-value">${Utils.formatCurrency(totalSavings)}</span>
+                    <span class="kpi-sub">${dealsCount} items below MSRP</span>
+                </div>
+            `);
+        }
+
+        if (showStoreFeeds) {
+            cards.push(`
+                <div class="product-kpi-card">
+                    <span class="kpi-label">Store Feeds</span>
+                    <span class="kpi-value">${healthyFeeds}/${total}</span>
+                    <span class="kpi-sub">${issueFeeds > 0 ? `<strong style="color:var(--danger);">${issueFeeds} issue(s)</strong>` : 'All operational'}</span>
+                </div>
+            `);
+        }
+
+        container.innerHTML = cards.join('');
     },
 
     renderProducts() {

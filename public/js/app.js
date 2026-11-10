@@ -171,6 +171,7 @@ const App = {
         document.getElementById('scrapeAllBtn')?.addEventListener('click', () => ProductsController.scrapeAll());
         document.getElementById('saveDiscordBtn')?.addEventListener('click', () => SettingsController.saveDiscordSettings());
         document.getElementById('testDiscordBtn')?.addEventListener('click', () => SettingsController.testDiscordWebhook());
+        document.getElementById('saveKpiVisibilityBtn')?.addEventListener('click', () => SettingsController.saveKpiVisibility());
         document.getElementById('enablePushBtn')?.addEventListener('click', () => SettingsController.subscribeToPush());
         document.getElementById('testPushBtn')?.addEventListener('click', () => SettingsController.sendTestPush());
 
@@ -369,6 +370,7 @@ const App = {
     // Settings Controller delegations
     saveDiscordSettings: () => SettingsController.saveDiscordSettings(),
     testDiscordWebhook: () => SettingsController.testDiscordWebhook(),
+    saveKpiVisibility: () => SettingsController.saveKpiVisibility(),
     downloadBackup: () => SettingsController.downloadBackup(),
     subscribeToPush: () => SettingsController.subscribeToPush(),
     sendTestPush: () => SettingsController.sendTestPush()

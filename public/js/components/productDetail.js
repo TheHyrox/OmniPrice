@@ -269,6 +269,79 @@ const ProductDetail = {
                 </div>
             </div>
 
+            <!-- Buy Advice & Deal Score Widget -->
+            ${(() => {
+                const kpi = window.App?.settings?.kpiVisibility || {};
+                if (kpi.showBuyAdvice === false || typeof window === 'undefined' || !window.Analytics) {
+                    return '';
+                }
+                const deal = window.Analytics.calculateDealScore(product, 90);
+                if (!deal || !deal.available) return '';
+
+                const rating = deal.rating;
+                const s = deal.stats;
+                const meterWidth = Math.min(Math.max(deal.dealScore, 5), 100);
+                const barColor = rating.color || '#2563eb';
+
+                return `
+                    <div class="buy-advice-card">
+                        <div class="buy-advice-header">
+                            <div class="buy-advice-title-group">
+                                <h3>
+                                    <span>${rating.emoji}</span>
+                                    <span>Deal Score: <strong>${deal.dealScore}/100</strong></span>
+                                </h3>
+                                <span class="buy-advice-subtitle">${escapeHtml(rating.badgeText)} — ${escapeHtml(rating.adviceText)}</span>
+                            </div>
+                            <div class="buy-advice-pill ${rating.badgeClass}">
+                                <span>Action:</span>
+                                <strong>${escapeHtml(rating.actionText)}</strong>
+                            </div>
+                        </div>
+
+                        <div class="buy-advice-body">
+                            <div class="deal-meter-box">
+                                <div class="deal-meter-bar">
+                                    <div class="deal-meter-fill" style="width: ${meterWidth}%; background-color: ${barColor};"></div>
+                                </div>
+                                <div class="deal-meter-labels">
+                                    <span>Overpriced (0)</span>
+                                    <span>Fair (50)</span>
+                                    <span>Best Deal (100)</span>
+                                </div>
+                            </div>
+
+                            <div class="deal-insights-grid">
+                                ${deal.cheaperPercent != null ? `
+                                    <div class="deal-insight-item">
+                                        <span class="deal-insight-label">Historical Rank</span>
+                                        <span class="deal-insight-value">${deal.cheaperPercent >= 50 ? `Cheaper than ${deal.cheaperPercent}%` : `Pricier than ${100 - deal.cheaperPercent}%`}</span>
+                                    </div>
+                                ` : ''}
+                                ${s.discountVsRef != null ? `
+                                    <div class="deal-insight-item">
+                                        <span class="deal-insight-label">Discount vs Ref</span>
+                                        <span class="deal-insight-value" style="color: ${s.discountVsRef >= 0 ? 'var(--success)' : 'var(--danger)'};">
+                                            ${s.discountVsRef >= 0 ? `-${s.discountVsRef}%` : `+${Math.abs(s.discountVsRef)}%`}
+                                        </span>
+                                    </div>
+                                ` : ''}
+                                ${s.avgPrice != null && s.dataPoints > 0 ? `
+                                    <div class="deal-insight-item">
+                                        <span class="deal-insight-label">90-Day Average</span>
+                                        <span class="deal-insight-value">${formatCurrency(s.avgPrice)}</span>
+                                    </div>
+                                ` : ''}
+                                <div class="deal-insight-item">
+                                    <span class="deal-insight-label">All-Time Range</span>
+                                    <span class="deal-insight-value">${formatCurrency(s.minPrice)} – ${formatCurrency(s.maxPrice)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            })()}
+
             <!-- Price History Chart Section -->
             <div class="chart-section detail-chart-section">
                 <div class="detail-chart-header">
@@ -395,12 +468,23 @@ const ProductDetail = {
                             : null;
                         const color = this.getSourceColor(index);
 
+                        const kpi = window.App?.settings?.kpiVisibility || {};
+                        let volatilityBadge = '';
+                        if (kpi.showStoreVolatility !== false && typeof window !== 'undefined' && window.Analytics) {
+                            const storeIntel = window.Analytics.calculateStoreVolatility(window.App?.products || [product]);
+                            const match = storeIntel.find(s => s.name.toLowerCase() === (source.siteName || '').trim().toLowerCase());
+                            if (match) {
+                                volatilityBadge = `<span class="volatility-badge ${match.volatilityBadgeClass}" title="${match.volatilityDesc} (${match.changesPerProduct} changes/prod)">${match.volatilityEmoji} ${match.volatilityLabel}</span>`;
+                            }
+                        }
+
                         return `
                             <div class="source-row-card ${isCheapest ? 'is-best-deal' : ''} ${source.lastStatus === 'error' ? 'has-error' : ''}">
                                 <div class="source-identity">
                                     <div class="source-name-row">
                                         <span class="source-color-dot" style="background-color: ${color}"></span>
                                         <strong class="source-name">${escapeHtml(source.siteName)}</strong>
+                                        ${volatilityBadge}
                                         ${isCheapest ? `<span class="source-lowest-pill">Lowest Price</span>` : ''}
                                         ${source.lastStatus === 'error' ? `<span class="source-health-pill error" title="${escapeHtml(source.lastError || 'Scrape failed')}"><span class="chip-dot"></span>Error: ${escapeHtml(source.lastError || 'Scrape failed')}</span>` : ''}
                                         ${source.usePuppeteer ? `<span class="source-puppeteer-pill" title="Rendered with Puppeteer">JS</span>` : ''}

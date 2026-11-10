@@ -16,7 +16,96 @@ const StoresController = {
         }
     },
 
+    renderStoreIntelligence() {
+        const intelContainer = document.getElementById('storesIntelligenceContainer');
+        if (!intelContainer) return;
+
+        const kpi = window.App?.settings?.kpiVisibility || {};
+        if (kpi.showStoreVolatility === false || typeof window === 'undefined' || !window.Analytics) {
+            intelContainer.innerHTML = '';
+            intelContainer.style.display = 'none';
+            return;
+        }
+
+        const products = window.App?.products || [];
+        const intelList = window.Analytics.calculateStoreVolatility(products);
+
+        if (!intelList || intelList.length === 0) {
+            intelContainer.innerHTML = '';
+            intelContainer.style.display = 'none';
+            return;
+        }
+
+        intelContainer.style.display = 'block';
+        intelContainer.innerHTML = `
+            <div class="store-intel-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <div>
+                        <h3 style="margin: 0; font-size: 1.0625rem; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                            <span>⚡</span> Retailer Volatility & Win-Rate Index
+                        </h3>
+                        <p style="margin: 3px 0 0 0; font-size: 0.8125rem; color: var(--text-secondary);">
+                            Behavioral pricing analysis, discount depths, and lowest-price win rates across all tracked products
+                        </p>
+                    </div>
+                    <span class="badge" style="font-size: 0.75rem; padding: 4px 8px; background: rgba(37, 99, 235, 0.1); color: #2563eb; font-weight: 600; border-radius: 6px;">
+                        ${intelList.length} Active Merchant${intelList.length !== 1 ? 's' : ''}
+                    </span>
+                </div>
+
+                <div class="store-intel-table-wrap">
+                    <table class="store-intel-table">
+                        <thead>
+                            <tr>
+                                <th>Store Name</th>
+                                <th>Monitored Items</th>
+                                <th>Lowest-Price Win Rate</th>
+                                <th>Pricing Volatility</th>
+                                <th>Price Changes</th>
+                                <th>Avg Drop Depth</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${intelList.map(item => `
+                                <tr>
+                                    <td>
+                                        <strong>${Utils.escapeHtml(item.name)}</strong>
+                                    </td>
+                                    <td>
+                                        <span>${item.productsCount} item${item.productsCount !== 1 ? 's' : ''}</span>
+                                    </td>
+                                    <td>
+                                        <div class="winrate-bar-container">
+                                            <div class="winrate-bar">
+                                                <div class="winrate-bar-fill" style="width: ${item.winRate}%;"></div>
+                                            </div>
+                                            <span><strong>${item.winRate}%</strong> (${item.cheapestCount})</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="volatility-badge ${item.volatilityBadgeClass}">
+                                            ${item.volatilityEmoji} ${Utils.escapeHtml(item.volatilityLabel)}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span style="color: var(--text-secondary);">${item.priceChanges} changes (${item.changesPerProduct}/prod)</span>
+                                    </td>
+                                    <td>
+                                        <span style="color: ${item.avgDiscountDepth > 0 ? 'var(--success)' : 'var(--text-secondary)'}; font-weight: 500;">
+                                            ${item.avgDiscountDepth > 0 ? `-${item.avgDiscountDepth}%` : '—'}
+                                        </span>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    },
+
     renderStores() {
+        this.renderStoreIntelligence();
         const container = document.getElementById('storesGrid');
         if (!container) return;
 

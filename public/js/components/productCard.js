@@ -67,6 +67,16 @@ const ProductCard = {
             savingsAmount = product.referencePrice - cleanLowest;
         }
 
+        const kpi = window.App?.settings?.kpiVisibility || {};
+        const showDealScore = kpi.showDealScoreBadge !== false;
+        let dealScoreBadge = '';
+        if (showDealScore && typeof window !== 'undefined' && window.Analytics && !isArchived && cleanLowest != null) {
+            const scoreData = window.Analytics.calculateDealScore(product, 90);
+            if (scoreData && scoreData.available) {
+                dealScoreBadge = `<span class="card-badge deal-badge ${scoreData.rating.badgeClass}" title="${scoreData.rating.badgeText} (${scoreData.dealScore}/100) — ${scoreData.rating.adviceText}">${scoreData.rating.emoji} ${scoreData.dealScore}</span>`;
+            }
+        }
+
         // List View Variant
         if (viewMode === 'list') {
             return `
@@ -74,6 +84,7 @@ const ProductCard = {
                     <div class="list-card-media">
                         <img class="product-card-image" src="${imageUrl}" alt="${title}" onerror="this.src='/images/placeholder.svg'">
                         ${isArchived ? `<span class="card-badge archived">Archived</span>` : (!isActive ? `<span class="card-badge paused">Paused</span>` : '')}
+                        ${dealScoreBadge}
                         ${isATL && !isArchived ? `<span class="card-badge atl">Record low</span>` : ''}
                     </div>
 
@@ -136,6 +147,7 @@ const ProductCard = {
                     <img class="product-card-image" src="${imageUrl}" alt="${title}" onerror="this.src='/images/placeholder.svg'">
                     <div class="card-badges-overlay">
                         ${isArchived ? `<span class="card-badge archived">Archived</span>` : (!isActive ? `<span class="card-badge paused">Paused</span>` : '')}
+                        ${dealScoreBadge}
                         ${isATL && !isArchived ? `<span class="card-badge atl">Record low</span>` : ''}
                         ${delta != null && !isArchived ? `
                             <span class="card-badge delta ${deltaClass}">
