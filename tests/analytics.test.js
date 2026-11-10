@@ -144,6 +144,128 @@ describe('Analytics - Store Volatility & Win-Rate Index', () => {
     });
 });
 
+describe('Analytics - Extended Market Metrics & Alert Realism', () => {
+    test('calculateCatalogMetrics: computes average discount and market trend direction', () => {
+        const products = [
+            { referencePrice: 100, lowestPrice: 80, priceHistory: [] },
+            { referencePrice: 200, lowestPrice: 160, priceHistory: [] }
+        ];
+
+        const metrics = Analytics.calculateCatalogMetrics(products);
+        assert.equal(metrics.avgDiscountPct, 20);
+        assert.equal(metrics.discountedCount, 2);
+    });
+
+    test('calculatePriceFreshness: detects stability or recent price change', () => {
+        const product = {
+            referencePrice: 100,
+            lowestPrice: 80,
+            priceHistory: [
+                { date: '2026-10-01', prices: [{ price: 90 }] },
+                { date: '2026-10-02', prices: [{ price: 80 }] }
+            ]
+        };
+
+        const freshness = Analytics.calculatePriceFreshness(product);
+        assert.ok(freshness);
+        assert.ok(typeof freshness.text === 'string');
+    });
+
+    test('calculateStoreSpread: calculates gap between lowest and highest store', () => {
+        const product = {
+            referencePrice: 100,
+            sources: [
+                { siteName: 'Amazon', lastPrice: 75 },
+                { siteName: 'Fnac', lastPrice: 95 }
+            ]
+        };
+
+        const spread = Analytics.calculateStoreSpread(product);
+        assert.ok(spread);
+        assert.equal(spread.spreadAmount, 20);
+        assert.equal(spread.highestStore, 'Fnac');
+    });
+
+    test('calculateAtlProximity: returns distance from ATL when above record low', () => {
+        const product = {
+            referencePrice: 200,
+            lowestPrice: 155,
+            minPriceEver: 150
+        };
+
+        const proximity = Analytics.calculateAtlProximity(product);
+        assert.ok(proximity);
+        assert.equal(proximity.diff, 5);
+    });
+
+    test('calculateDayOfWeekSweetSpot: evaluates lowest day of the week', () => {
+        const product = {
+            referencePrice: 100,
+            priceHistory: [
+                { date: '2026-11-01', prices: [{ price: 90 }] }, // Sunday
+                { date: '2026-11-03', prices: [{ price: 70 }] }, // Tuesday
+                { date: '2026-11-08', prices: [{ price: 92 }] }, // Sunday
+                { date: '2026-11-10', prices: [{ price: 72 }] }, // Tuesday
+                { date: '2026-11-06', prices: [{ price: 85 }] }, // Friday
+                { date: '2026-11-13', prices: [{ price: 84 }] }  // Friday
+            ]
+        };
+
+        const sweetSpot = Analytics.calculateDayOfWeekSweetSpot(product);
+        assert.ok(sweetSpot);
+        assert.equal(sweetSpot.bestDay, 'Tuesday');
+    });
+
+    test('calculateMovingAverages: calculates SMA-30 and comparison delta', () => {
+        const product = {
+            referencePrice: 100,
+            lowestPrice: 80,
+            priceHistory: [
+                { date: new Date().toISOString().slice(0, 10), prices: [{ price: 100 }] }
+            ]
+        };
+
+        const ma = Analytics.calculateMovingAverages(product);
+        assert.ok(ma);
+        assert.equal(ma.sma30, 100);
+        assert.equal(ma.diffPct30, -20);
+    });
+
+    test('calculateAlertRealism: rates high realism for targets hit previously', () => {
+        const product = {
+            referencePrice: 100,
+            lowestPrice: 90,
+            minPriceEver: 70,
+            priceHistory: [
+                { date: '2026-10-01', prices: [{ price: 75 }] },
+                { date: '2026-10-15', prices: [{ price: 72 }] },
+                { date: '2026-10-20', prices: [{ price: 70 }] }
+            ]
+        };
+
+        const alert = { targetPrice: 75, alertType: 'drop' };
+        const realism = Analytics.calculateAlertRealism(alert, product);
+        assert.equal(realism.level, 'high');
+        assert.ok(realism.daysMet >= 1);
+    });
+
+    test('calculateAlertRealism: rates optimistic for targets far below ATL', () => {
+        const product = {
+            referencePrice: 100,
+            lowestPrice: 90,
+            minPriceEver: 85,
+            priceHistory: [
+                { date: '2026-10-01', prices: [{ price: 95 }] },
+                { date: '2026-10-15', prices: [{ price: 85 }] }
+            ]
+        };
+
+        const alert = { targetPrice: 40, alertType: 'drop' }; // 50% below ATL
+        const realism = Analytics.calculateAlertRealism(alert, product);
+        assert.equal(realism.level, 'optimistic');
+    });
+});
+
 describe('Settings - KPI Visibility Schema Validation', () => {
     const { updateSettingsSchema } = require('../server/schemas');
 

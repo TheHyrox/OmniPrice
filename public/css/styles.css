@@ -4980,4 +4980,46 @@ label {
     border-radius: 3px;
 }
 
+/* Alert Realism Score & Card Analytics Meta (No Pills) */
+.buy-advice-pill.realism-high {
+    background: rgba(16, 185, 129, 0.12);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+.buy-advice-pill.realism-moderate {
+    background: rgba(37, 99, 235, 0.12);
+    color: #2563eb;
+    border: 1px solid rgba(37, 99, 235, 0.3);
+}
+.buy-advice-pill.realism-optimistic {
+    background: rgba(234, 88, 12, 0.12);
+    color: #ea580c;
+    border: 1px solid rgba(234, 88, 12, 0.3);
+}
+
+.card-analytics-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-top: 6px;
+    line-height: 1.4;
+}
+.analytics-meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.analytics-meta-item.atl-prox {
+    color: var(--text-secondary);
+}
+.analytics-meta-item.price-freshness {
+    color: var(--text-tertiary);
+}
+.analytics-meta-item.store-spread {
+    color: #2563eb;
+    font-weight: 500;
+}
+
 

@@ -55,8 +55,10 @@ const ProductsController = {
         const showRecordLows = kpi.showRecordLowsKpi !== false;
         const showTotalSavings = kpi.showTotalSavingsKpi !== false;
         const showStoreFeeds = kpi.showStoreFeedsKpi !== false;
+        const showAvgDiscount = kpi.showAvgDiscountKpi !== false;
+        const showMarketTrend = kpi.showMarketTrendKpi !== false;
 
-        const anyKpiVisible = showTracked || showRecordLows || showTotalSavings || showStoreFeeds;
+        const anyKpiVisible = showTracked || showRecordLows || showTotalSavings || showStoreFeeds || showAvgDiscount || showMarketTrend;
         if (!anyKpiVisible) {
             container.innerHTML = '';
             container.style.display = 'none';
@@ -118,6 +120,31 @@ const ProductsController = {
                     <span class="kpi-label">Total Savings</span>
                     <span class="kpi-value">${Utils.formatCurrency(totalSavings)}</span>
                     <span class="kpi-sub">${dealsCount} items below MSRP</span>
+                </div>
+            `);
+        }
+
+        const catMetrics = (showAvgDiscount || showMarketTrend) && window.Analytics
+            ? window.Analytics.calculateCatalogMetrics(activeCatalog)
+            : null;
+
+        if (showAvgDiscount && catMetrics && catMetrics.avgDiscountPct != null) {
+            cards.push(`
+                <div class="product-kpi-card highlight-savings">
+                    <span class="kpi-label">Avg Discount</span>
+                    <span class="kpi-value">-${catMetrics.avgDiscountPct}%</span>
+                    <span class="kpi-sub">${catMetrics.discountedCount} item(s) below MSRP</span>
+                </div>
+            `);
+        }
+
+        if (showMarketTrend && catMetrics) {
+            const trendColor = catMetrics.trendDirection === 'falling' ? 'color: var(--success);' : (catMetrics.trendDirection === 'rising' ? 'color: var(--danger);' : '');
+            cards.push(`
+                <div class="product-kpi-card">
+                    <span class="kpi-label">Market Trend</span>
+                    <span class="kpi-value" style="${trendColor}">${catMetrics.trendLabel}</span>
+                    <span class="kpi-sub">7-day vs 30-day index</span>
                 </div>
             `);
         }

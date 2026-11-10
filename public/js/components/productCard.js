@@ -69,6 +69,10 @@ const ProductCard = {
 
         const kpi = window.App?.settings?.kpiVisibility || {};
         const showDealScore = kpi.showDealScoreBadge !== false;
+        const showPriceFreshness = kpi.showPriceFreshness !== false;
+        const showStoreSpread = kpi.showStoreSpread !== false;
+        const showAtlProximity = kpi.showAtlProximity !== false;
+
         let dealScoreBadge = '';
         if (showDealScore && typeof window !== 'undefined' && window.Analytics && !isArchived && cleanLowest != null) {
             const scoreData = window.Analytics.calculateDealScore(product, 90);
@@ -76,6 +80,29 @@ const ProductCard = {
                 dealScoreBadge = `<span class="card-badge deal-badge ${scoreData.rating.badgeClass}" title="${scoreData.rating.badgeText} (${scoreData.dealScore}/100) — ${scoreData.rating.adviceText}">Score ${scoreData.dealScore}</span>`;
             }
         }
+
+        let freshnessInfo = null;
+        if (showPriceFreshness && typeof window !== 'undefined' && window.Analytics) {
+            freshnessInfo = window.Analytics.calculatePriceFreshness(product);
+        }
+
+        let spreadInfo = null;
+        if (showStoreSpread && typeof window !== 'undefined' && window.Analytics) {
+            spreadInfo = window.Analytics.calculateStoreSpread(product);
+        }
+
+        let atlProximityInfo = null;
+        if (showAtlProximity && !isATL && typeof window !== 'undefined' && window.Analytics) {
+            atlProximityInfo = window.Analytics.calculateAtlProximity(product);
+        }
+
+        const analyticsMetaRow = (freshnessInfo || spreadInfo || atlProximityInfo) ? `
+            <div class="card-analytics-meta">
+                ${atlProximityInfo ? `<span class="analytics-meta-item atl-prox" title="Difference from All-Time Low">${escapeHtml(atlProximityInfo.text)}</span>` : ''}
+                ${spreadInfo ? `<span class="analytics-meta-item store-spread" title="Price spread across available stores">${escapeHtml(spreadInfo.text)}</span>` : ''}
+                ${freshnessInfo ? `<span class="analytics-meta-item price-freshness" title="Price timeline">${escapeHtml(freshnessInfo.text)}</span>` : ''}
+            </div>
+        ` : '';
 
         // List View Variant
         if (viewMode === 'list') {
@@ -108,6 +135,7 @@ const ProductCard = {
                                 ${savingsAmount ? `<span class="price-savings">Save ${formatCurrency(savingsAmount)}</span>` : ''}
                             </div>
                             ${lowestSource ? `<span class="price-store-label">at ${escapeHtml(lowestSource.siteName)}</span>` : ''}
+                            ${analyticsMetaRow}
                         </div>
 
                         <div class="list-card-actions" onclick="event.stopPropagation()">
@@ -176,6 +204,7 @@ const ProductCard = {
                             ${savingsAmount ? `<span class="price-savings">Save ${formatCurrency(savingsAmount)}</span>` : ''}
                         </div>
                     </div>
+                    ${analyticsMetaRow}
 
                     <div class="product-card-footer" onclick="event.stopPropagation()">
                         ${isArchived ? `

@@ -26,6 +26,15 @@ const Router = (() => {
             }
         },
         {
+            pattern: /^#alert\/([a-zA-Z0-9_-]+)$/,
+            handler: (match) => {
+                const alertId = match[1];
+                if (window.App && typeof window.App.showAlertDetail === 'function') {
+                    window.App.showAlertDetail(alertId, false);
+                }
+            }
+        },
+        {
             pattern: /^#(products|stores|charts|alerts|bundles|settings|archive)$/,
             handler: (match) => {
                 const tabName = match[1];

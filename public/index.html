@@ -329,9 +329,9 @@
                         </p>
 
                         <div class="kpi-visibility-options" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
-                            <!-- Products Page Overview KPIs -->
+                            <!-- Group 1: Home Page Overview KPIs -->
                             <div class="kpi-visibility-group" style="padding: 14px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px;">
-                                <h4 style="font-size: 0.875rem; font-weight: 600; margin-bottom: 10px; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+                                <h4 style="font-size: 0.875rem; font-weight: 600; margin-bottom: 10px; color: var(--text-primary);">
                                     Home Page Overview KPIs
                                 </h4>
                                 <div style="display: flex; flex-direction: column; gap: 8px;">
@@ -351,26 +351,88 @@
                                         <input type="checkbox" id="kpiShowStoreFeeds" checked>
                                         <span>Store Feeds health counter</span>
                                     </label>
+                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
+                                        <input type="checkbox" id="kpiShowAvgDiscount" checked>
+                                        <span>Average Catalog Discount counter</span>
+                                    </label>
+                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
+                                        <input type="checkbox" id="kpiShowMarketTrend" checked>
+                                        <span>Market Trend Direction counter</span>
+                                    </label>
                                 </div>
                             </div>
 
-                            <!-- Product Cards & Details -->
+                            <!-- Group 2: Product Cards -->
                             <div class="kpi-visibility-group" style="padding: 14px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px;">
-                                <h4 style="font-size: 0.875rem; font-weight: 600; margin-bottom: 10px; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
-                                    Product Cards & Detail Page
+                                <h4 style="font-size: 0.875rem; font-weight: 600; margin-bottom: 10px; color: var(--text-primary);">
+                                    Product Cards (Grid & List)
                                 </h4>
                                 <div style="display: flex; flex-direction: column; gap: 8px;">
                                     <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
                                         <input type="checkbox" id="kpiShowDealScoreBadge" checked>
-                                        <span>Deal Score badge on product cards</span>
+                                        <span>Deal Score badge</span>
                                     </label>
                                     <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
+                                        <input type="checkbox" id="kpiShowPriceFreshness" checked>
+                                        <span>Price Freshness & Stability text</span>
+                                    </label>
+                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
+                                        <input type="checkbox" id="kpiShowStoreSpread" checked>
+                                        <span>Store Price Spread text</span>
+                                    </label>
+                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
+                                        <input type="checkbox" id="kpiShowAtlProximity" checked>
+                                        <span>All-Time Low Proximity text</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Group 3: Product Detail Page -->
+                            <div class="kpi-visibility-group" style="padding: 14px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px;">
+                                <h4 style="font-size: 0.875rem; font-weight: 600; margin-bottom: 10px; color: var(--text-primary);">
+                                    Product Detail Page
+                                </h4>
+                                <div style="display: flex; flex-direction: column; gap: 8px;">
+                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
                                         <input type="checkbox" id="kpiShowBuyAdvice" checked>
-                                        <span>Buy Advice & Deal Score meter in product detail</span>
+                                        <span>Buy Advice & Deal Score meter</span>
+                                    </label>
+                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
+                                        <input type="checkbox" id="kpiShowDayOfWeekSweetSpot" checked>
+                                        <span>Best Day to Buy (Day-of-Week sweet spot)</span>
+                                    </label>
+                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
+                                        <input type="checkbox" id="kpiShowDropCycleMetrics" checked>
+                                        <span>Drop Frequency & Cycle length</span>
+                                    </label>
+                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
+                                        <input type="checkbox" id="kpiShowMovingAverageBenchmark" checked>
+                                        <span>Moving Average Benchmark (SMA-30 / SMA-90)</span>
                                     </label>
                                     <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
                                         <input type="checkbox" id="kpiShowStoreVolatility" checked>
-                                        <span>Retailer Volatility & Win-Rate index</span>
+                                        <span>Store Source Volatility badge</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Group 4: Stores & Alerts -->
+                            <div class="kpi-visibility-group" style="padding: 14px; background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 8px;">
+                                <h4 style="font-size: 0.875rem; font-weight: 600; margin-bottom: 10px; color: var(--text-primary);">
+                                    Stores & Alerts Pages
+                                </h4>
+                                <div style="display: flex; flex-direction: column; gap: 8px;">
+                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
+                                        <input type="checkbox" id="kpiShowStoreVolatilityTable" checked>
+                                        <span>Retailer Volatility & Win-Rate Index</span>
+                                    </label>
+                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
+                                        <input type="checkbox" id="kpiShowStoreLatencyHealth" checked>
+                                        <span>Scraper Latency & Health stats</span>
+                                    </label>
+                                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
+                                        <input type="checkbox" id="kpiShowAlertRealismScore" checked>
+                                        <span>Alert Target Realism Score on Alert Detail</span>
                                     </label>
                                 </div>
                             </div>
@@ -460,6 +522,12 @@
 
                 <!-- Bundles Grid -->
                 <div id="bundlesGrid" class="bundles-grid"></div>
+            </section>
+
+            <!-- Alert Detail View (hidden by default) -->
+            <section id="alert-detail" class="tab-content alert-detail">
+                <button class="back-btn" id="backToAlerts">← Back to Alerts</button>
+                <div id="alertDetailContent"></div>
             </section>
 
             <!-- Bundle Detail View (hidden by default) -->

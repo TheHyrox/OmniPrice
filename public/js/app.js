@@ -219,6 +219,11 @@ const App = {
             this.navigateToTab('archive');
         });
 
+        // Alert Detail back button navigation
+        document.getElementById('backToAlerts')?.addEventListener('click', () => {
+            this.navigateToTab('alerts');
+        });
+
         // Product Detail back button navigation
         document.getElementById('backToProducts')?.addEventListener('click', () => {
             this.backToPreviousTab();
@@ -239,7 +244,7 @@ const App = {
     },
 
     navigateToTab(tabName, updateRoute = true) {
-        if (tabName !== 'product-detail' && tabName !== 'bundle-detail') {
+        if (tabName !== 'product-detail' && tabName !== 'bundle-detail' && tabName !== 'alert-detail') {
             this.previousTab = tabName;
         }
 
@@ -363,6 +368,7 @@ const App = {
     toggleAlert: (id, currentActive) => AlertsController.toggleAlert(id, currentActive),
     deleteAlert: (id) => AlertsController.deleteAlert(id),
     triggerTestAlert: (id) => AlertsController.triggerTestAlert(id),
+    showAlertDetail: (id, updateRoute) => AlertsController.showAlertDetail(id, updateRoute),
 
     // Bundles Controller delegations
     openBundleModal: (id) => BundlesController.openModal(id),

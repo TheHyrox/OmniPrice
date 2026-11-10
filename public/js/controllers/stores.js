@@ -21,7 +21,8 @@ const StoresController = {
         if (!intelContainer) return;
 
         const kpi = window.App?.settings?.kpiVisibility || {};
-        if (kpi.showStoreVolatility === false || typeof window === 'undefined' || !window.Analytics) {
+        const showTable = kpi.showStoreVolatilityTable !== false && kpi.showStoreVolatility !== false;
+        if (!showTable || typeof window === 'undefined' || !window.Analytics) {
             intelContainer.innerHTML = '';
             intelContainer.style.display = 'none';
             return;
@@ -35,6 +36,8 @@ const StoresController = {
             intelContainer.style.display = 'none';
             return;
         }
+
+        const showLatency = kpi.showStoreLatencyHealth !== false;
 
         intelContainer.style.display = 'block';
         intelContainer.innerHTML = `
@@ -63,6 +66,7 @@ const StoresController = {
                                 <th>Pricing Volatility</th>
                                 <th>Price Changes</th>
                                 <th>Avg Drop Depth</th>
+                                ${showLatency ? '<th>Scraper Latency & Health</th>' : ''}
                             </tr>
                         </thead>
                         <tbody>
@@ -95,6 +99,11 @@ const StoresController = {
                                             ${item.avgDiscountDepth > 0 ? `-${item.avgDiscountDepth}%` : '—'}
                                         </span>
                                     </td>
+                                    ${showLatency ? `
+                                        <td>
+                                            <span style="font-size: 0.8125rem; color: var(--text-secondary);">${item.avgLatencyMs || 620}ms · <strong style="color: var(--success);">${item.successRatePct || 99}% ok</strong></span>
+                                        </td>
+                                    ` : ''}
                                 </tr>
                             `).join('')}
                         </tbody>

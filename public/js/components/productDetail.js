@@ -134,7 +134,7 @@ const ProductDetail = {
                     </button>
                     ${!product.archived ? `
                         <button class="btn btn-secondary" onclick="App.toggleProductActive('${id}', ${product.active !== false})" title="${product.active === false ? 'Resume automatic scraping' : 'Pause automatic scraping'}">
-                            ${product.active === false ? '▶ Resume' : '⏸ Pause'}
+                            ${product.active === false ? 'Resume' : 'Pause'}
                         </button>
                         <button class="btn btn-secondary" id="scrapeAllProductBtn" onclick="App.scrapeProductAll('${id}', this)">
                             Scrape All Stores
@@ -272,9 +272,17 @@ const ProductDetail = {
             <!-- Buy Advice & Deal Score Widget -->
             ${(() => {
                 const kpi = window.App?.settings?.kpiVisibility || {};
-                if (kpi.showBuyAdvice === false || typeof window === 'undefined' || !window.Analytics) {
+                const showBuyAdvice = kpi.showBuyAdvice !== false;
+                const showMovingAvg = kpi.showMovingAverageBenchmark !== false;
+                const showDaySweetSpot = kpi.showDayOfWeekSweetSpot !== false;
+                const showDropCycle = kpi.showDropCycleMetrics !== false;
+                const showAtlProx = kpi.showAtlProximity !== false;
+
+                if (!showBuyAdvice && !showMovingAvg && !showDaySweetSpot && !showDropCycle && !showAtlProx) {
                     return '';
                 }
+                if (typeof window === 'undefined' || !window.Analytics) return '';
+
                 const deal = window.Analytics.calculateDealScore(product, 90);
                 if (!deal || !deal.available) return '';
 
@@ -283,23 +291,28 @@ const ProductDetail = {
                 const meterWidth = Math.min(Math.max(deal.dealScore, 5), 100);
                 const barColor = rating.color || '#2563eb';
 
+                const ma = showMovingAvg ? window.Analytics.calculateMovingAverages(product) : null;
+                const sweetSpot = showDaySweetSpot ? window.Analytics.calculateDayOfWeekSweetSpot(product) : null;
+                const cycle = showDropCycle ? window.Analytics.calculateDropCycleMetrics(product) : null;
+                const atlProx = showAtlProx ? window.Analytics.calculateAtlProximity(product) : null;
+
                 return `
                     <div class="buy-advice-card">
-                        <div class="buy-advice-header">
-                            <div class="buy-advice-title-group">
-                                <h3>
-                                    <span>Deal Score: <strong>${deal.dealScore}/100</strong></span>
-                                </h3>
-                                <span class="buy-advice-subtitle">${escapeHtml(rating.badgeText)} — ${escapeHtml(rating.adviceText)}</span>
+                        ${showBuyAdvice ? `
+                            <div class="buy-advice-header">
+                                <div class="buy-advice-title-group">
+                                    <h3>
+                                        <span>Deal Score: <strong>${deal.dealScore}/100</strong></span>
+                                    </h3>
+                                    <span class="buy-advice-subtitle">${escapeHtml(rating.badgeText)} — ${escapeHtml(rating.adviceText)}</span>
+                                </div>
+                                <div class="buy-advice-pill ${rating.badgeClass}">
+                                    <span>Action:</span>
+                                    <strong>${escapeHtml(rating.actionText)}</strong>
+                                </div>
                             </div>
-                            <div class="buy-advice-pill ${rating.badgeClass}">
-                                <span>Action:</span>
-                                <strong>${escapeHtml(rating.actionText)}</strong>
-                            </div>
-                        </div>
 
-                        <div class="buy-advice-body">
-                            <div class="deal-meter-box">
+                            <div class="deal-meter-box" style="margin-bottom: 16px;">
                                 <div class="deal-meter-bar">
                                     <div class="deal-meter-fill" style="width: ${meterWidth}%; background-color: ${barColor};"></div>
                                 </div>
@@ -309,7 +322,9 @@ const ProductDetail = {
                                     <span>Best Deal (100)</span>
                                 </div>
                             </div>
+                        ` : ''}
 
+                        <div class="buy-advice-body" style="grid-template-columns: 1fr;">
                             <div class="deal-insights-grid">
                                 ${deal.cheaperPercent != null ? `
                                     <div class="deal-insight-item">
@@ -325,17 +340,46 @@ const ProductDetail = {
                                         </span>
                                     </div>
                                 ` : ''}
-                                ${s.avgPrice != null && s.dataPoints > 0 ? `
+                                ${ma?.sma30 != null ? `
+                                    <div class="deal-insight-item">
+                                        <span class="deal-insight-label">30-Day Avg (SMA)</span>
+                                        <span class="deal-insight-value">${formatCurrency(ma.sma30)} (${ma.diffPct30 <= 0 ? '' : '+'}${ma.diffPct30}%)</span>
+                                    </div>
+                                ` : (s.avgPrice != null && s.dataPoints > 0 ? `
                                     <div class="deal-insight-item">
                                         <span class="deal-insight-label">90-Day Average</span>
                                         <span class="deal-insight-value">${formatCurrency(s.avgPrice)}</span>
                                     </div>
-                                ` : ''}
-                                <div class="deal-insight-item">
-                                    <span class="deal-insight-label">All-Time Range</span>
-                                    <span class="deal-insight-value">${formatCurrency(s.minPrice)} – ${formatCurrency(s.maxPrice)}</span>
-                                </div>
+                                ` : '')}
+                                ${atlProx ? `
+                                    <div class="deal-insight-item">
+                                        <span class="deal-insight-label">From Record Low</span>
+                                        <span class="deal-insight-value">+${formatCurrency(atlProx.diff)} (+${atlProx.diffPct}%)</span>
+                                    </div>
+                                ` : `
+                                    <div class="deal-insight-item">
+                                        <span class="deal-insight-label">All-Time Range</span>
+                                        <span class="deal-insight-value">${formatCurrency(s.minPrice)} – ${formatCurrency(s.maxPrice)}</span>
+                                    </div>
+                                `}
                             </div>
+
+                            ${(sweetSpot?.available || cycle?.available) ? `
+                                <div class="deal-timing-block" style="margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 8px;">
+                                    ${sweetSpot?.available ? `
+                                        <div style="font-size: 0.8125rem; color: var(--text-secondary); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px;">
+                                            <span style="font-weight: 500; color: var(--text-primary);">Day-of-Week Sweet Spot:</span>
+                                            <span>${escapeHtml(sweetSpot.text)}</span>
+                                        </div>
+                                    ` : ''}
+                                    ${cycle?.available ? `
+                                        <div style="font-size: 0.8125rem; color: var(--text-secondary); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px;">
+                                            <span style="font-weight: 500; color: var(--text-primary);">Drop Frequency & Interval:</span>
+                                            <span>${escapeHtml(cycle.text)}</span>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            ` : ''}
                         </div>
                     </div>
                 `;

@@ -37,9 +37,23 @@ const SettingsController = {
             setCheck('kpiShowRecordLows', kpi.showRecordLowsKpi);
             setCheck('kpiShowTotalSavings', kpi.showTotalSavingsKpi);
             setCheck('kpiShowStoreFeeds', kpi.showStoreFeedsKpi);
+            setCheck('kpiShowAvgDiscount', kpi.showAvgDiscountKpi);
+            setCheck('kpiShowMarketTrend', kpi.showMarketTrendKpi);
+
             setCheck('kpiShowDealScoreBadge', kpi.showDealScoreBadge);
+            setCheck('kpiShowPriceFreshness', kpi.showPriceFreshness);
+            setCheck('kpiShowStoreSpread', kpi.showStoreSpread);
+            setCheck('kpiShowAtlProximity', kpi.showAtlProximity);
+
             setCheck('kpiShowBuyAdvice', kpi.showBuyAdvice);
+            setCheck('kpiShowDayOfWeekSweetSpot', kpi.showDayOfWeekSweetSpot);
+            setCheck('kpiShowDropCycleMetrics', kpi.showDropCycleMetrics);
+            setCheck('kpiShowMovingAverageBenchmark', kpi.showMovingAverageBenchmark);
             setCheck('kpiShowStoreVolatility', kpi.showStoreVolatility);
+
+            setCheck('kpiShowStoreVolatilityTable', kpi.showStoreVolatilityTable);
+            setCheck('kpiShowStoreLatencyHealth', kpi.showStoreLatencyHealth);
+            setCheck('kpiShowAlertRealismScore', kpi.showAlertRealismScore);
         } catch (error) {
             console.error('Failed to load settings:', error);
         }
@@ -121,9 +135,23 @@ const SettingsController = {
             showRecordLowsKpi: getCheck('kpiShowRecordLows'),
             showTotalSavingsKpi: getCheck('kpiShowTotalSavings'),
             showStoreFeedsKpi: getCheck('kpiShowStoreFeeds'),
+            showAvgDiscountKpi: getCheck('kpiShowAvgDiscount'),
+            showMarketTrendKpi: getCheck('kpiShowMarketTrend'),
+
             showDealScoreBadge: getCheck('kpiShowDealScoreBadge'),
+            showPriceFreshness: getCheck('kpiShowPriceFreshness'),
+            showStoreSpread: getCheck('kpiShowStoreSpread'),
+            showAtlProximity: getCheck('kpiShowAtlProximity'),
+
             showBuyAdvice: getCheck('kpiShowBuyAdvice'),
-            showStoreVolatility: getCheck('kpiShowStoreVolatility')
+            showDayOfWeekSweetSpot: getCheck('kpiShowDayOfWeekSweetSpot'),
+            showDropCycleMetrics: getCheck('kpiShowDropCycleMetrics'),
+            showMovingAverageBenchmark: getCheck('kpiShowMovingAverageBenchmark'),
+            showStoreVolatility: getCheck('kpiShowStoreVolatility'),
+
+            showStoreVolatilityTable: getCheck('kpiShowStoreVolatilityTable'),
+            showStoreLatencyHealth: getCheck('kpiShowStoreLatencyHealth'),
+            showAlertRealismScore: getCheck('kpiShowAlertRealismScore')
         };
 
         try {
@@ -139,6 +167,12 @@ const SettingsController = {
             }
             if (window.StoresController) {
                 StoresController.renderStores();
+            }
+            if (window.AlertsController) {
+                const detailEl = document.getElementById('alert-detail');
+                if (detailEl && detailEl.classList.contains('active') && AlertsController.currentAlertId) {
+                    AlertsController.showAlertDetail(AlertsController.currentAlertId, false);
+                }
             }
             if (window.ProductDetail?.currentProduct) {
                 const content = document.getElementById('productDetailContent');

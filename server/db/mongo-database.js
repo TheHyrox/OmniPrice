@@ -144,9 +144,20 @@ const defaultSettings = {
         showRecordLowsKpi: true,
         showTotalSavingsKpi: true,
         showStoreFeedsKpi: true,
+        showAvgDiscountKpi: true,
+        showMarketTrendKpi: true,
         showDealScoreBadge: true,
+        showPriceFreshness: true,
+        showStoreSpread: true,
+        showAtlProximity: true,
         showBuyAdvice: true,
-        showStoreVolatility: true
+        showDayOfWeekSweetSpot: true,
+        showDropCycleMetrics: true,
+        showMovingAverageBenchmark: true,
+        showStoreVolatility: true,
+        showStoreVolatilityTable: true,
+        showStoreLatencyHealth: true,
+        showAlertRealismScore: true
     }
 };
 

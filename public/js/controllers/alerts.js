@@ -109,6 +109,9 @@ const AlertsController = {
                             </div>
 
                             <div class="alert-card-footer">
+                                <button class="btn btn-primary btn-sm" onclick="App.showAlertDetail('${id}')">
+                                    Details →
+                                </button>
                                 <button class="btn btn-secondary btn-sm" onclick="App.triggerTestAlert('${id}')" title="Send a test notification">
                                     Test
                                 </button>
@@ -127,6 +130,157 @@ const AlertsController = {
                 }).join('')}
             </div>
         `;
+    },
+
+    async showAlertDetail(alertId, updateRoute = true) {
+        try {
+            this.currentAlertId = alertId;
+            if (!this.alerts || this.alerts.length === 0) {
+                await this.loadAlerts();
+            }
+
+            let alert = this.alerts.find(a => String(a._id) === String(alertId));
+            if (!alert) {
+                alert = await API.getAlert(alertId);
+            }
+            if (!alert) {
+                Toast.error('Alert not found');
+                return;
+            }
+
+            let product = (window.App?.products || []).find(p => String(p._id) === String(alert.productId));
+            if (!product) {
+                try {
+                    product = await API.getProduct(alert.productId);
+                } catch (_) {}
+            }
+            product = product || alert.product || { title: 'Unknown Product', referencePrice: null, lowestPrice: null };
+
+            // Switch to alert detail view
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+
+            const alertDetailTab = document.getElementById('alert-detail');
+            if (alertDetailTab) alertDetailTab.classList.add('active');
+
+            const contentElem = document.getElementById('alertDetailContent');
+            if (!contentElem) return;
+
+            const kpi = window.App?.settings?.kpiVisibility || {};
+            const showRealism = kpi.showAlertRealismScore !== false;
+            const realism = (showRealism && window.Analytics)
+                ? window.Analytics.calculateAlertRealism(alert, product)
+                : null;
+
+            const id = Utils.escapeHtml(alert._id);
+            const title = Utils.escapeHtml(product.title);
+            const image = Utils.escapeHtml(product.image || '/images/placeholder.svg');
+            const isActive = alert.active !== false;
+            const cleanLowest = product.lowestPrice;
+
+            contentElem.innerHTML = `
+                <div class="alert-detail-view" style="max-width: 840px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px;">
+                    <!-- Alert Detail Header Card -->
+                    <div class="product-detail-header-card" style="display: flex; gap: 20px; align-items: flex-start; padding: 24px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: var(--card-shadow);">
+                        <img src="${image}" alt="${title}" style="width: 90px; height: 90px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border-color);" onerror="this.src='/images/placeholder.svg'">
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px;">
+                                <span class="badge" style="font-size: 0.75rem; padding: 3px 8px; border-radius: 4px; background: ${isActive ? 'rgba(16, 185, 129, 0.12)' : 'var(--bg-tertiary)'}; color: ${isActive ? '#10b981' : 'var(--text-secondary)'}; font-weight: 600;">
+                                    ${isActive ? 'Active Monitoring' : 'Paused'}
+                                </span>
+                                <span style="font-size: 0.8125rem; color: var(--text-tertiary);">Alert ID: ${id.slice(0, 8)}</span>
+                            </div>
+                            <h2 style="font-size: 1.25rem; font-weight: 600; margin: 0 0 8px 0;">${title}</h2>
+                            <div style="display: flex; gap: 16px; font-size: 0.875rem; color: var(--text-secondary); flex-wrap: wrap;">
+                                <span>Current Lowest: <strong style="color: var(--text-primary);">${cleanLowest != null ? Utils.formatCurrency(cleanLowest) : 'No price'}</strong></span>
+                                ${product.referencePrice ? `<span>Reference MSRP: <strong>${Utils.formatCurrency(product.referencePrice)}</strong></span>` : ''}
+                                ${product.lowestPriceSource ? `<span>Best Store: <strong>${Utils.escapeHtml(product.lowestPriceSource.siteName)}</strong></span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+
+                    ${(showRealism && realism && realism.available) ? `
+                        <!-- Target Realism Score Card -->
+                        <div class="buy-advice-card alert-realism-card">
+                            <div class="buy-advice-header">
+                                <div class="buy-advice-title-group">
+                                    <h3>Target Realism Analysis</h3>
+                                    <span class="buy-advice-subtitle">${escapeHtml(realism.advice)}</span>
+                                </div>
+                                <div class="buy-advice-pill realism-${realism.level}" style="font-weight: 600;">
+                                    <span>Feasibility:</span>
+                                    <strong>${escapeHtml(realism.label)}</strong>
+                                </div>
+                            </div>
+
+                            <div class="deal-insights-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+                                <div class="deal-insight-item">
+                                    <span class="deal-insight-label">Configured Target</span>
+                                    <span class="deal-insight-value">${alert.targetPrice != null ? Utils.formatCurrency(alert.targetPrice) : 'All-Time Low'}</span>
+                                </div>
+                                ${realism.gapAmount != null ? `
+                                    <div class="deal-insight-item">
+                                        <span class="deal-insight-label">Distance to Target</span>
+                                        <span class="deal-insight-value" style="color: ${realism.gapAmount === 0 ? 'var(--success)' : 'var(--text-primary)'};">
+                                            ${realism.gapAmount === 0 ? 'At Target' : `${cleanLowest > realism.targetPrice ? '-' : '+'}${Utils.formatCurrency(realism.gapAmount)} (${realism.gapPct}%)`}
+                                        </span>
+                                    </div>
+                                ` : ''}
+                                ${realism.minEver != null ? `
+                                    <div class="deal-insight-item">
+                                        <span class="deal-insight-label">Record Low (ATL)</span>
+                                        <span class="deal-insight-value">${Utils.formatCurrency(realism.minEver)}</span>
+                                    </div>
+                                ` : ''}
+                                <div class="deal-insight-item">
+                                    <span class="deal-insight-label">Historical Hit Rate</span>
+                                    <span class="deal-insight-value">${realism.daysMet} of ${realism.totalDays} days (${realism.hitRatePct}%)</span>
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <!-- Alert Configuration & Dispatch Settings -->
+                    <div class="settings-card" style="padding: 20px; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 12px; box-shadow: var(--card-shadow);">
+                        <h3 style="margin-bottom: 14px; font-size: 1rem; font-weight: 600;">Alert Rules & Notifications</h3>
+                        <div style="display: flex; flex-direction: column; gap: 10px; font-size: 0.875rem;">
+                            <div style="display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid var(--border-color);">
+                                <span style="color: var(--text-secondary);">Alert Condition:</span>
+                                <strong>${alert.alertType === 'atl' ? 'All-Time Low' : (alert.alertType === 'percentage_drop' ? `≥ ${alert.thresholdPercent}% Drop` : (alert.alertType === 'rise' ? 'Price Rise' : 'Price Drop'))}</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid var(--border-color);">
+                                <span style="color: var(--text-secondary);">Notify on Price Rise / Deal End:</span>
+                                <strong>${alert.notifyOnRise ? 'Enabled' : 'Disabled'}</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid var(--border-color);">
+                                <span style="color: var(--text-secondary);">Discord Webhook:</span>
+                                <span>${alert.webhookUrl ? `<code style="font-size: 0.75rem;">${Utils.escapeHtml(alert.webhookUrl.slice(0, 35))}...</code>` : 'Default Channel Webhook'}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span style="color: var(--text-secondary);">Last Triggered:</span>
+                                <span>${alert.lastTriggeredAt ? `${Utils.formatTimeAgo(alert.lastTriggeredAt)} (${Utils.formatCurrency(alert.lastTriggeredPrice)})` : 'Never triggered yet'}</span>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button class="btn btn-primary btn-sm" onclick="App.triggerTestAlert('${id}')">Send Test Notification</button>
+                            <button class="btn btn-secondary btn-sm" onclick="App.toggleAlert('${id}', ${isActive})">${isActive ? 'Pause Alert' : 'Resume Alert'}</button>
+                            <button class="btn btn-secondary btn-sm" onclick="App.openAlertModal('${id}')">Edit Alert</button>
+                            <button class="btn btn-secondary btn-sm" onclick="App.showProductDetail('${alert.productId}')">View Product Detail →</button>
+                            <button class="btn btn-ghost btn-sm" onclick="App.deleteAlert('${id}')" style="color: var(--danger); margin-left: auto;">Delete Alert</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            if (updateRoute && window.Router) {
+                Router.navigate(`alert/${alertId}`, true);
+            }
+        } catch (error) {
+            console.error('Failed to show alert details:', error);
+            Toast.error('Failed to load alert details: ' + error.message);
+        }
     },
 
     onAlertTypeSelectChange(type) {
