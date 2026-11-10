@@ -22,6 +22,15 @@ const SettingsController = {
                 freqSelect.value = this.settings.scrapeFrequency;
             }
 
+            const timeInput = document.getElementById('scrapeTime');
+            if (timeInput) {
+                timeInput.value = this.settings.scrapeTime || '00:00';
+                const isManual = parseInt(this.settings.scrapeFrequency !== undefined ? this.settings.scrapeFrequency : freqSelect?.value, 10) === 0;
+                timeInput.disabled = isManual;
+                const timeRow = document.getElementById('scrapeTimeRow');
+                if (timeRow) timeRow.style.opacity = isManual ? '0.5' : '1';
+            }
+
             const webhookInput = document.getElementById('discordWebhookUrl');
             if (webhookInput && this.settings.discordWebhookUrl) {
                 webhookInput.value = this.settings.discordWebhookUrl;
@@ -85,11 +94,30 @@ const SettingsController = {
 
     async handleFrequencyChange(val) {
         const freq = parseInt(val, 10);
+        const timeInput = document.getElementById('scrapeTime');
+        const timeRow = document.getElementById('scrapeTimeRow');
+        const isManual = freq === 0;
+        if (timeInput) timeInput.disabled = isManual;
+        if (timeRow) timeRow.style.opacity = isManual ? '0.5' : '1';
+
         try {
             await API.updateSettings({ scrapeFrequency: freq });
+            this.settings.scrapeFrequency = freq;
             Toast.success('Scraping frequency updated');
         } catch (error) {
             Toast.error('Failed to update scraping frequency: ' + error.message);
+        }
+    },
+
+    async handleTimeChange(val) {
+        if (!val) return;
+        try {
+            await API.updateSettings({ scrapeTime: val });
+            this.settings.scrapeTime = val;
+            if (window.App) window.App.settings = this.settings;
+            Toast.success(`Scheduled scraping hour set to ${val}`);
+        } catch (error) {
+            Toast.error('Failed to update scraping time: ' + error.message);
         }
     },
 

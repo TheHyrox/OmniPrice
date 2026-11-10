@@ -98,6 +98,17 @@ const updateSettingsSchema = z.object({
     theme: z.enum(['light', 'dark']).optional(),
     currency: z.enum(['EUR', 'USD', 'GBP', 'CAD', 'JPY', 'CHF', 'AUD']).optional(),
     scrapeFrequency: z.number().int().min(0).optional(),
+    scrapeTime: z
+        .string()
+        .regex(/^([0-1]?\d|2[0-3]):[0-5]\d$/, 'Time must be in hh:mm format (00:00 to 23:59)')
+        .transform(val => {
+            if (!val) return val;
+            const parts = val.split(':');
+            return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+        })
+        .optional()
+        .or(z.literal(''))
+        .nullable(),
     discordWebhookUrl: z
         .string()
         .url('Webhook URL must be a valid URL')

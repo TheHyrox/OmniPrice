@@ -269,7 +269,7 @@
                     <div class="settings-card">
                         <h3>Scraping</h3>
                         <div class="setting-row">
-                            <label style="padding-right: 10px">Frequency</label>
+                            <label for="scrapeFrequency" style="padding-right: 10px">Frequency</label>
                             <select id="scrapeFrequency">
                                 <option value="900000">Every 15 minutes</option>
                                 <option value="1800000">Every 30 minutes</option>
@@ -280,6 +280,10 @@
                                 <option value="86400000">Every 24 hours (Daily)</option>
                                 <option value="0">Only at startup / Manual</option>
                             </select>
+                        </div>
+                        <div class="setting-row" id="scrapeTimeRow">
+                            <label for="scrapeTime" style="padding-right: 10px">Scheduled Hour (hh:mm)</label>
+                            <input type="time" id="scrapeTime" value="00:00" step="60" />
                         </div>
                         <div class="setting-row">
                             <button id="scrapeAllBtn" class="btn btn-secondary">Scrape All Now</button>

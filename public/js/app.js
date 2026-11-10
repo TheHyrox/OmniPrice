@@ -168,6 +168,9 @@ const App = {
         document.getElementById('scrapeFrequency')?.addEventListener('change', (e) => {
             SettingsController.handleFrequencyChange(e.target.value);
         });
+        document.getElementById('scrapeTime')?.addEventListener('change', (e) => {
+            SettingsController.handleTimeChange(e.target.value);
+        });
         document.getElementById('scrapeAllBtn')?.addEventListener('click', () => ProductsController.scrapeAll());
         document.getElementById('saveDiscordBtn')?.addEventListener('click', () => SettingsController.saveDiscordSettings());
         document.getElementById('testDiscordBtn')?.addEventListener('click', () => SettingsController.testDiscordWebhook());

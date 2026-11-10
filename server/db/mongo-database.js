@@ -86,6 +86,7 @@ const settingsSchema = new mongoose.Schema({
     theme: { type: String, default: 'light' },
     currency: { type: String, default: 'EUR' },
     scrapeFrequency: { type: Number, default: 43200000 },
+    scrapeTime: { type: String, default: '00:00' },
     discordWebhookUrl: { type: String, default: '' },
     kpiVisibility: { type: mongoose.Schema.Types.Mixed, default: () => ({}) }
 }, { versionKey: false, collection: 'settings', strict: false });
@@ -138,6 +139,7 @@ const defaultSettings = {
     theme: 'light',
     currency: 'EUR',
     scrapeFrequency: 43200000,
+    scrapeTime: '00:00',
     discordWebhookUrl: '',
     kpiVisibility: {
         showTrackedKpi: true,
@@ -582,6 +584,9 @@ class MongoDatabase {
                 ...defaultSettings.kpiVisibility,
                 ...(settings.kpiVisibility || {})
             };
+            if (!settings.scrapeTime) {
+                settings.scrapeTime = defaultSettings.scrapeTime;
+            }
         }
         return settings;
     }

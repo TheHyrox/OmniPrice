@@ -2,6 +2,7 @@
   "products": [],
   "settings": {
     "theme": "light",
-    "scrapeFrequency": 43200000
+    "scrapeFrequency": 43200000,
+    "scrapeTime": "00:00"
   }
 }

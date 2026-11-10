@@ -5,15 +5,58 @@ const alertChecker = require('../services/alert-checker');
 class Scheduler {
     constructor() {
         this.intervalId = null;
+        this.timeoutId = null;
     }
 
     async getFrequency() {
         try {
             const settings = await db.getSettings();
-            return settings.scrapeFrequency || 43200000; // Default 12h
+            return settings.scrapeFrequency !== undefined ? settings.scrapeFrequency : 43200000; // Default 12h
         } catch {
             return 43200000;
         }
+    }
+
+    async getScrapeTime() {
+        try {
+            const settings = await db.getSettings();
+            return settings.scrapeTime || '00:00';
+        } catch {
+            return '00:00';
+        }
+    }
+
+    /**
+     * Calculates the next execution Date aligned to frequency and scheduled scrapeTime (hh:mm).
+     * @param {number} frequency - Interval in ms
+     * @param {string} scrapeTime - Time string 'HH:mm'
+     * @param {Date} fromTime - Reference date/time (default new Date())
+     * @returns {Date|null}
+     */
+    getNextScheduledTime(frequency, scrapeTime = '00:00', fromTime = new Date()) {
+        if (!frequency || frequency <= 0) return null;
+
+        const parts = (scrapeTime || '00:00').split(':').map(Number);
+        const hours = (Number.isInteger(parts[0]) && parts[0] >= 0 && parts[0] <= 23) ? parts[0] : 0;
+        const minutes = (Number.isInteger(parts[1]) && parts[1] >= 0 && parts[1] <= 59) ? parts[1] : 0;
+
+        const fromMs = fromTime.getTime();
+
+        // For daily (24h), anchor to calendar day so clock hour remains preserved across DST
+        if (frequency === 86400000) {
+            const todayTarget = new Date(fromTime.getFullYear(), fromTime.getMonth(), fromTime.getDate(), hours, minutes, 0, 0);
+            if (todayTarget.getTime() > fromMs) {
+                return todayTarget;
+            }
+            return new Date(fromTime.getFullYear(), fromTime.getMonth(), fromTime.getDate() + 1, hours, minutes, 0, 0);
+        }
+
+        const anchor = new Date(fromTime.getFullYear(), fromTime.getMonth(), fromTime.getDate(), hours, minutes, 0, 0);
+        const anchorMs = anchor.getTime();
+        const diff = fromMs - anchorMs;
+        const k = Math.floor(diff / frequency) + 1;
+        const nextMs = anchorMs + k * frequency;
+        return new Date(nextMs);
     }
 
     /**
@@ -85,14 +128,34 @@ class Scheduler {
         }
     }
 
+    scheduleNext(frequency, scrapeTime) {
+        if (this.timeoutId) {
+            clearTimeout(this.timeoutId);
+            this.timeoutId = null;
+        }
+        if (!frequency || frequency <= 0) return;
+
+        const nextTime = this.getNextScheduledTime(frequency, scrapeTime, new Date());
+        if (!nextTime) return;
+
+        const delay = Math.max(1000, nextTime.getTime() - Date.now());
+        console.log(`Scheduler: Next scrape scheduled at ${nextTime.toISOString()} (in ${Math.round(delay / 60000)}m)`);
+
+        this.timeoutId = setTimeout(async () => {
+            await this.scrapeAllProducts();
+            this.scheduleNext(frequency, scrapeTime);
+        }, delay);
+    }
+
     async start() {
         const frequency = await this.getFrequency();
+        const scrapeTime = await this.getScrapeTime();
 
         if (frequency > 0) {
             const freqDesc = frequency >= 3600000
                 ? `${frequency / 3600000} hour${frequency / 3600000 !== 1 ? 's' : ''}`
                 : `${Math.round(frequency / 60000)} minute${Math.round(frequency / 60000) !== 1 ? 's' : ''}`;
-            console.log(`Scheduler started. Scraping every ${freqDesc}.`);
+            console.log(`Scheduler started. Scraping every ${freqDesc} (scheduled hour: ${scrapeTime}).`);
 
             // Only fire the startup scrape if enough time has passed since the last one.
             // This prevents hammering external sites on every container restart/redeploy.
@@ -101,27 +164,24 @@ class Scheduler {
 
             if (lastScrape === 0 || timeSinceLast >= frequency) {
                 console.log('Scheduler: No recent scrape found — running initial scrape in 5s.');
-                setTimeout(() => this.scrapeAllProducts(), 5000);
+                this.timeoutId = setTimeout(async () => {
+                    await this.scrapeAllProducts();
+                    this.scheduleNext(frequency, scrapeTime);
+                }, 5000);
             } else {
-                // Schedule the next scrape for the remaining time in the current interval
-                const nextIn = frequency - timeSinceLast;
-                console.log(`Scheduler: Last scrape was ${Math.round(timeSinceLast / 60000)}m ago. Next scrape in ${Math.round(nextIn / 60000)}m.`);
-                setTimeout(() => {
-                    this.scrapeAllProducts();
-                    // After the catch-up scrape, set the regular interval
-                    this.intervalId = setInterval(() => this.scrapeAllProducts(), frequency);
-                }, nextIn);
-                return; // Don't set the regular interval yet — the setTimeout above will do it
+                this.scheduleNext(frequency, scrapeTime);
             }
-
-            this.intervalId = setInterval(() => this.scrapeAllProducts(), frequency);
         } else {
             console.log('Scheduler: Scraping only at startup');
-            setTimeout(() => this.scrapeAllProducts(), 5000);
+            this.timeoutId = setTimeout(() => this.scrapeAllProducts(), 5000);
         }
     }
 
     stop() {
+        if (this.timeoutId) {
+            clearTimeout(this.timeoutId);
+            this.timeoutId = null;
+        }
         if (this.intervalId) {
             clearInterval(this.intervalId);
             this.intervalId = null;

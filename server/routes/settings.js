@@ -20,8 +20,8 @@ router.put('/', validate(updateSettingsSchema), async (req, res) => {
     try {
         const settings = await db.updateSettings(req.body);
 
-        // Restart the scheduler if the scrape frequency changed
-        if (req.body.scrapeFrequency !== undefined) {
+        // Restart the scheduler if the scrape frequency or scrape time changed
+        if (req.body.scrapeFrequency !== undefined || req.body.scrapeTime !== undefined) {
             scheduler.restart().catch(err =>
                 console.error('Failed to restart scheduler after settings update:', err.message)
             );
